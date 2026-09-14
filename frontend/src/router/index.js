@@ -1,0 +1,209 @@
+import AppLayout from '@/layout/AuthenticatedLayout.vue';
+import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from '@/stores/auth'
+import { setToast } from "@/helpers/toast";
+
+import { toast } from "vue3-toastify";
+
+const routes = [
+
+
+    {
+        path: '/',
+        name: 'admin_login',
+        component: () => import('@/views/Login.vue'),
+        meta: {
+            title: 'Login Account'
+        }
+    },
+
+    {
+        path: '/:pathMatch(.*)*',
+        name: 'not-found',
+        component: () => import('@/views/NotFound.vue'),
+        meta: {
+            title: '404 - Not Found!'
+        }
+    },
+
+    {
+        path: '/admin-v2/permission',
+        name: 'access_block',
+        component: () => import('@/views/AccessBlock.vue'),
+        meta: {
+            title: '403 - Access Denied!'
+        }
+    },
+
+    /* ========= protected route START ========= */
+    {
+        path: '/admin',
+        component: AppLayout,
+        meta: { requiresAuth: true },
+        children: [
+            {
+                path: 'dashboard',
+                name: 'admin_dashboard',
+                component: () => import('@/views/Dashboard.vue'),
+                meta: {
+                    title: 'Dashboard',
+                }
+            },
+
+
+            /* ====================== Role Route START ====================== */
+            {
+                path: 'roles',
+                name: 'admin_roles',
+                component: () => import('@/views/roles/Index.vue'),
+                meta: {
+                    title: 'All Role List',
+                    permissions: ['roles.view']
+                }
+            },
+
+            {
+                path: 'role-add',
+                name: 'admin_role_add',
+                component: () => import('@/views/roles/Add.vue'),
+                meta: {
+                    title: 'Add Role',
+                    permissions: ['roles.create']
+                }
+            },
+
+            {
+                path: 'role-edit/:id',
+                name: 'admin_role_edit',
+                component: () => import('@/views/roles/Edit.vue'),
+                meta: {
+                    title: 'Edit Role',
+                    permissions: ['roles.update']
+                }
+            },
+            /* ====================== User Route  ====================== */
+            {
+                path: 'users',
+                name: 'admin_users',
+                component: () => import('@/views/users/Index.vue'),
+                meta: {
+                    title: 'All User List',
+                    permissions: ['users.view']
+                }
+            },
+
+            {
+                path: 'user-add',
+                name: 'admin_user_add',
+                component: () => import('@/views/users/Add.vue'),
+                meta: {
+                    title: 'Add User',
+                    permissions: ['users.create']
+                }
+            },
+
+            {
+                path: 'user-edit/:id',
+                name: 'admin_user_edit',
+                component: () => import('@/views/users/Edit.vue'),
+                meta: {
+                    title: 'Edit User',
+                    permissions: ['users.update']
+                }
+            },
+
+            {
+                path: 'profile',
+                name: 'admin_profile',
+                component: () => import('@/views/Profile.vue'),
+                meta: {
+                    title: 'Profile',
+                }
+            },
+
+
+
+        ]
+    },
+]
+
+const router = createRouter({
+    history: createWebHistory(),
+    routes,
+    scrollBehavior(){
+        return {
+            top: 0
+        }
+    }
+});
+
+
+// title
+router.afterEach((to) => {
+    document.title = to.meta.title || 'Admin Dashboard'
+})
+
+
+router.beforeEach(async (to) => {
+    const auth = useAuthStore()
+
+    // Wait for auth check on first load, but only once
+    if (!auth.authChecked) {
+        try {
+            await auth.checkAuth()
+        } catch (err) {
+            // checkAuth action already handles this
+        }
+    }
+
+    // Protect routes that require auth
+    if (to.meta.requiresAuth && !auth.isAuthenticated) {
+        return { name: 'admin_login' } // redirect to login
+    }
+
+    // Redirect authenticated users away from login page
+    if (to.name === 'admin_login' && auth.isAuthenticated) {
+        return { name: 'admin_dashboard' } // redirect to dashboard
+    }
+
+    // Check for permissions
+    if (to.meta.permissions && auth.isAuthenticated) {
+        const userPermissions = auth.user?.permissions || [];
+        const hasPermission = to.meta.permissions.some(p => userPermissions.includes(p));
+
+        if (!hasPermission) {
+            setToast('error', "You don't have permission to access this page.");
+            return { name: 'access_block' };
+        }
+    }
+
+    // Otherwise, allow navigation
+})
+
+
+router.afterEach(() => {
+  const toastData = sessionStorage.getItem("toast");
+  if (toastData) {
+    try {
+      const { type, message } = JSON.parse(toastData);
+      if (type && message && typeof toast[type] === "function") {
+        toast[type](message, {
+          autoClose: 3000,
+          hideProgressBar: true,
+          position: toast.POSITION.TOP_RIGHT,
+        });
+      } else {
+        toast.success(message); // fallback
+      }
+    } catch (e) {
+      toast.success(toastData); // fallback if parsing fails
+    }
+    sessionStorage.removeItem("toast");
+  }
+});
+
+
+export default router;
+
+
+

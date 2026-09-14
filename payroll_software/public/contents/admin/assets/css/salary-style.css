@@ -1,0 +1,343 @@
+*{
+margin: 0;
+padding: 0;
+outline: 0;
+}
+
+.salary{
+margin-top: 50px;
+}
+
+
+.table > :not(caption) > * > * {
+padding: 0.2rem .5rem;
+}
+
+tbody, td, tfoot, th, thead, tr {
+    border: 0;
+}
+
+/* heading */
+.company_information{
+
+}
+.company_information h4{
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 2px;
+}
+.company_information h4 small{
+
+}
+.company_information .address{
+  margin: 0;
+  color: green;
+  font-size: 16px;
+}
+.company_information p{
+
+}
+.company_information p span{
+  font-size: 13px;
+  font-weight: 500;
+}
+.salary__header{
+  display: flex;
+  margin-bottom: 25px;
+}
+.salary__header .project_info{
+  margin-left: 15px;
+  margin-top: 4px;
+}
+.salary__header .project_info span{
+  display:  block;
+}
+.salary__header .project_info span.project_name{
+  font-size: 18px;
+  font-weight: 700;
+}
+.salary__header .project_info span.project_code{
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+/* heading */
+
+
+
+.salary__table{
+
+}
+
+.salary__table thead{
+    border: 1px solid #3F3F3F;
+}
+
+.salary__table td.signature_field {
+  border: 1px solid #3F3F3F;
+  border-top: 0;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.salary__table thead tr.thead-row th{
+
+}
+
+tr.salary-row-parent{
+  border: 1px solid #3F3F3F;
+  background-color: #FAFAFA;
+}
+
+
+
+.salary__table tbody tr.first-row{
+    border:  0px solid #FAFAFA;
+    border-left: 1px solid #3F3F3F;
+    border-bottom: 0;
+    background-color: #FAFAFA;
+}
+.salary__table tbody tr.second-row {
+  border-top: 0!important;
+  border: 1px solid #3F3F3F;
+  border-bottom: 0;
+}
+
+.salary__table thead tr.first-head-row th,
+.salary__table thead tr.second-head-row th{
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.salary__table thead tr.first-head-row th{
+
+}
+
+.salary__table thead tr.first-head-row th span.basic_amount{
+   text-align: right;
+   display: block;
+}
+
+.salary__table thead tr.second-head-row th{
+
+}
+
+.salary__table thead tr.second-head-row th .nationality{
+
+}
+
+.salary__table thead tr.second-head-row th .district{
+
+}
+
+.salary__table thead tr.second-head-row th{
+    padding-bottom: 0;
+}
+
+/* Salary Heading */
+th span.district-head,
+th span.category-head,
+th span.iqama-head,
+th span.type-head,
+th span.country-head{
+    border: 1px solid #ddd;
+    border-bottom-color: rgb(221, 221, 221);
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+    display: block;
+    border-bottom: 0;
+    text-align: center;
+    color: red;
+}
+
+th span.type-head,
+th span.iqama-head,
+th span.district-head{
+    color: teal;
+}
+
+th span{
+    display: block;
+    color: #222;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+td span{
+    display: block;
+    color: #222;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+
+td span.district-data,
+/* td span.iqama-data, */
+td span.type-data,
+td span.category-data,
+td span.country-data{
+    text-align: center;
+}
+
+
+
+
+
+td span.basic_amout{
+    display: block;
+    text-align: right;
+}
+
+td span.emp_name{
+    text-transform: capitalize;
+}
+
+td span.signature{
+    display: block;
+    background-color: #fff;
+    height: 47px;
+}
+
+td span.iqama_no{
+    text-align: right;
+    display: block;
+    padding-right: 40px;
+    color: #222;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+td span.country{
+    color: red;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+td span.district{
+    color: teal;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.salary__header-bottom p.date{
+  background: teal;
+  display: inline-block;
+  padding: 3px 10px;
+  color: #fff;
+}
+/* ============== Salary Table */
+span.currency{
+  color: green;
+}
+span.currency_data{
+  color: green;
+}
+
+.salary__header-bottom{
+  margin-bottom: 20px;
+}
+
+a.print-button{
+  text-decoration: none;
+  background: teal;
+  color: #fff;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+p.toEndDate{}
+p.toEndDate strong{ font-size: 14px }
+p.toEndDate span {
+  font-size: 14px;
+  font-weight: 600;
+  margin-left: 2px;
+}
+div.officer-signature{
+  display: flex;
+  justify-content: space-between;
+}
+span{
+  font-size: 10px !important;
+}
+
+.project_name{
+  margin-bottom: 0;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+/* ========== Print Style ========== */
+
+
+@media print {
+    .container{
+      max-width: 98%;
+      margin: 0 auto 50px;
+
+    }
+
+
+    @page {
+       size: A4 landscape;
+       margin: 25mm 10mm 20mm 10mm; /* top, right,bottom, left */
+
+    }
+
+    tr,th,td{
+      border: 1px solid #333;
+    }
+
+
+
+
+
+    /*__________ Salary Attendence __________*/
+    table.attend__table tr{ border: 1px solid #333!important }
+    table.attend__table th{ border: 1px solid #333 }
+    table.attend__table td{ border: 1px solid #333 }
+    /*__________ Salary Attendence __________*/
+
+    a.print-button{
+      display: none;
+    }
+    p.toEndDate{}
+    p.toEndDate strong{ font-size: 14px }
+    p.toEndDate span {
+      font-size: 14px;
+      font-weight: 600;
+      margin-left: 2px;
+    }
+    div.officer-signature{
+      display: flex;
+      justify-content: space-between;
+    }
+    .project_name{
+      font-size: 14px;
+    }
+    span{
+      font-size: 10px !important;
+    }
+
+    .totalCount{
+      font-size: 12px;
+    }
+
+    .officer-signature{
+      margin-top: 100px;
+    }
+
+}
+
+table.attend__table thead tr th {
+    font-size: 11px;
+    font-weight: 700;
+}
+table.attend__table tr{ border: 1px solid #333 }
+table.attend__table th{ border: 1px solid #333 }
+table.attend__table td{ border: 1px solid #333 }
+span.attendence-data{
+  font-size: 11px;
+  display: block;
+}

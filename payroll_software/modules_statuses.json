@@ -1,0 +1,14 @@
+{
+    "Account": true,
+    "Advance": true,
+    "Dashboard": true,
+    "Employee":true,
+    "Expense": true,
+    "Tender": true,
+    "Subcontractor": true,
+    "Report": true,
+    "Transportation": true,
+    "HrManagement": true,
+    "Payroll": true
+
+}

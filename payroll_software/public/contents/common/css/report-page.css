@@ -1,0 +1,177 @@
+* {
+    margin: 0;
+    padding: 0;
+    outline: 0;
+}
+
+
+@media print {
+    .container {
+        max-width: 98%;
+        margin: 0 auto 20px;
+    }
+
+    @page {
+        size: A4 landscape;
+        margin: 15mm 0mm 10mm 0mm;
+        /* top, right,bottom, left */
+    }
+}
+
+.main__wrap {
+    width: 90%;
+    margin: 20px auto;
+}
+
+.header__part {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    background-color: aqua;
+
+}
+
+.date__part {
+    width: 33%; /* Fixed width */
+    text-align: center;
+    background-color: aqua;
+}
+
+
+.title__part {
+    text-align: center;
+    width: 33%;
+}
+
+.print__part {
+    width: 33%; /* Fixed width */
+    text-align: right;
+}
+
+/* table part */
+.table__part {
+    display: flex;
+}
+
+table {
+    width: 100%;
+    padding: 10px;
+}
+
+table,
+tr {
+    border: 1px solid #333;
+    border-collapse: collapse;
+}
+
+/* table tr {} */
+table th {
+    font-size: 13px;
+}
+
+table td {
+    text-align: left;
+    font-size: 13px;
+}
+
+th,
+td {
+    padding: 5px 2px;
+    /* Top,Right,Bottom,left */
+}
+
+.td__left {
+    text-align: left
+}
+
+.td__center {
+    text-align: center
+}
+
+.td__right {
+    text-align: right
+}
+
+.td__name {
+    padding-bottom: 25px;
+}
+
+.td__bold {
+    font-weight: 700;
+}
+
+.td__emplyoeeId {
+    font-size: 14px;
+    padding-bottom: 25px;
+    color: blue;
+    font-weight: 900;
+    text-align: center
+}
+
+.td__sponser {
+    color: green;
+    font-weight: 300;
+    text-align: center
+}
+
+.sponser__name {
+    font-size: 10px;
+    font-weight: 100;
+}
+
+.country {
+    color: red;
+    text-align: center;
+    font-size: 10px;
+}
+
+.employe__trade {
+    color: red;
+    text-align: center;
+    font-size: 10px;
+}
+
+.td__project {
+    font-size: 8px;
+    padding-bottom: 5px;
+    color: red;
+    font-weight: 100;
+    text-align: center;
+}
+
+
+.td__multi__project {
+    font-size: 10px;
+    color: red;
+    text-align: center
+}
+
+
+.td__red__color {
+    color: red;
+    text-align: center;
+}
+
+.td__total {
+    font-weight: bold;
+    text-align: center;
+    color: black;
+    font-size: 14px;
+}
+
+.box__signature {
+    width: 200px;
+    height: 30px;
+    border: 1px solid gray;
+    margin-top: 5px;
+    margin-left: 0px;
+    color: lightgray;
+}
+
+.td__gross_salary {
+    font-size: 14px;
+    color: navy;
+    font-weight: 900;
+    text-align: center
+}

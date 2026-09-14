@@ -1,0 +1,11 @@
+{
+    "name": "Advance",
+    "alias": "advance",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Advance\\Providers\\AdvanceServiceProvider"
+    ],
+    "files": []
+}

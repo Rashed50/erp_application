@@ -1,0 +1,85 @@
+{
+  "Modules/Dashboard/Resources/assets/js/components/LiveDashboard/components/AttendanceView.vue": {
+    "file": "assets/AttendanceView-BMhebOKr.js",
+    "name": "AttendanceView",
+    "src": "Modules/Dashboard/Resources/assets/js/components/LiveDashboard/components/AttendanceView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendors-BSeF05K3.js",
+      "_useViewData-eNoBhoWZ.js",
+      "resources/js/app.js"
+    ],
+    "css": [
+      "assets/AttendanceView-To_aQGux.css"
+    ]
+  },
+  "Modules/Dashboard/Resources/assets/js/components/LiveDashboard/components/ComprehensiveView.vue": {
+    "file": "assets/ComprehensiveView-BK_o1frl.js",
+    "name": "ComprehensiveView",
+    "src": "Modules/Dashboard/Resources/assets/js/components/LiveDashboard/components/ComprehensiveView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendors-BSeF05K3.js",
+      "_useViewData-eNoBhoWZ.js",
+      "resources/js/app.js"
+    ],
+    "css": [
+      "assets/ComprehensiveView-9PmuOKOz.css"
+    ]
+  },
+  "Modules/Dashboard/Resources/assets/js/components/LiveDashboard/components/SalaryView.vue": {
+    "file": "assets/SalaryView-g02QRSwf.js",
+    "name": "SalaryView",
+    "src": "Modules/Dashboard/Resources/assets/js/components/LiveDashboard/components/SalaryView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendors-BSeF05K3.js",
+      "_useViewData-eNoBhoWZ.js",
+      "resources/js/app.js"
+    ],
+    "css": [
+      "assets/SalaryView-jlnoe7Vv.css"
+    ]
+  },
+  "_useViewData-eNoBhoWZ.js": {
+    "file": "assets/useViewData-eNoBhoWZ.js",
+    "name": "useViewData",
+    "imports": [
+      "_vendors-BSeF05K3.js"
+    ]
+  },
+  "_vendors-!~{003}~.js": {
+    "file": "assets/vendors-BMvSnErO.css",
+    "src": "_vendors-!~{003}~.js"
+  },
+  "_vendors-BSeF05K3.js": {
+    "file": "assets/vendors-BSeF05K3.js",
+    "name": "vendors",
+    "css": [
+      "assets/vendors-BMvSnErO.css"
+    ]
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-l0sNRNKZ.js",
+    "name": "app",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-BrmqPDwX.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_vendors-BSeF05K3.js"
+    ],
+    "dynamicImports": [
+      "Modules/Dashboard/Resources/assets/js/components/LiveDashboard/components/AttendanceView.vue",
+      "Modules/Dashboard/Resources/assets/js/components/LiveDashboard/components/SalaryView.vue",
+      "Modules/Dashboard/Resources/assets/js/components/LiveDashboard/components/ComprehensiveView.vue"
+    ],
+    "css": [
+      "assets/app-D3iSNmKj.css"
+    ]
+  }
+}

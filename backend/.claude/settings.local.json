@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(vendor\\\\bin\\\\pint --dirty --format agent 2>&1 | Out-String -Width 200)",
+      "PowerShell(php artisan test --compact 2>&1 | Out-String -Width 200)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "laravel-boost"
+  ]
+}

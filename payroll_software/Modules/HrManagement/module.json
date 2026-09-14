@@ -1,0 +1,11 @@
+{
+    "name": "HrManagement",
+    "alias": "hrmanagement",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\HrManagement\\Providers\\HrManagementServiceProvider"
+    ],
+    "files": []
+}
