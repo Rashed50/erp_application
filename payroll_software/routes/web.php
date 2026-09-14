@@ -1247,20 +1247,4 @@ Route::group(['prefix' => 'admin', 'middleware' => ['admin', 'auth']], function 
 });
 
 
-use App\Http\Controllers\Fontend\ZktecoAdmsController;
-
-Route::match(['GET', 'POST'], '/iclock/cdata',
-    [ZktecoAdmsController::class, 'cdata']
-);
-
-Route::match(['GET', 'POST'], '/iclock/registry',
-    [ZktecoAdmsController::class, 'registry']
-);
-
-Route::match(['GET', 'POST'], '/iclock/getrequest',
-    [ZktecoAdmsController::class, 'getRequest']
-);
-
-Route::match(['GET', 'POST'], '/iclock/devicecmd',
-    [ZktecoAdmsController::class, 'deviceCmd']
-);
+ 
