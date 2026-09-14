@@ -36,7 +36,7 @@
                                 <img src="{{ asset('contents/admin') }}/assets/images/logo_icon.png" class="img-fluid" alt="">
                             </a>
                         </div> --}}
-                        <h3>   ABC Simplified Payroll Management</h3>
+                    
                     </div>
                     {{-- <div class="col-lg-4">
 
@@ -68,7 +68,7 @@
                             <img src="{{ asset('contents/admin') }}/assets/images/logo_icon.png" class="img-fluid" alt="">
                         </a>
                     </div> --}}
-                    <h3>   ABC Simplified Payroll Management</h3>
+                     
                 </div>
                 <div class="col-3 text-right">
 
