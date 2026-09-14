@@ -140,47 +140,7 @@
             </ul>
         </li>
 
-        <!-- Approval -->
-        <li class="has_sub">
-            <a href="#" class="waves-effect"><i class="fas fa-users"></i><span>Approval</span><span
-                    class="pull-right"><i class="md md-add"></i></span></a>
-            <ul class="list-unstyled">
-
-                @can('job-approve')
-                    <li><a href="{{ route('employee.new.employee.job.approval.ui') }}"><span><i
-                                    class="fas fa-arrow-right"></i></span> New Employee Approval </a></li>
-                @endcan
-
-                @can('iqama-renewal-expense-approval')
-                    <li><a href="{{ route('show-pending-iqamarenewal-fee') }}"><span><i
-                                    class="fas fa-arrow-right"></i></span> Iqama Renewal Approval </a></li>
-                @endcan
-
-                <!--@can('attendance-records-approval')
-    -->
-                    <!--    <li><a href="{{ route('monthly.attendance.approval.ui') }}"><span><i class="fas fa-arrow-right"></i></span> Attendance Approval </a></li>-->
-                    <!--
-@endcan-->
-
-                <!--@can('income-approve')
-    -->
-                    <!--<li><a href="{{ route('income-list') }}"><span><i class="fas fa-arrow-right"></i></span> Income Approval </a></li>-->
-                    <!--
-@endcan-->
-
-                <!--@can('expenditure-approve')
-    -->
-                    <!--<li><a href="{{ route('company.daily.expesne.approval-pending.list') }}"><span><i class="fas fa-arrow-right"></i></span> Expenses Approval </a></li>-->
-                    <!--
-@endcan-->
-
-                @can('leave_application_update')
-                    <li><a href="{{ route('leave.application.pending.list') }}"><span><i
-                                    class="fas fa-arrow-right"></i></span>Leave Application </a></li>
-                @endcan
-
-            </ul>
-        </li>
+       
 
         <!--HR Management Employee -->
         <li class="has_sub">
