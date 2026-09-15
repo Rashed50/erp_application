@@ -41,6 +41,28 @@
             </v-list-item>
             <!-- Customer Menu END -->
 
+            <!-- Supplier Menu START -->
+            <v-list-item class="" v-if="can(['suppliers.view'])">
+                <router-link :to="{ name: 'admin_suppliers_list' }" class="custom_router_link">
+                    <span class="sidebar-menu-icon">
+                        <i class="fa-solid fa-truck-field"></i>
+                    </span>
+                    Suppliers
+                </router-link>
+            </v-list-item>
+            <!-- Supplier Menu END -->
+
+            <!-- Purchase Menu START -->
+            <v-list-item class="" v-if="can(['purchases.view'])">
+                <router-link :to="{ name: 'admin_purchases_list' }" class="custom_router_link">
+                    <span class="sidebar-menu-icon">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </span>
+                    Purchases
+                </router-link>
+            </v-list-item>
+            <!-- Purchase Menu END -->
+
             <v-list-item class="" v-if="can(['prescription-list', 'prescription-create', 'prescription-view'])">
                 <router-link :to="{ name: 'admin_prescription' }" class="custom_router_link">
                     <span class="sidebar-menu-icon">

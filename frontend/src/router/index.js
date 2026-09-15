@@ -154,6 +154,80 @@ const routes = [
             },
             /* ====================== Customer Route END ====================== */
 
+            /* ====================== Supplier Route START ====================== */
+            {
+                path: 'suppliers',
+                name: 'admin_suppliers_list',
+                component: () => import('@/views/suppliers/Index.vue'),
+                meta: {
+                    title: 'All Supplier List',
+                    permissions: ['suppliers.view']
+                }
+            },
+
+            {
+                path: 'supplier-add',
+                name: 'admin_supplier_add',
+                component: () => import('@/views/suppliers/Add.vue'),
+                meta: {
+                    title: 'Add Supplier',
+                    permissions: ['suppliers.create']
+                }
+            },
+
+            {
+                path: 'supplier-edit/:id',
+                name: 'admin_supplier_edit',
+                component: () => import('@/views/suppliers/Edit.vue'),
+                meta: {
+                    title: 'Edit Supplier',
+                    permissions: ['suppliers.update']
+                }
+            },
+
+            {
+                path: 'supplier-ledger/:id',
+                name: 'admin_supplier_ledger',
+                component: () => import('@/views/suppliers/Ledger.vue'),
+                meta: {
+                    title: 'Supplier Ledger',
+                    permissions: ['suppliers.view']
+                }
+            },
+            /* ====================== Supplier Route END ====================== */
+
+            /* ====================== Purchase Route START ====================== */
+            {
+                path: 'purchases',
+                name: 'admin_purchases_list',
+                component: () => import('@/views/purchases/Index.vue'),
+                meta: {
+                    title: 'All Purchase List',
+                    permissions: ['purchases.view']
+                }
+            },
+
+            {
+                path: 'purchase-add',
+                name: 'admin_purchase_add',
+                component: () => import('@/views/purchases/Add.vue'),
+                meta: {
+                    title: 'Add Purchase',
+                    permissions: ['purchases.create']
+                }
+            },
+
+            {
+                path: 'purchase-edit/:id',
+                name: 'admin_purchase_edit',
+                component: () => import('@/views/purchases/Edit.vue'),
+                meta: {
+                    title: 'Edit Purchase',
+                    permissions: ['purchases.update']
+                }
+            },
+            /* ====================== Purchase Route END ====================== */
+
             {
                 path: 'profile',
                 name: 'admin_profile',
