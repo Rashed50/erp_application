@@ -31,6 +31,9 @@ class CustomerTransactionService
                 'credit' => $data['credit'] ?? 0,
                 'transaction_date' => $data['transaction_date'],
                 'notes' => $data['notes'] ?? null,
+                // Set explicitly rather than relying on the DB column default,
+                // which the in-memory model wouldn't see until a fresh fetch.
+                'status' => true,
                 'branch_office_id' => $customer->branch_office_id,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),

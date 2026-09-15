@@ -38,6 +38,18 @@ describe('index', function () {
 
         $response->assertOk()->assertJsonCount(1, 'data.customers');
     });
+
+    it('returns every customer when the active_status filter is present but empty', function () {
+        $actor = adminUser();
+        Customer::factory()->create(['active_status' => true]);
+        Customer::factory()->inactive()->create();
+
+        // A cleared dropdown submits `?active_status=` — this must not be
+        // read as "false" and silently hide the active customers.
+        $response = $this->actingAs($actor, 'sanctum')->getJson('/api/customers?active_status=');
+
+        $response->assertOk()->assertJsonCount(2, 'data.customers');
+    });
 });
 
 describe('show', function () {

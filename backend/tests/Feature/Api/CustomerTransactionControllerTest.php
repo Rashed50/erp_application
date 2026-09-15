@@ -58,7 +58,12 @@ describe('store', function () {
             ]);
 
         $response->assertStatus(201)
-            ->assertJsonPath('data.debit', 400);
+            ->assertJsonPath('data.debit', 400)
+            // The `status` column defaults to true at the DB level, but that
+            // default isn't visible on the in-memory model unless it's set
+            // explicitly — this pins the immediate API response, not just a
+            // re-fetch, to the correct value.
+            ->assertJsonPath('data.status', true);
 
         expect($customer->fresh()->current_balance)->toEqual('500.00');
     });

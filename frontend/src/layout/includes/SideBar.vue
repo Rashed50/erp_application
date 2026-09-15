@@ -30,6 +30,17 @@
             </v-list-item>
             <!-- User Menu END -->
 
+            <!-- Customer Menu START -->
+            <v-list-item class="" v-if="can(['customers.view'])">
+                <router-link :to="{ name: 'admin_customers_list' }" class="custom_router_link">
+                    <span class="sidebar-menu-icon">
+                        <i class="fa-solid fa-people-arrows"></i>
+                    </span>
+                    Customers
+                </router-link>
+            </v-list-item>
+            <!-- Customer Menu END -->
+
             <v-list-item class="" v-if="can(['prescription-list', 'prescription-create', 'prescription-view'])">
                 <router-link :to="{ name: 'admin_prescription' }" class="custom_router_link">
                     <span class="sidebar-menu-icon">

@@ -21,7 +21,9 @@ class CustomerController extends Controller
         $customers = $this->customerService->paginate(
             (int) $request->integer('per_page', 15),
             $request->string('search')->value() ?: null,
-            $request->has('active_status') ? $request->boolean('active_status') : null,
+            // `filled` (not `has`) so a query string like `?active_status=` from a
+            // reset dropdown is treated as "no filter" rather than "false".
+            $request->filled('active_status') ? $request->boolean('active_status') : null,
         );
 
         return ApiResponse::success([

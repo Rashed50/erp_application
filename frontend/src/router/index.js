@@ -112,6 +112,48 @@ const routes = [
                 }
             },
 
+            /* ====================== Customer Route START ====================== */
+            {
+                path: 'customers',
+                name: 'admin_customers_list',
+                component: () => import('@/views/customers/Index.vue'),
+                meta: {
+                    title: 'All Customer List',
+                    permissions: ['customers.view']
+                }
+            },
+
+            {
+                path: 'customer-add',
+                name: 'admin_customer_add',
+                component: () => import('@/views/customers/Add.vue'),
+                meta: {
+                    title: 'Add Customer',
+                    permissions: ['customers.create']
+                }
+            },
+
+            {
+                path: 'customer-edit/:id',
+                name: 'admin_customer_edit',
+                component: () => import('@/views/customers/Edit.vue'),
+                meta: {
+                    title: 'Edit Customer',
+                    permissions: ['customers.update']
+                }
+            },
+
+            {
+                path: 'customer-ledger/:id',
+                name: 'admin_customer_ledger',
+                component: () => import('@/views/customers/Ledger.vue'),
+                meta: {
+                    title: 'Customer Ledger',
+                    permissions: ['customers.view']
+                }
+            },
+            /* ====================== Customer Route END ====================== */
+
             {
                 path: 'profile',
                 name: 'admin_profile',
