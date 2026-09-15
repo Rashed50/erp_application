@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\CustomerTransactionController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
@@ -41,4 +43,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])
         ->name('permissions.index')
         ->middleware('permission:roles.view');
+
+    Route::apiResource('customers', CustomerController::class)
+        ->middlewareFor(['index', 'show'], 'permission:customers.view')
+        ->middlewareFor('store', 'permission:customers.create')
+        ->middlewareFor('update', 'permission:customers.update')
+        ->middlewareFor('destroy', 'permission:customers.delete');
+
+    Route::get('/customers/{customer}/transactions', [CustomerTransactionController::class, 'index'])
+        ->name('customers.transactions.index')
+        ->middleware('permission:customer-transactions.view');
+    Route::post('/customers/{customer}/transactions', [CustomerTransactionController::class, 'store'])
+        ->name('customers.transactions.store')
+        ->middleware('permission:customer-transactions.create');
+    Route::delete('/customers/{customer}/transactions/{transaction}', [CustomerTransactionController::class, 'destroy'])
+        ->name('customers.transactions.destroy')
+        ->middleware('permission:customer-transactions.delete');
 });

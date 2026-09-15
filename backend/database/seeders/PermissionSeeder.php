@@ -21,6 +21,13 @@ class PermissionSeeder extends Seeder
         'roles.create',
         'roles.update',
         'roles.delete',
+        'customers.view',
+        'customers.create',
+        'customers.update',
+        'customers.delete',
+        'customer-transactions.view',
+        'customer-transactions.create',
+        'customer-transactions.delete',
     ];
 
     /**

@@ -2,15 +2,6 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
-
-function adminUser(): User
-{
-    $user = User::factory()->create();
-    $user->assignRole(Role::findOrCreate('Super Admin', 'web'));
-
-    return $user;
-}
 
 describe('index', function () {
     it('returns 401 when no token is provided', function () {
