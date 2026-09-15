@@ -19,41 +19,16 @@
                 </router-link>
             </v-list-item>
 
-            <!-- Role Menu START -->
-            <v-list-group class="" v-if="
-                can(['users.view']) ||
-                can(['roles.view'])
-            ">
-                <template v-slot:activator="{ props }">
-                    <v-list-item v-bind="props">
-                        <div class="custom_dropdown_router_link custom_mb_10">
-                            <span class="sidebar-menu-icon">
-                                <i class="fa-solid fa-address-card"></i>
-                            </span>
-                            User Access
-                        </div>
-                    </v-list-item>
-                </template>
-                <div>
-                    <router-link :to="{ name: 'admin_users' }" class="custom_router_sub_link" v-if="can(['users.view'])">
-                        <span class="ml-3">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            User
-                        </span>
-                    </router-link>
-                    <router-link :to="{ name: 'admin_roles' }" class="custom_router_sub_link" v-if="can(['roles.view'])">
-                        <span class="ml-3">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Role
-                        </span>
-                    </router-link>
-                </div>
-            </v-list-group>
-
-
-
-
-            <!-- Role Menu END -->
+            <!-- User Menu START -->
+            <v-list-item class="" v-if="can(['users.view'])">
+                <router-link :to="{ name: 'admin_users' }" class="custom_router_link">
+                    <span class="sidebar-menu-icon">
+                        <i class="fa-solid fa-address-card"></i>
+                    </span>
+                    User
+                </router-link>
+            </v-list-item>
+            <!-- User Menu END -->
 
             <v-list-item class="" v-if="can(['prescription-list', 'prescription-create', 'prescription-view'])">
                 <router-link :to="{ name: 'admin_prescription' }" class="custom_router_link">
