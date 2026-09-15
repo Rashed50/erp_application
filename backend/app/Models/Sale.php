@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Purchase extends Model
+class Sale extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -21,7 +21,7 @@ class Purchase extends Model
     {
         return [
             'issue_date' => 'date',
-            'purchase_date' => 'date',
+            'due_date' => 'date',
             'total_amount' => 'decimal:2',
             'discount_amount' => 'decimal:2',
             'vat_amount' => 'decimal:2',
@@ -30,19 +30,19 @@ class Purchase extends Model
         ];
     }
 
-    public function supplier(): BelongsTo
+    public function customer(): BelongsTo
     {
-        return $this->belongsTo(Supplier::class);
+        return $this->belongsTo(Customer::class);
     }
 
     public function ledgerTransaction(): BelongsTo
     {
-        return $this->belongsTo(SupplierTransaction::class, 'supplier_transaction_id');
+        return $this->belongsTo(CustomerTransaction::class, 'customer_transaction_id');
     }
 
     public function items(): HasMany
     {
-        return $this->hasMany(PurchaseItem::class);
+        return $this->hasMany(SaleItem::class);
     }
 
     public function creator(): BelongsTo

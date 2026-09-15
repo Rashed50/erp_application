@@ -144,6 +144,91 @@ describe('update', function () {
         // The ledger entry the purchase posted moves with it, not just the purchase row.
         expect($supplier->fresh()->current_balance)->toEqual('100.00');
     });
+
+    it('rejects reducing the total below what has already been paid', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $purchase = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->json('data');
+
+        // net_total is 88; pay 50 of it.
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['amount' => 50, 'payment_date' => now()->toDateString()])
+            ->assertStatus(201);
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/purchases/{$purchase['id']}", [
+                'items' => [
+                    ['item_name' => 'Paper', 'qty' => 1, 'unit_price' => 10, 'discount' => 0, 'vat' => 0],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['items']]);
+    });
+});
+
+describe('payments', function () {
+    it('rejects a payment that exceeds the due amount', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $purchase = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->json('data');
+
+        // net_total is 88.
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['amount' => 200, 'payment_date' => now()->toDateString()])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['amount']]);
+    });
+
+    it('records a partial payment, reduces the due amount, and decreases the supplier balance', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $purchase = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->json('data');
+
+        // net_total is 88.
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/purchases/{$purchase['id']}/payments", [
+                'amount' => 30,
+                'payment_date' => now()->toDateString(),
+                'notes' => 'partial payment',
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.paid_amount', 30)
+            ->assertJsonPath('data.due_amount', 58);
+
+        expect($supplier->fresh()->current_balance)->toEqual('58.00');
+        $this->assertDatabaseHas('supplier_transactions', [
+            'supplier_id' => $supplier->id,
+            'transaction_type' => 'Bill Payment',
+            'debit' => 30,
+        ]);
+    });
+
+    it('allows paying off the remaining due amount across multiple partial payments', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $purchase = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->json('data');
+
+        // net_total is 88.
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['amount' => 58, 'payment_date' => now()->toDateString()])
+            ->assertStatus(201);
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['amount' => 30, 'payment_date' => now()->toDateString()]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.paid_amount', 88)
+            ->assertJsonPath('data.due_amount', 0);
+    });
 });
 
 describe('destroy', function () {

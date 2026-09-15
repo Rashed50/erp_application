@@ -39,6 +39,20 @@ class PermissionSeeder extends Seeder
         'purchases.create',
         'purchases.update',
         'purchases.delete',
+        'purchase-payments.create',
+        'sales.view',
+        'sales.create',
+        'sales.update',
+        'sales.delete',
+        'sale-payments.create',
+        'ledger-accounts.view',
+        'ledger-accounts.create',
+        'ledger-accounts.update',
+        'ledger-accounts.delete',
+        'income-expenses.view',
+        'income-expenses.create',
+        'income-expenses.update',
+        'income-expenses.delete',
     ];
 
     /**

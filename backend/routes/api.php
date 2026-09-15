@@ -3,9 +3,14 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerTransactionController;
+use App\Http\Controllers\Api\IncomeExpenseAccountController;
+use App\Http\Controllers\Api\IncomeExpenseTransactionController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\PurchaseController;
+use App\Http\Controllers\Api\PurchasePaymentController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\SaleController;
+use App\Http\Controllers\Api\SalePaymentController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\SupplierTransactionController;
 use App\Http\Controllers\Api\UserController;
@@ -84,4 +89,30 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('store', 'permission:purchases.create')
         ->middlewareFor('update', 'permission:purchases.update')
         ->middlewareFor('destroy', 'permission:purchases.delete');
+
+    Route::post('/purchases/{purchase}/payments', [PurchasePaymentController::class, 'store'])
+        ->name('purchases.payments.store')
+        ->middleware('permission:purchase-payments.create');
+
+    Route::apiResource('sales', SaleController::class)
+        ->middlewareFor(['index', 'show'], 'permission:sales.view')
+        ->middlewareFor('store', 'permission:sales.create')
+        ->middlewareFor('update', 'permission:sales.update')
+        ->middlewareFor('destroy', 'permission:sales.delete');
+
+    Route::post('/sales/{sale}/payments', [SalePaymentController::class, 'store'])
+        ->name('sales.payments.store')
+        ->middleware('permission:sale-payments.create');
+
+    Route::apiResource('ledger-accounts', IncomeExpenseAccountController::class)
+        ->middlewareFor(['index', 'show'], 'permission:ledger-accounts.view')
+        ->middlewareFor('store', 'permission:ledger-accounts.create')
+        ->middlewareFor('update', 'permission:ledger-accounts.update')
+        ->middlewareFor('destroy', 'permission:ledger-accounts.delete');
+
+    Route::apiResource('income-expenses', IncomeExpenseTransactionController::class)
+        ->middlewareFor(['index', 'show'], 'permission:income-expenses.view')
+        ->middlewareFor('store', 'permission:income-expenses.create')
+        ->middlewareFor('update', 'permission:income-expenses.update')
+        ->middlewareFor('destroy', 'permission:income-expenses.delete');
 });

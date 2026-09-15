@@ -7,6 +7,7 @@ use App\Models\Supplier;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PurchaseService
 {
@@ -37,7 +38,7 @@ class PurchaseService
     public function create(array $data): Purchase
     {
         return DB::transaction(function () use ($data) {
-            $totals = $this->computeTotals($data['items']);
+            $totals = LineItemTotalCalculator::calculate($data['items']);
 
             $purchase = Purchase::create([
                 'supplier_id' => $data['supplier_id'],
@@ -84,7 +85,13 @@ class PurchaseService
     public function update(Purchase $purchase, array $data): Purchase
     {
         return DB::transaction(function () use ($purchase, $data) {
-            $totals = isset($data['items']) ? $this->computeTotals($data['items']) : null;
+            $totals = isset($data['items']) ? LineItemTotalCalculator::calculate($data['items']) : null;
+
+            if ($totals && $totals['net_total'] < $purchase->paid_amount) {
+                throw ValidationException::withMessages([
+                    'items' => "The new total ({$totals['net_total']}) cannot be less than the amount already paid ({$purchase->paid_amount}).",
+                ]);
+            }
 
             $purchase->fill([
                 ...collect($data)->except('items')->all(),
@@ -134,45 +141,29 @@ class PurchaseService
     }
 
     /**
-     * @param  array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>  $items
-     * @return array{items: array<int, array<string, mixed>>, total_amount: float, discount_amount: float, vat_amount: float, net_total: float}
+     * Record a payment against a purchase (a "Bill Payment"), posting a debit
+     * ledger entry that reduces what's owed to the supplier and tracking how
+     * much of the purchase has been paid so far.
+     *
+     * @param  array{amount: float, payment_date: string, notes?: ?string}  $data
      */
-    private function computeTotals(array $items): array
+    public function recordPayment(Purchase $purchase, array $data): Purchase
     {
-        $totalAmount = 0;
-        $discountAmount = 0;
-        $vatAmount = 0;
-        $computedItems = [];
+        return DB::transaction(function () use ($purchase, $data) {
+            $this->supplierTransactionService->create($purchase->supplier, [
+                'transaction_type' => 'Bill Payment',
+                'invoice_no' => $purchase->invoice_number,
+                'debit' => $data['amount'],
+                'transaction_date' => $data['payment_date'],
+                'notes' => $data['notes'] ?? null,
+            ]);
 
-        foreach ($items as $item) {
-            $qty = (float) $item['qty'];
-            $unitPrice = (float) $item['unit_price'];
-            $discount = (float) ($item['discount'] ?? 0);
-            $vat = (float) ($item['vat'] ?? 0);
-            $gross = $qty * $unitPrice;
-            $lineTotal = $gross - $discount + $vat;
+            $purchase->update([
+                'paid_amount' => $purchase->paid_amount + $data['amount'],
+                'updated_by' => Auth::id(),
+            ]);
 
-            $totalAmount += $gross;
-            $discountAmount += $discount;
-            $vatAmount += $vat;
-
-            $computedItems[] = [
-                'item_name' => $item['item_name'],
-                'description' => $item['description'] ?? null,
-                'qty' => $qty,
-                'unit_price' => $unitPrice,
-                'discount' => $discount,
-                'vat' => $vat,
-                'total_amount' => $lineTotal,
-            ];
-        }
-
-        return [
-            'items' => $computedItems,
-            'total_amount' => $totalAmount,
-            'discount_amount' => $discountAmount,
-            'vat_amount' => $vatAmount,
-            'net_total' => $totalAmount - $discountAmount + $vatAmount,
-        ];
+            return $purchase->load(['items', 'supplier']);
+        });
     }
 }

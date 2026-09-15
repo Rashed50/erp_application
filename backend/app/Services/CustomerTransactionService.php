@@ -46,6 +46,26 @@ class CustomerTransactionService
     }
 
     /**
+     * Update an existing ledger entry's amounts in place (rather than
+     * reversing and recreating it) and refresh the owning customer's balance.
+     * Used by SaleService to keep a sale's linked ledger entry in sync when
+     * the sale itself is edited.
+     *
+     * @param  array{transaction_type?: string, invoice_no?: ?string, debit?: ?float, credit?: ?float, transaction_date?: string, notes?: ?string}  $data
+     */
+    public function updateAmounts(CustomerTransaction $transaction, array $data): CustomerTransaction
+    {
+        return DB::transaction(function () use ($transaction, $data) {
+            $transaction->fill([...$data, 'updated_by' => Auth::id()]);
+            $transaction->save();
+
+            $this->recalculateBalance($transaction->customer);
+
+            return $transaction;
+        });
+    }
+
+    /**
      * Reverse a transaction's effect on the customer's balance instead of
      * deleting it, so the ledger keeps a full, auditable history.
      */
