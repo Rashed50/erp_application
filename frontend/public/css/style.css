@@ -1,11 +1,11 @@
 :root {
-    --primary: #2a3042;
-    --secondary: #D31A22;
-    --gray: #555555;
-    --blue: #4761FF;
-    --light: #F1F3FA;
-    --dark: #1C2035;
-    --white: #fff;
+    --primary: #2a3042 !important;
+    --secondary: #D31A22 !important;
+    --gray: #555555 !important;
+    --blue: #4761FF !important;
+    --light: #F1F3FA !important;
+    --dark: #1C2035 !important;
+    --white: #fff !important;
 }
 
 h1,
@@ -36,9 +36,9 @@ a:hover {
 .navigation__drawer .sidebar__header {
     display: flex;
     align-items: center;
+    justify-content: center;
     margin: 10px 0px;
     border-bottom: 1px solid var(--light);
-    padding-bottom: 15px;
 
 }
 

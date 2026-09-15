@@ -2,7 +2,6 @@
     <!-- Menu Bar -->
     <v-navigation-drawer v-model="drawer" class="navigation__drawer">
         <div class="sidebar__header">
-            <img :src="static_image_path + 'default-logo.png'" alt="Logo" />
             <div class="identity">
                 <p><span class="badge rounded-pill bg-success">{{ auth?.user?.roles?.[0] }}</span></p>
             </div>
