@@ -1,5 +1,5 @@
 <template lang="html">
-    <Breadcrumb title="Edit Purchase" buttonText="Back Purchases" :buttonLink="{ name: 'admin_purchases_list' }"
+    <Breadcrumb title="Add New Sale" buttonText="Back Sales" :buttonLink="{ name: 'admin_sales_list' }"
         buttonIcon="list" />
 
     <div class="main-content-wrapper mt-4">
@@ -12,20 +12,14 @@
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label>Supplier:</label>
-                                        <input type="text" class="form-control" :value="supplierName" disabled />
-                                        <small class="text-muted">A purchase's supplier cannot be changed after creation.</small>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="purchase_type">Purchase Type:</label>
-                                        <select id="purchase_type" class="form-control" v-model="form.purchase_type" required>
-                                            <option value="product">Product</option>
-                                            <option value="service">Service</option>
+                                        <label for="customer_id">Customer:</label>
+                                        <select id="customer_id" class="form-control" v-model="form.customer_id" required>
+                                            <option value="" disabled>Select a Customer</option>
+                                            <option v-for="customer in customers" :key="customer.id" :value="customer.id">
+                                                {{ customer.name }}
+                                            </option>
                                         </select>
-                                        <div v-if="errors.purchase_type" class="error-msg">{{ errors.purchase_type }}</div>
+                                        <div v-if="errors.customer_id" class="error-msg">{{ errors.customer_id }}</div>
                                     </div>
                                 </div>
 
@@ -49,10 +43,10 @@
 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="purchase_date">Purchase Date:</label>
-                                        <input type="date" id="purchase_date" class="form-control"
-                                            v-model="form.purchase_date" required />
-                                        <div v-if="errors.purchase_date" class="error-msg">{{ errors.purchase_date }}</div>
+                                        <label for="due_date">Due Date:</label>
+                                        <input type="date" id="due_date" class="form-control"
+                                            v-model="form.due_date" />
+                                        <div v-if="errors.due_date" class="error-msg">{{ errors.due_date }}</div>
                                     </div>
                                 </div>
 
@@ -136,17 +130,9 @@
                                                 <td>Net Total</td>
                                                 <td class="text-end">{{ totals.netTotal.toFixed(2) }}</td>
                                             </tr>
-                                            <tr>
-                                                <td>Paid Amount</td>
-                                                <td class="text-end">{{ paidAmount.toFixed(2) }}</td>
-                                            </tr>
-                                            <tr class="fw-bold">
-                                                <td>Due Amount</td>
-                                                <td class="text-end">{{ dueAmount.toFixed(2) }}</td>
-                                            </tr>
                                         </tbody>
                                     </table>
-                                    <small class="text-muted">Totals are recalculated by the server on save; the linked supplier ledger entry is kept in sync automatically. Reducing the total below the amount already paid is rejected.</small>
+                                    <small class="text-muted">Totals are recalculated by the server on save.</small>
                                 </div>
                             </div>
 
@@ -154,7 +140,7 @@
                                 <div class="col-md-12">
                                     <v-btn type="submit" class="text-none text-white mr-2" color="blue-darken-4"
                                         rounded="0" variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
-                                        Update
+                                        Submit
                                     </v-btn>
                                 </div>
                             </div>
@@ -167,32 +153,27 @@
 
 </template>
 <script setup>
-import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
-import { useRouter, useRoute } from 'vue-router';
+import { useRouter } from 'vue-router';
 
 const router = useRouter();
-const route = useRoute();
-
-const supplierName = ref('')
-const paidAmount = ref(0)
-const dueAmount = ref(0)
 
 const emptyItem = () => ({ item_name: '', description: '', qty: 1, unit_price: 0, discount: 0, vat: 0 })
 
-// supplier_id is intentionally not part of the submitted form — the backend
-// does not accept changing a purchase's supplier after creation.
 const { form, errors, isSubmitting, submit } = useStoreForm({
-    purchase_type: 'product',
+    customer_id: '',
     invoice_number: '',
-    issue_date: '',
-    purchase_date: '',
+    issue_date: new Date().toISOString().slice(0, 10),
+    due_date: '',
     description: '',
     notes: '',
     items: [emptyItem()],
 })
+
+const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
 
 const addItem = () => form.items.push(emptyItem())
 const removeItem = (index) => {
@@ -227,44 +208,17 @@ const totals = computed(() => {
 })
 
 const handleSubmit = async () => {
-    const resp = await submit(`/api/purchases/${route.params.id}`, 'put')
+    if (!form.due_date) delete form.due_date
+
+    const resp = await submit('/api/sales', 'post')
 
     if (resp && resp.success) {
         setToast('success', resp.message)
-        router.push({ name: 'admin_purchases_list' })
-    }
-}
-
-const loadPurchase = async () => {
-    try {
-        const { data } = await axios.get(`/api/purchases/${route.params.id}`)
-        if (data.success) {
-            const purchase = data.data
-            supplierName.value = purchase.supplier_name
-            paidAmount.value = Number(purchase.paid_amount)
-            dueAmount.value = Number(purchase.due_amount)
-            form.purchase_type = purchase.purchase_type
-            form.invoice_number = purchase.invoice_number
-            form.issue_date = purchase.issue_date
-            form.purchase_date = purchase.purchase_date
-            form.description = purchase.description
-            form.notes = purchase.notes
-            form.items = (purchase.items ?? []).map((item) => ({
-                item_name: item.item_name,
-                description: item.description,
-                qty: item.qty,
-                unit_price: item.unit_price,
-                discount: item.discount,
-                vat: item.vat,
-            }))
-            if (!form.items.length) form.items = [emptyItem()]
-        }
-    } catch (e) {
-        console.error(e)
+        router.push({ name: 'admin_sales_list' })
     }
 }
 
 onMounted(() => {
-    loadPurchase()
+    loadCustomers()
 })
 </script>

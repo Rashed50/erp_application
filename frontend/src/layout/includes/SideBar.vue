@@ -63,6 +63,47 @@
             </v-list-item>
             <!-- Purchase Menu END -->
 
+            <!-- Sale Menu START -->
+            <v-list-item class="" v-if="can(['sales.view'])">
+                <router-link :to="{ name: 'admin_sales_list' }" class="custom_router_link">
+                    <span class="sidebar-menu-icon">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </span>
+                    Sales
+                </router-link>
+            </v-list-item>
+            <!-- Sale Menu END -->
+
+            <!-- Accounting (Ledger Accounts / Income & Expense) Menu -->
+            <v-list-group class="" v-if="can(['ledger-accounts.view']) || can(['income-expenses.view'])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-money-bill-transfer"></i>
+                            </span>
+                            Accounting
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
+                    <router-link :to="{ name: 'admin_income_expenses_list' }" class="custom_router_sub_link"
+                        v-if="can(['income-expenses.view'])">
+                        <span class="ml-3">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Income &amp; Expenses
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_ledger_accounts_list' }" class="custom_router_sub_link"
+                        v-if="can(['ledger-accounts.view'])">
+                        <span class="ml-3">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Ledger Accounts
+                        </span>
+                    </router-link>
+                </div>
+            </v-list-group>
+
             <v-list-item class="" v-if="can(['prescription-list', 'prescription-create', 'prescription-view'])">
                 <router-link :to="{ name: 'admin_prescription' }" class="custom_router_link">
                     <span class="sidebar-menu-icon">

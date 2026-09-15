@@ -228,6 +228,102 @@ const routes = [
             },
             /* ====================== Purchase Route END ====================== */
 
+            /* ====================== Sale Route START ====================== */
+            {
+                path: 'sales',
+                name: 'admin_sales_list',
+                component: () => import('@/views/sales/Index.vue'),
+                meta: {
+                    title: 'All Sale List',
+                    permissions: ['sales.view']
+                }
+            },
+
+            {
+                path: 'sale-add',
+                name: 'admin_sale_add',
+                component: () => import('@/views/sales/Add.vue'),
+                meta: {
+                    title: 'Add Sale',
+                    permissions: ['sales.create']
+                }
+            },
+
+            {
+                path: 'sale-edit/:id',
+                name: 'admin_sale_edit',
+                component: () => import('@/views/sales/Edit.vue'),
+                meta: {
+                    title: 'Edit Sale',
+                    permissions: ['sales.update']
+                }
+            },
+            /* ====================== Sale Route END ====================== */
+
+            /* ====================== Ledger Account Route START ====================== */
+            {
+                path: 'ledger-accounts',
+                name: 'admin_ledger_accounts_list',
+                component: () => import('@/views/ledger-accounts/Index.vue'),
+                meta: {
+                    title: 'Ledger Accounts',
+                    permissions: ['ledger-accounts.view']
+                }
+            },
+
+            {
+                path: 'ledger-account-add',
+                name: 'admin_ledger_account_add',
+                component: () => import('@/views/ledger-accounts/Add.vue'),
+                meta: {
+                    title: 'Add Ledger Account',
+                    permissions: ['ledger-accounts.create']
+                }
+            },
+
+            {
+                path: 'ledger-account-edit/:id',
+                name: 'admin_ledger_account_edit',
+                component: () => import('@/views/ledger-accounts/Edit.vue'),
+                meta: {
+                    title: 'Edit Ledger Account',
+                    permissions: ['ledger-accounts.update']
+                }
+            },
+            /* ====================== Ledger Account Route END ====================== */
+
+            /* ====================== Income/Expense Route START ====================== */
+            {
+                path: 'income-expenses',
+                name: 'admin_income_expenses_list',
+                component: () => import('@/views/income-expenses/Index.vue'),
+                meta: {
+                    title: 'Income & Expenses',
+                    permissions: ['income-expenses.view']
+                }
+            },
+
+            {
+                path: 'income-expense-add',
+                name: 'admin_income_expense_add',
+                component: () => import('@/views/income-expenses/Add.vue'),
+                meta: {
+                    title: 'Add Income / Expense Entry',
+                    permissions: ['income-expenses.create']
+                }
+            },
+
+            {
+                path: 'income-expense-edit/:id',
+                name: 'admin_income_expense_edit',
+                component: () => import('@/views/income-expenses/Edit.vue'),
+                meta: {
+                    title: 'Edit Income / Expense Entry',
+                    permissions: ['income-expenses.update']
+                }
+            },
+            /* ====================== Income/Expense Route END ====================== */
+
             {
                 path: 'profile',
                 name: 'admin_profile',

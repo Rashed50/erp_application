@@ -1,6 +1,6 @@
 <template lang="html">
-    <Breadcrumb title="All Purchases" buttonText="Add Purchase" :buttonLink="{ name: 'admin_purchase_add' }"
-        buttonIcon="fa-solid fa-cart-plus" />
+    <Breadcrumb title="All Sales" buttonText="Add Sale" :buttonLink="{ name: 'admin_sale_add' }"
+        buttonIcon="fa-solid fa-file-invoice-dollar" />
 
     <div class="main-content-wrapper mt-4">
         <div class="container-fluid">
@@ -12,10 +12,10 @@
                         <div class="row align-items-center">
                             <div class="col-md-4"></div>
                             <div class="col-md-3">
-                                <select class="form-select" v-model="filters.supplier_id">
-                                    <option value="">All Suppliers</option>
-                                    <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">
-                                        {{ supplier.name }}
+                                <select class="form-select" v-model="filters.customer_id">
+                                    <option value="">All Customers</option>
+                                    <option v-for="customer in customers" :key="customer.id" :value="customer.id">
+                                        {{ customer.name }}
                                     </option>
                                 </select>
                             </div>
@@ -42,9 +42,8 @@
                             <tr>
                                 <th class="text-left">#</th>
                                 <th class="text-left">Invoice No</th>
-                                <th class="text-left">Supplier</th>
-                                <th class="text-left">Type</th>
-                                <th class="text-left">Purchase Date</th>
+                                <th class="text-left">Customer</th>
+                                <th class="text-left">Issue Date</th>
                                 <th class="text-right">Net Total</th>
                                 <th class="text-right">Due</th>
                                 <th class="text-center">Action</th>
@@ -54,7 +53,7 @@
 
                             <!-- Loading State with Vuetify Spinner -->
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="7" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     Loading...
                                 </td>
@@ -62,7 +61,7 @@
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="7" class="text-center py-4">
                                     No records found.
                                 </td>
                             </tr>
@@ -71,9 +70,8 @@
                             <tr v-else v-for="(item, index) in items" :key="item.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
                                 <td>{{ item.invoice_number }}</td>
-                                <td>{{ item.supplier_name }}</td>
-                                <td class="text-capitalize">{{ item.purchase_type }}</td>
-                                <td>{{ item.purchase_date }}</td>
+                                <td>{{ item.customer_name }}</td>
+                                <td>{{ item.issue_date }}</td>
                                 <td class="text-right">{{ Number(item.net_total).toFixed(2) }}</td>
                                 <td class="text-right">
                                     <span :class="item.due_amount > 0 ? 'badge bg-danger' : 'badge bg-success'">
@@ -89,13 +87,13 @@
                                             </button>
                                         </template>
                                         <ul class="table-action-menu">
-                                            <li class="menu-item" v-if="item.due_amount > 0 && can(['purchase-payments.create'])">
+                                            <li class="menu-item" v-if="item.due_amount > 0 && can(['sale-payments.create'])">
                                                 <button type="button" class="menu-link" @click="openPaymentDialog(item)">
                                                     Record Payment
                                                 </button>
                                             </li>
                                             <li class="menu-item">
-                                                <router-link :to="{ name: 'admin_purchase_edit', params: { id: item.id } }"
+                                                <router-link :to="{ name: 'admin_sale_edit', params: { id: item.id } }"
                                                     class="menu-link">
                                                     Edit
                                                 </router-link>
@@ -120,8 +118,8 @@
                 </div>
             </v-card>
 
-            <PaymentDialog v-model="paymentDialogOpen" :endpoint="`/api/purchases/${selectedPurchase?.id}/payments`"
-                :due-amount="selectedPurchase?.due_amount ?? 0" title="Record Bill Payment" @recorded="fetchData" />
+            <PaymentDialog v-model="paymentDialogOpen" :endpoint="`/api/sales/${selectedSale?.id}/payments`"
+                :due-amount="selectedSale?.due_amount ?? 0" title="Record Payment Received" @recorded="fetchData" />
 
         </div>
     </div>
@@ -149,26 +147,26 @@ const {
     changePage,
     changePerPage,
     resetFilters,
-} = usePaginatedFetch('/api/purchases', {
+} = usePaginatedFetch('/api/sales', {
     search: '',
-    supplier_id: '',
+    customer_id: '',
 })
 
-// supplier dropdown for the filter
-const { items: suppliers, fetchData: loadSuppliers } = useFetch('/api/suppliers', { per_page: 100 })
+// customer dropdown for the filter
+const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
 
 const paymentDialogOpen = ref(false)
-const selectedPurchase = ref(null)
+const selectedSale = ref(null)
 
 const openPaymentDialog = (item) => {
-    selectedPurchase.value = item
+    selectedSale.value = item
     paymentDialogOpen.value = true
 }
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({
         title: 'Are you sure?',
-        text: `Delete purchase "${item.invoice_number}"? This reverses its supplier ledger entry.`,
+        text: `Delete sale "${item.invoice_number}"? This reverses its customer ledger entry.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Yes, delete',
@@ -178,19 +176,19 @@ const handleDelete = async (item) => {
     if (!result.isConfirmed) return
 
     try {
-        const resp = await axios.delete(`/api/purchases/${item.id}`)
+        const resp = await axios.delete(`/api/sales/${item.id}`)
         if (resp.data.success) {
             toast.success(resp.data.message)
             fetchData()
         }
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete purchase.')
+        toast.error(e.response?.data?.message || 'Failed to delete sale.')
     }
 }
 
 onMounted(() => {
     fetchData()
-    loadSuppliers()
+    loadCustomers()
 })
 
 </script>

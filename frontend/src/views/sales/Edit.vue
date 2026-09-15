@@ -1,5 +1,5 @@
 <template lang="html">
-    <Breadcrumb title="Edit Purchase" buttonText="Back Purchases" :buttonLink="{ name: 'admin_purchases_list' }"
+    <Breadcrumb title="Edit Sale" buttonText="Back Sales" :buttonLink="{ name: 'admin_sales_list' }"
         buttonIcon="list" />
 
     <div class="main-content-wrapper mt-4">
@@ -12,20 +12,9 @@
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label>Supplier:</label>
-                                        <input type="text" class="form-control" :value="supplierName" disabled />
-                                        <small class="text-muted">A purchase's supplier cannot be changed after creation.</small>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="purchase_type">Purchase Type:</label>
-                                        <select id="purchase_type" class="form-control" v-model="form.purchase_type" required>
-                                            <option value="product">Product</option>
-                                            <option value="service">Service</option>
-                                        </select>
-                                        <div v-if="errors.purchase_type" class="error-msg">{{ errors.purchase_type }}</div>
+                                        <label>Customer:</label>
+                                        <input type="text" class="form-control" :value="customerName" disabled />
+                                        <small class="text-muted">A sale's customer cannot be changed after creation.</small>
                                     </div>
                                 </div>
 
@@ -49,10 +38,9 @@
 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="purchase_date">Purchase Date:</label>
-                                        <input type="date" id="purchase_date" class="form-control"
-                                            v-model="form.purchase_date" required />
-                                        <div v-if="errors.purchase_date" class="error-msg">{{ errors.purchase_date }}</div>
+                                        <label for="due_date">Due Date:</label>
+                                        <input type="date" id="due_date" class="form-control" v-model="form.due_date" />
+                                        <div v-if="errors.due_date" class="error-msg">{{ errors.due_date }}</div>
                                     </div>
                                 </div>
 
@@ -146,7 +134,7 @@
                                             </tr>
                                         </tbody>
                                     </table>
-                                    <small class="text-muted">Totals are recalculated by the server on save; the linked supplier ledger entry is kept in sync automatically. Reducing the total below the amount already paid is rejected.</small>
+                                    <small class="text-muted">Totals are recalculated by the server on save; the linked customer ledger entry is kept in sync automatically. Reducing the total below the amount already paid is rejected.</small>
                                 </div>
                             </div>
 
@@ -176,19 +164,18 @@ import { useRouter, useRoute } from 'vue-router';
 const router = useRouter();
 const route = useRoute();
 
-const supplierName = ref('')
+const customerName = ref('')
 const paidAmount = ref(0)
 const dueAmount = ref(0)
 
 const emptyItem = () => ({ item_name: '', description: '', qty: 1, unit_price: 0, discount: 0, vat: 0 })
 
-// supplier_id is intentionally not part of the submitted form — the backend
-// does not accept changing a purchase's supplier after creation.
+// customer_id is intentionally not part of the submitted form — the backend
+// does not accept changing a sale's customer after creation.
 const { form, errors, isSubmitting, submit } = useStoreForm({
-    purchase_type: 'product',
     invoice_number: '',
     issue_date: '',
-    purchase_date: '',
+    due_date: '',
     description: '',
     notes: '',
     items: [emptyItem()],
@@ -227,29 +214,28 @@ const totals = computed(() => {
 })
 
 const handleSubmit = async () => {
-    const resp = await submit(`/api/purchases/${route.params.id}`, 'put')
+    const resp = await submit(`/api/sales/${route.params.id}`, 'put')
 
     if (resp && resp.success) {
         setToast('success', resp.message)
-        router.push({ name: 'admin_purchases_list' })
+        router.push({ name: 'admin_sales_list' })
     }
 }
 
-const loadPurchase = async () => {
+const loadSale = async () => {
     try {
-        const { data } = await axios.get(`/api/purchases/${route.params.id}`)
+        const { data } = await axios.get(`/api/sales/${route.params.id}`)
         if (data.success) {
-            const purchase = data.data
-            supplierName.value = purchase.supplier_name
-            paidAmount.value = Number(purchase.paid_amount)
-            dueAmount.value = Number(purchase.due_amount)
-            form.purchase_type = purchase.purchase_type
-            form.invoice_number = purchase.invoice_number
-            form.issue_date = purchase.issue_date
-            form.purchase_date = purchase.purchase_date
-            form.description = purchase.description
-            form.notes = purchase.notes
-            form.items = (purchase.items ?? []).map((item) => ({
+            const sale = data.data
+            customerName.value = sale.customer_name
+            paidAmount.value = Number(sale.paid_amount)
+            dueAmount.value = Number(sale.due_amount)
+            form.invoice_number = sale.invoice_number
+            form.issue_date = sale.issue_date
+            form.due_date = sale.due_date
+            form.description = sale.description
+            form.notes = sale.notes
+            form.items = (sale.items ?? []).map((item) => ({
                 item_name: item.item_name,
                 description: item.description,
                 qty: item.qty,
@@ -265,6 +251,6 @@ const loadPurchase = async () => {
 }
 
 onMounted(() => {
-    loadPurchase()
+    loadSale()
 })
 </script>
