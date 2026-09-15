@@ -28,6 +28,17 @@ class PermissionSeeder extends Seeder
         'customer-transactions.view',
         'customer-transactions.create',
         'customer-transactions.delete',
+        'suppliers.view',
+        'suppliers.create',
+        'suppliers.update',
+        'suppliers.delete',
+        'supplier-transactions.view',
+        'supplier-transactions.create',
+        'supplier-transactions.delete',
+        'purchases.view',
+        'purchases.create',
+        'purchases.update',
+        'purchases.delete',
     ];
 
     /**

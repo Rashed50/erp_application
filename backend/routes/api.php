@@ -4,7 +4,10 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerTransactionController;
 use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\SupplierTransactionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UserRoleController;
 use App\Http\Resources\UserResource;
@@ -59,4 +62,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/customers/{customer}/transactions/{transaction}', [CustomerTransactionController::class, 'destroy'])
         ->name('customers.transactions.destroy')
         ->middleware('permission:customer-transactions.delete');
+
+    Route::apiResource('suppliers', SupplierController::class)
+        ->middlewareFor(['index', 'show'], 'permission:suppliers.view')
+        ->middlewareFor('store', 'permission:suppliers.create')
+        ->middlewareFor('update', 'permission:suppliers.update')
+        ->middlewareFor('destroy', 'permission:suppliers.delete');
+
+    Route::get('/suppliers/{supplier}/transactions', [SupplierTransactionController::class, 'index'])
+        ->name('suppliers.transactions.index')
+        ->middleware('permission:supplier-transactions.view');
+    Route::post('/suppliers/{supplier}/transactions', [SupplierTransactionController::class, 'store'])
+        ->name('suppliers.transactions.store')
+        ->middleware('permission:supplier-transactions.create');
+    Route::delete('/suppliers/{supplier}/transactions/{transaction}', [SupplierTransactionController::class, 'destroy'])
+        ->name('suppliers.transactions.destroy')
+        ->middleware('permission:supplier-transactions.delete');
+
+    Route::apiResource('purchases', PurchaseController::class)
+        ->middlewareFor(['index', 'show'], 'permission:purchases.view')
+        ->middlewareFor('store', 'permission:purchases.create')
+        ->middlewareFor('update', 'permission:purchases.update')
+        ->middlewareFor('destroy', 'permission:purchases.delete');
 });
