@@ -30,6 +30,9 @@ class SupplierResource extends JsonResource
             'active_status' => $this->active_status,
             'branch_office_id' => $this->branch_office_id,
             'transactions' => SupplierTransactionResource::collection($this->whenLoaded('transactions')),
+            'created_by' => $this->created_by,
+            'approved_by' => $this->approved_by,
+            'approved_at' => $this->approved_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

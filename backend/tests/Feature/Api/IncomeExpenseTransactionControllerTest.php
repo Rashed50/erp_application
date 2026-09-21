@@ -127,6 +127,6 @@ describe('destroy', function () {
             ->deleteJson("/api/income-expenses/{$transaction->id}")
             ->assertOk();
 
-        $this->assertDatabaseMissing('income_expense_transactions', ['id' => $transaction->id]);
+        $this->assertSoftDeleted('income_expense_transactions', ['id' => $transaction->id]);
     });
 });

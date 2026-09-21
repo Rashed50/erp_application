@@ -157,7 +157,7 @@ describe('destroy', function () {
             ->assertOk()
             ->assertJson(['success' => true, 'message' => 'Supplier deleted successfully.']);
 
-        $this->assertDatabaseMissing('suppliers', ['id' => $target->id]);
+        $this->assertSoftDeleted('suppliers', ['id' => $target->id]);
     });
 
     it('rejects deleting a supplier that has ledger transactions', function () {

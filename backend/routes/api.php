@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ApprovalController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerTransactionController;
@@ -115,4 +116,27 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('store', 'permission:income-expenses.create')
         ->middlewareFor('update', 'permission:income-expenses.update')
         ->middlewareFor('destroy', 'permission:income-expenses.delete');
+    Route::post('/customers/{customer}/approve', [ApprovalController::class, 'customer'])
+        ->name('customers.approve')
+        ->middleware('permission:customers.approve');
+
+    Route::post('/suppliers/{supplier}/approve', [ApprovalController::class, 'supplier'])
+        ->name('suppliers.approve')
+        ->middleware('permission:suppliers.approve');
+
+    Route::post('/purchases/{purchase}/approve', [ApprovalController::class, 'purchase'])
+        ->name('purchases.approve')
+        ->middleware('permission:purchases.approve');
+
+    Route::post('/sales/{sale}/approve', [ApprovalController::class, 'sale'])
+        ->name('sales.approve')
+        ->middleware('permission:sales.approve');
+
+    Route::post('/ledger-accounts/{ledger_account}/approve', [ApprovalController::class, 'ledgerAccount'])
+        ->name('ledger-accounts.approve')
+        ->middleware('permission:ledger-accounts.approve');
+
+    Route::post('/income-expenses/{income_expense}/approve', [ApprovalController::class, 'incomeExpense'])
+        ->name('income-expenses.approve')
+        ->middleware('permission:income-expenses.approve');
 });

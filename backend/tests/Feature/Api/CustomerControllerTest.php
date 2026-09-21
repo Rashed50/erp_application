@@ -158,7 +158,7 @@ describe('destroy', function () {
             ->assertOk()
             ->assertJson(['success' => true, 'message' => 'Customer deleted successfully.']);
 
-        $this->assertDatabaseMissing('customers', ['id' => $target->id]);
+        $this->assertSoftDeleted('customers', ['id' => $target->id]);
     });
 
     it('rejects deleting a customer that has ledger transactions', function () {

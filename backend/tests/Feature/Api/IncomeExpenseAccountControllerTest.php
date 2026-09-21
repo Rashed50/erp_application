@@ -80,7 +80,7 @@ describe('destroy', function () {
             ->deleteJson("/api/ledger-accounts/{$account->id}")
             ->assertOk();
 
-        $this->assertDatabaseMissing('income_expense_accounts', ['id' => $account->id]);
+        $this->assertSoftDeleted('income_expense_accounts', ['id' => $account->id]);
     });
 
     it('rejects deleting an account referenced by a transaction', function () {

@@ -53,6 +53,12 @@ class PermissionSeeder extends Seeder
         'income-expenses.create',
         'income-expenses.update',
         'income-expenses.delete',
+        'customers.approve',
+        'suppliers.approve',
+        'purchases.approve',
+        'sales.approve',
+        'ledger-accounts.approve',
+        'income-expenses.approve',
     ];
 
     /**

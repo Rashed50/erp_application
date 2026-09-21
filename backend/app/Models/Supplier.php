@@ -2,15 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Approvable;
+use App\Models\Concerns\RecordsDeleter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 
 class Supplier extends Model
 {
-    use HasFactory;
+    use Approvable, HasFactory, RecordsDeleter, SoftDeletes;
 
     protected $guarded = [];
 

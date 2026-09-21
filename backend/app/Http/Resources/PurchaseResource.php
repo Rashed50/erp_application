@@ -31,6 +31,9 @@ class PurchaseResource extends JsonResource
             'due_amount' => (float) $this->due_amount,
             'notes' => $this->notes,
             'items' => PurchaseItemResource::collection($this->whenLoaded('items')),
+            'created_by' => $this->created_by,
+            'approved_by' => $this->approved_by,
+            'approved_at' => $this->approved_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

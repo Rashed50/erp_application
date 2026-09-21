@@ -2,15 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Approvable;
+use App\Models\Concerns\RecordsDeleter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 
 class IncomeExpenseAccount extends Model
 {
-    use HasFactory;
+    use Approvable, HasFactory, RecordsDeleter, SoftDeletes;
 
     protected $guarded = [];
 
@@ -27,6 +31,11 @@ class IncomeExpenseAccount extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     /**
