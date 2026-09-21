@@ -3,6 +3,7 @@
     <v-navigation-drawer v-model="drawer" class="navigation__drawer">
         <div class="sidebar__header">
             <div class="identity">
+                
                 <p><span class="badge rounded-pill bg-success">{{ auth?.user?.roles?.[0] }}</span></p>
             </div>
         </div>
