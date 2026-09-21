@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-
 class IncomeExpenseTransaction extends Model
 {
     use Approvable, HasFactory, RecordsDeleter, SoftDeletes;
@@ -32,7 +31,7 @@ class IncomeExpenseTransaction extends Model
      */
     public function account(): BelongsTo
     {
-        return $this->belongsTo(IncomeExpenseAccount::class, 'income_expense_account_id');
+        return $this->belongsTo(ChartOfAccount::class, 'income_expense_account_id');
     }
 
     /**
@@ -40,7 +39,7 @@ class IncomeExpenseTransaction extends Model
      */
     public function paymentAccount(): BelongsTo
     {
-        return $this->belongsTo(IncomeExpenseAccount::class, 'payment_account_id');
+        return $this->belongsTo(ChartOfAccount::class, 'payment_account_id');
     }
 
     public function creator(): BelongsTo

@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\IncomeExpense;
 
-use App\Models\IncomeExpenseAccount;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,6 +9,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateIncomeExpenseTransactionRequest extends FormRequest
 {
+    use ValidatesEntryAccounts;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -30,8 +31,8 @@ class UpdateIncomeExpenseTransactionRequest extends FormRequest
     {
         return [
             'type' => ['sometimes', 'required', Rule::in(['income', 'expense'])],
-            'income_expense_account_id' => ['sometimes', 'required', 'different:payment_account_id', Rule::exists('income_expense_accounts', 'id')],
-            'payment_account_id' => ['sometimes', 'required', Rule::exists('income_expense_accounts', 'id')],
+            'income_expense_account_id' => ['sometimes', 'required', 'different:payment_account_id', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
+            'payment_account_id' => ['sometimes', 'required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
             'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'],
             'transaction_date' => ['sometimes', 'required', 'date'],
             'reference_no' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -51,19 +52,13 @@ class UpdateIncomeExpenseTransactionRequest extends FormRequest
             }
 
             $transaction = $this->route('income_expense');
-            $type = $this->input('type', $transaction->type);
-            $accountId = $this->input('income_expense_account_id', $transaction->income_expense_account_id);
-            $paymentAccountId = $this->input('payment_account_id', $transaction->payment_account_id);
 
-            $account = IncomeExpenseAccount::find($accountId);
-            if ($account && $account->type !== $type) {
-                $validator->errors()->add('income_expense_account_id', "This account is not a(n) {$type} account.");
-            }
-
-            $paymentAccount = IncomeExpenseAccount::find($paymentAccountId);
-            if ($paymentAccount && $paymentAccount->type !== 'asset') {
-                $validator->errors()->add('payment_account_id', 'The payment account must be an asset account.');
-            }
+            $this->validateEntryAccounts(
+                $validator,
+                $this->input('type', $transaction->type),
+                (int) $this->input('income_expense_account_id', $transaction->income_expense_account_id),
+                (int) $this->input('payment_account_id', $transaction->payment_account_id),
+            );
         });
     }
 }

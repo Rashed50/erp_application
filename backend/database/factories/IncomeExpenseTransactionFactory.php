@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\IncomeExpenseAccount;
+use App\Models\ChartOfAccount;
 use App\Models\IncomeExpenseTransaction;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -20,8 +20,8 @@ class IncomeExpenseTransactionFactory extends Factory
     {
         return [
             'type' => 'expense',
-            'income_expense_account_id' => IncomeExpenseAccount::factory()->expense(),
-            'payment_account_id' => IncomeExpenseAccount::factory()->asset(),
+            'income_expense_account_id' => ChartOfAccount::factory()->expense(),
+            'payment_account_id' => ChartOfAccount::factory()->asset(),
             'amount' => fake()->randomFloat(2, 100, 5000),
             'transaction_date' => fake()->date(),
             'reference_no' => fake()->optional()->bothify('REF-####'),
@@ -33,7 +33,7 @@ class IncomeExpenseTransactionFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'type' => 'income',
-            'income_expense_account_id' => IncomeExpenseAccount::factory()->income(),
+            'income_expense_account_id' => ChartOfAccount::factory()->revenue(),
         ]);
     }
 }

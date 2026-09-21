@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\AccountTypeController;
 use App\Http\Controllers\Api\ApprovalController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChartOfAccountController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerTransactionController;
-use App\Http\Controllers\Api\IncomeExpenseAccountController;
 use App\Http\Controllers\Api\IncomeExpenseTransactionController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\PurchaseController;
@@ -105,7 +106,11 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('sales.payments.store')
         ->middleware('permission:sale-payments.create');
 
-    Route::apiResource('ledger-accounts', IncomeExpenseAccountController::class)
+    Route::get('/account-types', [AccountTypeController::class, 'index'])
+        ->name('account-types.index')
+        ->middleware('permission:ledger-accounts.view');
+
+    Route::apiResource('ledger-accounts', ChartOfAccountController::class)
         ->middlewareFor(['index', 'show'], 'permission:ledger-accounts.view')
         ->middlewareFor('store', 'permission:ledger-accounts.create')
         ->middlewareFor('update', 'permission:ledger-accounts.update')

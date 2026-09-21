@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ChartOfAccountResource;
 use App\Http\Resources\CustomerResource;
-use App\Http\Resources\IncomeExpenseAccountResource;
 use App\Http\Resources\IncomeExpenseTransactionResource;
 use App\Http\Resources\PurchaseResource;
 use App\Http\Resources\SaleResource;
 use App\Http\Resources\SupplierResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\ChartOfAccount;
 use App\Models\Customer;
-use App\Models\IncomeExpenseAccount;
 use App\Models\IncomeExpenseTransaction;
 use App\Models\Purchase;
 use App\Models\Sale;
@@ -45,9 +45,9 @@ class ApprovalController extends Controller
         return $this->approve($sale, SaleResource::class);
     }
 
-    public function ledgerAccount(IncomeExpenseAccount $ledger_account): JsonResponse
+    public function ledgerAccount(ChartOfAccount $ledger_account): JsonResponse
     {
-        return $this->approve($ledger_account, IncomeExpenseAccountResource::class);
+        return $this->approve($ledger_account, ChartOfAccountResource::class);
     }
 
     public function incomeExpense(IncomeExpenseTransaction $income_expense): JsonResponse

@@ -1,7 +1,7 @@
 <?php
 
+use App\Models\ChartOfAccount;
 use App\Models\Customer;
-use App\Models\IncomeExpenseAccount;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
@@ -12,7 +12,7 @@ dataset('approvable resources', [
     'suppliers' => ['suppliers', fn () => Supplier::factory()->create()],
     'purchases' => ['purchases', fn () => Purchase::factory()->create()],
     'sales' => ['sales', fn () => Sale::factory()->create()],
-    'ledger-accounts' => ['ledger-accounts', fn () => IncomeExpenseAccount::factory()->create()],
+    'ledger-accounts' => ['ledger-accounts', fn () => ChartOfAccount::factory()->create()],
 ]);
 
 it('requires authentication to approve', function () {

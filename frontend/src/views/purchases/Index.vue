@@ -47,6 +47,7 @@
                                 <th class="text-left">Purchase Date</th>
                                 <th class="text-right">Net Total</th>
                                 <th class="text-right">Due</th>
+                                <th class="text-center">Approval</th>
                                 <th class="text-center">Action</th>
                             </tr>
                         </thead>
@@ -54,7 +55,7 @@
 
                             <!-- Loading State with Vuetify Spinner -->
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     Loading...
                                 </td>
@@ -62,7 +63,7 @@
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     No records found.
                                 </td>
                             </tr>
@@ -80,6 +81,9 @@
                                         {{ Number(item.due_amount).toFixed(2) }}
                                     </span>
                                 </td>
+                                <td class="text-center">
+                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
+                                </td>
                                 <!-- actions -->
                                 <td class="text-center">
                                     <v-menu>
@@ -89,6 +93,11 @@
                                             </button>
                                         </template>
                                         <ul class="table-action-menu">
+                                            <li class="menu-item" v-if="!item.approved_by && can(['purchases.approve'])">
+                                                <button type="button" class="menu-link" @click="approve(item, 'purchase')">
+                                                    Approve
+                                                </button>
+                                            </li>
                                             <li class="menu-item" v-if="item.due_amount > 0 && can(['purchase-payments.create'])">
                                                 <button type="button" class="menu-link" @click="openPaymentDialog(item)">
                                                     Record Payment
@@ -133,6 +142,8 @@ import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import ApprovalBadge from '@/components/common/ApprovalBadge.vue';
+import { useApproval } from '@/composables/useApproval';
 import PaymentDialog from '@/components/common/PaymentDialog.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { useFetch } from '@/composables/useFetch';
@@ -164,6 +175,8 @@ const openPaymentDialog = (item) => {
     selectedPurchase.value = item
     paymentDialogOpen.value = true
 }
+
+const { approve } = useApproval('/api/purchases', () => fetchData())
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({

@@ -266,7 +266,7 @@ const routes = [
                 name: 'admin_ledger_accounts_list',
                 component: () => import('@/views/ledger-accounts/Index.vue'),
                 meta: {
-                    title: 'Ledger Accounts',
+                    title: 'Chart of Accounts',
                     permissions: ['ledger-accounts.view']
                 }
             },
@@ -276,7 +276,7 @@ const routes = [
                 name: 'admin_ledger_account_add',
                 component: () => import('@/views/ledger-accounts/Add.vue'),
                 meta: {
-                    title: 'Add Ledger Account',
+                    title: 'Add Account',
                     permissions: ['ledger-accounts.create']
                 }
             },
@@ -286,7 +286,7 @@ const routes = [
                 name: 'admin_ledger_account_edit',
                 component: () => import('@/views/ledger-accounts/Edit.vue'),
                 meta: {
-                    title: 'Edit Ledger Account',
+                    title: 'Edit Account',
                     permissions: ['ledger-accounts.update']
                 }
             },

@@ -38,18 +38,19 @@
                                 <th class="text-left">Payment Account</th>
                                 <th class="text-right">Amount</th>
                                 <th class="text-left">Reference No</th>
+                                <th class="text-center">Approval</th>
                                 <th class="text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     Loading...
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="8" class="text-center py-4">No records found.</td>
+                                <td colspan="9" class="text-center py-4">No records found.</td>
                             </tr>
                             <tr v-else v-for="(item, index) in items" :key="item.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
@@ -64,6 +65,9 @@
                                 <td class="text-right">{{ Number(item.amount).toFixed(2) }}</td>
                                 <td>{{ item.reference_no }}</td>
                                 <td class="text-center">
+                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
+                                </td>
+                                <td class="text-center">
                                     <v-menu>
                                         <template v-slot:activator="{ props }">
                                             <button type="button" class="table-action-button" v-bind="props">
@@ -71,6 +75,11 @@
                                             </button>
                                         </template>
                                         <ul class="table-action-menu">
+                                            <li class="menu-item" v-if="!item.approved_by && can(['income-expenses.approve'])">
+                                                <button type="button" class="menu-link" @click="approve(item, 'entry')">
+                                                    Approve
+                                                </button>
+                                            </li>
                                             <li class="menu-item">
                                                 <router-link
                                                     :to="{ name: 'admin_income_expense_edit', params: { id: item.id } }"
@@ -107,7 +116,10 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
+import ApprovalBadge from '@/components/common/ApprovalBadge.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import { useApproval } from '@/composables/useApproval';
+import { usePermission } from '@/composables/usePermission';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 
 const {
@@ -125,6 +137,9 @@ const {
 })
 
 watch(() => [filters.type, filters.from_date, filters.to_date], fetchData)
+
+const { can } = usePermission()
+const { approve } = useApproval('/api/income-expenses', () => fetchData())
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({

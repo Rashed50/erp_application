@@ -98,7 +98,7 @@
                         v-if="can(['ledger-accounts.view'])">
                         <span class="ml-3">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Ledger Accounts
+                            Chart of Accounts
                         </span>
                     </router-link>
                 </div>

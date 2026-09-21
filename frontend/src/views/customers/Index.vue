@@ -45,6 +45,7 @@
                                 <th class="text-left">Phone</th>
                                 <th class="text-right">Balance</th>
                                 <th class="text-center">Status</th>
+                                <th class="text-center">Approval</th>
                                 <th class="text-center">Action</th>
                             </tr>
                         </thead>
@@ -52,7 +53,7 @@
 
                             <!-- Loading State with Vuetify Spinner -->
                             <tr v-if="loading">
-                                <td colspan="7" class="text-center py-4">
+                                <td colspan="8" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     Loading...
                                 </td>
@@ -60,7 +61,7 @@
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
-                                <td colspan="7" class="text-center py-4">
+                                <td colspan="8" class="text-center py-4">
                                     No records found.
                                 </td>
                             </tr>
@@ -77,6 +78,9 @@
                                         {{ item.active_status ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
+                                <td class="text-center">
+                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
+                                </td>
                                 <!-- actions -->
                                 <td class="text-center">
                                     <v-menu>
@@ -86,6 +90,11 @@
                                             </button>
                                         </template>
                                         <ul class="table-action-menu">
+                                            <li class="menu-item" v-if="!item.approved_by && can(['customers.approve'])">
+                                                <button type="button" class="menu-link" @click="approve(item, 'customer')">
+                                                    Approve
+                                                </button>
+                                            </li>
                                             <li class="menu-item">
                                                 <router-link :to="{ name: 'admin_customer_ledger', params: { id: item.id } }"
                                                     class="menu-link">
@@ -128,6 +137,9 @@ import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import { usePermission } from '@/composables/usePermission';
+import ApprovalBadge from '@/components/common/ApprovalBadge.vue';
+import { useApproval } from '@/composables/useApproval';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 
 const {
@@ -143,6 +155,9 @@ const {
     search: '',
     active_status: '',
 })
+
+const { can } = usePermission()
+const { approve } = useApproval('/api/customers', () => fetchData())
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({

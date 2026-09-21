@@ -39,7 +39,7 @@
                                             v-model="form.income_expense_account_id" required>
                                             <option value="" disabled>Select a Category</option>
                                             <option v-for="account in categoryAccounts" :key="account.id" :value="account.id">
-                                                {{ account.name }}
+                                                {{ account.account_number }} {{ account.name }}
                                             </option>
                                         </select>
                                         <div v-if="errors.income_expense_account_id" class="error-msg">{{ errors.income_expense_account_id }}</div>
@@ -53,7 +53,7 @@
                                             v-model="form.payment_account_id" required>
                                             <option value="" disabled>Select a Payment Account</option>
                                             <option v-for="account in assetAccounts" :key="account.id" :value="account.id">
-                                                {{ account.name }}
+                                                {{ account.account_number }} {{ account.name }}
                                             </option>
                                         </select>
                                         <div v-if="errors.payment_account_id" class="error-msg">{{ errors.payment_account_id }}</div>
@@ -123,12 +123,21 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
 })
 
 const { items: accounts, fetchData: loadAccounts } = useFetch('/api/ledger-accounts', {
-    per_page: 100,
+    per_page: 200,
     active_status: 1,
+    is_transaction: 1,
 })
 
-const categoryAccounts = computed(() => accounts.value.filter((a) => a.type === form.type))
-const assetAccounts = computed(() => accounts.value.filter((a) => a.type === 'asset'))
+// Account type ids as seeded by the backend (account_types table).
+const ASSET = 1
+const REVENUE = 4
+const EXPENSE = 5
+
+// Only open transaction accounts can receive entries. Income posts to a
+// revenue account, expense to an expense account, and payment is always an asset.
+const postable = computed(() => accounts.value.filter((a) => a.is_transaction && !a.is_closed))
+const categoryAccounts = computed(() => postable.value.filter((a) => a.account_type_id === (form.type === 'income' ? REVENUE : EXPENSE)))
+const assetAccounts = computed(() => postable.value.filter((a) => a.account_type_id === ASSET))
 
 // Only reset the category selection on a user-driven type change — not while
 // the existing entry is still being loaded into the form.
