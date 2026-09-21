@@ -2,7 +2,6 @@
     <!-- Menu Bar -->
     <v-navigation-drawer v-model="drawer" class="navigation__drawer">
         <div class="sidebar__header">
-            <img :src="static_image_path + 'default-logo.png'" alt="Logo" />
             <div class="identity">
                 <p><span class="badge rounded-pill bg-success">{{ auth?.user?.roles?.[0] }}</span></p>
             </div>
@@ -20,131 +19,127 @@
                 </router-link>
             </v-list-item>
 
-            <!-- Role Menu START -->
-            <v-list-group class="" v-if="
-                can(['users.view']) ||
-                can(['roles.view'])
-            ">
-                <template v-slot:activator="{ props }">
-                    <v-list-item v-bind="props">
-                        <div class="custom_dropdown_router_link custom_mb_10">
-                            <span class="sidebar-menu-icon">
-                                <i class="fa-solid fa-address-card"></i>
-                            </span>
-                            User Access
-                        </div>
-                    </v-list-item>
-                </template>
-                <div>
-                    <router-link :to="{ name: 'admin_users' }" class="custom_router_sub_link" v-if="can(['users.view'])">
-                        <span class="ml-3">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            User
-                        </span>
-                    </router-link>
-                    <router-link :to="{ name: 'admin_roles' }" class="custom_router_sub_link" v-if="can(['roles.view'])">
-                        <span class="ml-3">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Role
-                        </span>
-                    </router-link>
-                </div>
-            </v-list-group>
-
-
-
-
-            <!-- Role Menu END -->
-
-            <v-list-item class="" v-if="can(['prescription-list', 'prescription-create', 'prescription-view'])">
-                <router-link :to="{ name: 'admin_prescription' }" class="custom_router_link">
+            <!-- User Menu START -->
+            <v-list-item class="" v-if="can(['users.view'])">
+                <router-link :to="{ name: 'admin_users' }" class="custom_router_link">
                     <span class="sidebar-menu-icon">
-                        <i class="fa-solid fa-file-medical"></i>
+                        <i class="fa-solid fa-address-card"></i>
                     </span>
-                    Prescription
+                    User
                 </router-link>
             </v-list-item>
+            <!-- User Menu END -->
 
-            <v-list-item class="" v-if="can(['customer-list', 'customer-view', 'customer-create'])">
-                <router-link :to="{ name: 'admin_customers' }" class="custom_router_link">
-                    <span class="sidebar-menu-icon">
-                        <i class="fa-solid fa-users"></i>
-                    </span>
-                    Patient
-                </router-link>
-            </v-list-item>
-
-            <!-- Medicine (Product) Menu -->
-            <v-list-group class="" v-if="
-                can(['product-list']) ||
-                can(['medical-test-list']) ||
-                can(['question-answer-list'])
-            ">
+            <!-- Accounts Menu START -->
+            <v-list-group value="accounts" v-if="canAny([
+                'customers.view', 'sales.view', 'suppliers.view', 'purchases.view',
+                'ledger-accounts.view', 'income-expenses.view',
+            ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
                         <div class="custom_dropdown_router_link custom_mb_10">
                             <span class="sidebar-menu-icon">
-                                <i class="fa-solid fa-capsules"></i>
+                                <i class="fa-solid fa-wallet"></i>
                             </span>
-                            Medicine
+                            Accounts
                         </div>
                     </v-list-item>
                 </template>
-                <div>
-                    <router-link :to="{ name: 'admin_products' }" class="custom_router_sub_link"
-                        v-if="can(['product-list'])">
-                        <span class="ml-3">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Medicine List
-                        </span>
-                    </router-link>
-                    <!-- <router-link :to="{ name: 'medical_test' }" class="custom_router_sub_link"
-                        v-if="can(['medical-test-list'])">
-                        <span class="ml-3">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Medical Test
-                        </span>
-                    </router-link> -->
 
-                    <router-link :to="{ name: 'durations' }" class="custom_router_sub_link"
-                        v-if="can(['question-answer-list'])">
-                        <span class="ml-3">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Durations
-                        </span>
-                    </router-link>
-                </div>
-            </v-list-group>
-
-            <!-- Product Purchase START -->
-            <v-list-group class="" v-if="can(['purchase-list'])">
-                <template v-slot:activator="{ props }">
-                    <v-list-item v-bind="props">
-                        <div class="custom_dropdown_router_link custom_mb_10">
-                            <span class="sidebar-menu-icon">
-                                <i class="fa-solid fa-address-card"></i>
+                <!-- Customer & Sale -->
+                <v-list-group value="accounts-customer-sale"
+                    v-if="canAny(['customers.view', 'sales.view'])">
+                    <template v-slot:activator="{ props }">
+                        <v-list-item v-bind="props">
+                            <div class="custom_dropdown_router_link custom_mb_10 ml-3">
+                                <span class="sidebar-menu-icon">
+                                    <i class="fa-solid fa-people-arrows"></i>
+                                </span>
+                                Customer &amp; Sale
+                            </div>
+                        </v-list-item>
+                    </template>
+                    <div>
+                        <router-link :to="{ name: 'admin_customers_list' }" class="custom_router_sub_link"
+                            v-if="can(['customers.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Customers
                             </span>
-                            Stock Manage
-                        </div>
-                    </v-list-item>
-                </template>
-                <div>
-                    <router-link :to="{ name: 'admin_purchase_list' }" class="custom_router_sub_link">
-                        <span class="ml-3">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Stock In
-                        </span>
-                    </router-link>
-                    <router-link :to="{ name: 'admin_drop_reports' }" class="custom_router_sub_link">
-                        <span class="ml-3">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Stock Report
-                        </span>
-                    </router-link>
-                </div>
-            </v-list-group>
-            <!-- Product Purchase END -->
+                        </router-link>
+                        <router-link :to="{ name: 'admin_sales_list' }" class="custom_router_sub_link"
+                            v-if="can(['sales.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Sales
+                            </span>
+                        </router-link>
+                    </div>
+                </v-list-group>
 
+                <!-- Supplier & Purchase -->
+                <v-list-group value="accounts-supplier-purchase"
+                    v-if="canAny(['suppliers.view', 'purchases.view'])">
+                    <template v-slot:activator="{ props }">
+                        <v-list-item v-bind="props">
+                            <div class="custom_dropdown_router_link custom_mb_10 ml-3">
+                                <span class="sidebar-menu-icon">
+                                    <i class="fa-solid fa-truck-field"></i>
+                                </span>
+                                Supplier &amp; Purchase
+                            </div>
+                        </v-list-item>
+                    </template>
+                    <div>
+                        <router-link :to="{ name: 'admin_suppliers_list' }" class="custom_router_sub_link"
+                            v-if="can(['suppliers.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Suppliers
+                            </span>
+                        </router-link>
+                        <router-link :to="{ name: 'admin_purchases_list' }" class="custom_router_sub_link"
+                            v-if="can(['purchases.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Purchases
+                            </span>
+                        </router-link>
+                    </div>
+                </v-list-group>
+
+                <!-- Ledger Book -->
+                <v-list-group value="accounts-ledger-book"
+                    v-if="canAny(['ledger-accounts.view', 'income-expenses.view'])">
+                    <template v-slot:activator="{ props }">
+                        <v-list-item v-bind="props">
+                            <div class="custom_dropdown_router_link custom_mb_10 ml-3">
+                                <span class="sidebar-menu-icon">
+                                    <i class="fa-solid fa-book"></i>
+                                </span>
+                                Ledger Book
+                            </div>
+                        </v-list-item>
+                    </template>
+                    <div>
+                        <router-link :to="{ name: 'admin_income_expenses_list' }" class="custom_router_sub_link"
+                            v-if="can(['income-expenses.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Income &amp; Expenses
+                            </span>
+                        </router-link>
+                        <router-link :to="{ name: 'admin_ledger_accounts_list' }" class="custom_router_sub_link"
+                            v-if="can(['ledger-accounts.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Chart of Accounts
+                            </span>
+                        </router-link>
+                    </div>
+                </v-list-group>
+            </v-list-group>
+            <!-- Accounts Menu END -->
 
             <v-list-item class="" v-if="can(['settings-view'])">
                 <router-link :to="{ name: 'admin_settings' }" class="custom_router_link">
@@ -225,6 +220,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useRoute, useRouter } from 'vue-router';
 const route = useRoute();
 const { can } = usePermission()
+const canAny = (perms) => perms.some((p) => can([p]))
 
 // drawer state
 const drawer = ref(null)

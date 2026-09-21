@@ -1,5 +1,8 @@
 <template lang="html">
-    <Breadcrumb title="All User" buttonText="Add User" :buttonLink="{ name: 'admin_user_add' }" />
+    <Breadcrumb title="All User" :buttons="[
+        { text: 'Add User', link: { name: 'admin_user_add' }, icon: 'fa-solid fa-user-plus' },
+        { text: 'Roles', link: { name: 'admin_roles' }, icon: 'fa-solid fa-user-shield' }
+    ]" />
 
     <div class="main-content-wrapper mt-4">
         <div class="container-fluid">
@@ -8,31 +11,20 @@
             <v-card style="padding: 5px; margin-top: 15px;">
                 <div class="row">
                     <div class="col-md-12 mb-2">
-                        <div class="row">
+                        <div class="row align-items-center">
+                            <div class="col-md-8"></div>
                             <div class="col-md-4">
-                                <!-- excel -->
-                                <v-btn class="text-none text-white mr-2" color="green-darken-4" rounded="0"
-                                    variant="flat">
-                                    Excel
-                                </v-btn>
-                                <!-- print -->
-                                <v-btn class="text-none text-white mr-2" color="blue-darken-4" rounded="0"
-                                    variant="flat" @click="handlePrint">
-                                    Print
-                                </v-btn>
-                                <!-- refresh -->
-                                <v-btn @click.prevent="resetFilters" class="text-none text-white mr-2"
-                                    color="red-darken-4" rounded="0" variant="flat">
-                                    Reload
-                                </v-btn>
-                            </div>
-                            <div class="col-md-4"></div>
-                            <div class="col-md-4">
-                                <div class="search-wrapper">
+                                <div class="search-wrapper d-flex align-center gap-2">
                                     <v-text-field variant="outlined" density="compact" placeholder="Search..."
-                                        v-model="filters.search"></v-text-field>
-                                    <v-btn type="button" @click="fetchData" class="text-none text-white mr-2"
-                                        color="blue-darken-4" rounded="0" variant="flat">Search</v-btn>
+                                        v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
+                                    <v-btn type="button" @click="fetchData" class="text-none text-white"
+                                        color="blue-darken-3" rounded="0" variant="flat" min-width="100">
+                                        Search
+                                    </v-btn>
+                                    <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3"
+                                        rounded="0" variant="flat" min-width="100">
+                                        Reload
+                                    </v-btn>
                                 </div>
                             </div>
                         </div>
@@ -126,28 +118,8 @@
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
-import { usePrintable } from '@/composables/usePrintable'
 
 const search = ref('');
-
-// print section START
-const { printTable } = usePrintable()
-
-const handlePrint = () => {
-    if (!items.value.length) return
-    printTable({
-        title: 'সোসাইটির সক্রিয় সদস্যদের তালিকা',
-        columns: [
-            { label: '#', key: 'index', align: 'center' },
-            { label: 'Name', key: 'name' },
-            { label: 'Email', key: 'email' },
-            { label: 'Roles', key: 'roles' },
-        ],
-        items: items.value
-    })
-}
-// print section END
-
 
 const {
     items,

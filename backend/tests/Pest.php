@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /*
@@ -47,4 +49,17 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Create a user with the "Super Admin" role, which bypasses every permission
+ * check via the Gate::before hook in AppServiceProvider. Shared across
+ * feature tests that need an authenticated, fully-privileged actor.
+ */
+function adminUser(): User
+{
+    $user = User::factory()->create();
+    $user->assignRole(Role::findOrCreate('Super Admin', 'web'));
+
+    return $user;
 }
