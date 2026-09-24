@@ -228,6 +228,28 @@ const routes = [
             },
             /* ====================== Purchase Route END ====================== */
 
+            /* ====================== Supplier Payment Route START ====================== */
+            {
+                path: 'accounting/purchase/payment/list',
+                name: 'admin_supplier_payments_list',
+                component: () => import('@/views/supplier-payments/Index.vue'),
+                meta: {
+                    title: 'Supplier Payments',
+                    permissions: ['supplier-payments.view']
+                }
+            },
+
+            {
+                path: 'accounting/purchase/payment/index',
+                name: 'admin_supplier_payment_add',
+                component: () => import('@/views/supplier-payments/Add.vue'),
+                meta: {
+                    title: 'Supplier Payment',
+                    permissions: ['supplier-payments.create']
+                }
+            },
+            /* ====================== Supplier Payment Route END ====================== */
+
             /* ====================== Sale Route START ====================== */
             {
                 path: 'sales',
@@ -291,6 +313,28 @@ const routes = [
                 }
             },
             /* ====================== Ledger Account Route END ====================== */
+
+            /* ====================== Internal Fund Transfer Route START ====================== */
+            {
+                path: 'accounting/internal-fund-transfer',
+                name: 'admin_fund_transfer_add',
+                component: () => import('@/views/fund-transfers/Add.vue'),
+                meta: {
+                    title: 'Internal Fund Transfer',
+                    permissions: ['fund-transfers.create']
+                }
+            },
+
+            {
+                path: 'accounting/internal-fund-transfer/list',
+                name: 'admin_fund_transfers_list',
+                component: () => import('@/views/fund-transfers/Index.vue'),
+                meta: {
+                    title: 'Internal Fund Transfers',
+                    permissions: ['fund-transfers.view']
+                }
+            },
+            /* ====================== Internal Fund Transfer Route END ====================== */
 
             /* ====================== Income/Expense Route START ====================== */
             {

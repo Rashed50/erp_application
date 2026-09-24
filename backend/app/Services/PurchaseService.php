@@ -11,7 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseService
 {
-    public function __construct(private readonly SupplierTransactionService $supplierTransactionService) {}
+    public function __construct(
+        private readonly SupplierTransactionService $supplierTransactionService,
+        private readonly LedgerPostingService $ledgerPostingService,
+    ) {}
 
     public function paginate(int $perPage = 15, ?string $search = null, ?int $supplierId = null): LengthAwarePaginator
     {
@@ -68,7 +71,10 @@ class PurchaseService
                 'notes' => $data['description'] ?? null,
             ]);
 
-            $purchase->update(['supplier_transaction_id' => $transaction->id]);
+            $purchase->update([
+                'supplier_transaction_id' => $transaction->id,
+                'is_ledger_posted' => $this->postToLedger((float) $purchase->net_total),
+            ]);
 
             return $purchase->load(['items', 'supplier']);
         });
@@ -86,6 +92,7 @@ class PurchaseService
     {
         return DB::transaction(function () use ($purchase, $data) {
             $totals = isset($data['items']) ? LineItemTotalCalculator::calculate($data['items']) : null;
+            $previousNetTotal = (float) $purchase->net_total;
 
             if ($totals && $totals['net_total'] < $purchase->paid_amount) {
                 throw ValidationException::withMessages([
@@ -112,6 +119,10 @@ class PurchaseService
                 $purchase->items()->createMany($totals['items']);
             }
 
+            if ($purchase->is_ledger_posted && (float) $purchase->net_total !== $previousNetTotal) {
+                $this->postToLedger((float) $purchase->net_total - $previousNetTotal);
+            }
+
             if ($purchase->ledgerTransaction) {
                 $this->supplierTransactionService->updateAmounts($purchase->ledgerTransaction, [
                     'invoice_no' => $purchase->invoice_number,
@@ -136,34 +147,34 @@ class PurchaseService
                 $this->supplierTransactionService->reverse($purchase->ledgerTransaction);
             }
 
+            if ($purchase->is_ledger_posted) {
+                $this->postToLedger(-(float) $purchase->net_total);
+            }
+
             $purchase->delete();
         });
     }
 
     /**
-     * Record a payment against a purchase (a "Bill Payment"), posting a debit
-     * ledger entry that reduces what's owed to the supplier and tracking how
-     * much of the purchase has been paid so far.
+     * Post a purchase amount (negative to reverse) as a double entry: debit
+     * the Purchase expense account and credit Accounts Payable, mirroring the
+     * credit the purchase adds to the supplier ledger.
      *
-     * @param  array{amount: float, payment_date: string, notes?: ?string}  $data
+     * Returns false without posting when the predefined accounts have not
+     * been seeded, so purchases still work before the chart is set up.
      */
-    public function recordPayment(Purchase $purchase, array $data): Purchase
+    private function postToLedger(float $amount): bool
     {
-        return DB::transaction(function () use ($purchase, $data) {
-            $this->supplierTransactionService->create($purchase->supplier, [
-                'transaction_type' => 'Bill Payment',
-                'invoice_no' => $purchase->invoice_number,
-                'debit' => $data['amount'],
-                'transaction_date' => $data['payment_date'],
-                'notes' => $data['notes'] ?? null,
-            ]);
+        $purchaseAccount = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::PURCHASE_NUMBER);
+        $payableAccount = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER);
 
-            $purchase->update([
-                'paid_amount' => $purchase->paid_amount + $data['amount'],
-                'updated_by' => Auth::id(),
-            ]);
+        if (! $purchaseAccount || ! $payableAccount) {
+            return false;
+        }
 
-            return $purchase->load(['items', 'supplier']);
-        });
+        $this->ledgerPostingService->debit($purchaseAccount, $amount);
+        $this->ledgerPostingService->credit($payableAccount, $amount);
+
+        return true;
     }
 }

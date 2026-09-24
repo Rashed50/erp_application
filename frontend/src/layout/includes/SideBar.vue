@@ -33,7 +33,7 @@
             <!-- Accounts Menu START -->
             <v-list-group value="accounts" v-if="canAny([
                 'customers.view', 'sales.view', 'suppliers.view', 'purchases.view',
-                'ledger-accounts.view', 'income-expenses.view',
+                'supplier-payments.view', 'ledger-accounts.view', 'income-expenses.view', 'fund-transfers.view',
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -41,10 +41,58 @@
                             <span class="sidebar-menu-icon">
                                 <i class="fa-solid fa-wallet"></i>
                             </span>
-                            Accounts
+                            Accounting
                         </div>
                     </v-list-item>
                 </template>
+
+                <!-- Ledger Book -->
+                <v-list-group value="accounts-ledger-book"
+                    v-if="canAny(['ledger-accounts.view', 'income-expenses.view', 'fund-transfers.view'])">
+                    <template v-slot:activator="{ props }">
+                        <v-list-item v-bind="props">
+                            <div class="custom_dropdown_router_link custom_mb_10 ml-3">
+                                <span class="sidebar-menu-icon">
+                                    <i class="fa-solid fa-book"></i>
+                                </span>
+                                Ledger Book
+                            </div>
+                        </v-list-item>
+                    </template>
+                    <div>
+                        <router-link :to="{ name: 'admin_ledger_accounts_list' }" class="custom_router_sub_link"
+                            v-if="can(['ledger-accounts.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                General Ledger
+                            </span>
+                        </router-link>
+
+                        <router-link :to="{ name: 'admin_income_expenses_list' }" class="custom_router_sub_link"
+                            v-if="can(['income-expenses.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Income &amp; Expenses
+                            </span>
+                        </router-link>
+
+                        <router-link :to="{ name: 'admin_fund_transfer_add' }" class="custom_router_sub_link"
+                            v-if="can(['fund-transfers.create'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Internal Fund Transfer
+                            </span>
+                        </router-link>
+
+                        <router-link :to="{ name: 'admin_fund_transfers_list' }" class="custom_router_sub_link"
+                            v-if="can(['fund-transfers.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Fund Transfer List
+                            </span>
+                        </router-link>
+                    </div>
+                </v-list-group>
 
                 <!-- Customer & Sale -->
                 <v-list-group value="accounts-customer-sale"
@@ -79,7 +127,7 @@
 
                 <!-- Supplier & Purchase -->
                 <v-list-group value="accounts-supplier-purchase"
-                    v-if="canAny(['suppliers.view', 'purchases.view'])">
+                    v-if="canAny(['suppliers.view', 'purchases.view', 'supplier-payments.view'])">
                     <template v-slot:activator="{ props }">
                         <v-list-item v-bind="props">
                             <div class="custom_dropdown_router_link custom_mb_10 ml-3">
@@ -105,39 +153,24 @@
                                 Purchases
                             </span>
                         </router-link>
+                        <router-link :to="{ name: 'admin_supplier_payment_add' }" class="custom_router_sub_link"
+                            v-if="can(['supplier-payments.create'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Purchase Payment
+                            </span>
+                        </router-link>
+                        <router-link :to="{ name: 'admin_supplier_payments_list' }" class="custom_router_sub_link"
+                            v-if="can(['supplier-payments.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Purchase Payment List
+                            </span>
+                        </router-link>
                     </div>
                 </v-list-group>
 
-                <!-- Ledger Book -->
-                <v-list-group value="accounts-ledger-book"
-                    v-if="canAny(['ledger-accounts.view', 'income-expenses.view'])">
-                    <template v-slot:activator="{ props }">
-                        <v-list-item v-bind="props">
-                            <div class="custom_dropdown_router_link custom_mb_10 ml-3">
-                                <span class="sidebar-menu-icon">
-                                    <i class="fa-solid fa-book"></i>
-                                </span>
-                                Ledger Book
-                            </div>
-                        </v-list-item>
-                    </template>
-                    <div>
-                        <router-link :to="{ name: 'admin_income_expenses_list' }" class="custom_router_sub_link"
-                            v-if="can(['income-expenses.view'])">
-                            <span class="ml-5">
-                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Income &amp; Expenses
-                            </span>
-                        </router-link>
-                        <router-link :to="{ name: 'admin_ledger_accounts_list' }" class="custom_router_sub_link"
-                            v-if="can(['ledger-accounts.view'])">
-                            <span class="ml-5">
-                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Chart of Accounts
-                            </span>
-                        </router-link>
-                    </div>
-                </v-list-group>
+                
             </v-list-group>
             <!-- Accounts Menu END -->
 

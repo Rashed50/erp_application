@@ -11,7 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class SaleService
 {
-    public function __construct(private readonly CustomerTransactionService $customerTransactionService) {}
+    public function __construct(
+        private readonly CustomerTransactionService $customerTransactionService,
+        private readonly LedgerPostingService $ledgerPostingService,
+    ) {}
 
     public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null): LengthAwarePaginator
     {
@@ -67,7 +70,10 @@ class SaleService
                 'notes' => $data['description'] ?? null,
             ]);
 
-            $sale->update(['customer_transaction_id' => $transaction->id]);
+            $sale->update([
+                'customer_transaction_id' => $transaction->id,
+                'is_ledger_posted' => $this->postToLedger((float) $sale->net_total),
+            ]);
 
             return $sale->load(['items', 'customer']);
         });
@@ -84,6 +90,7 @@ class SaleService
     {
         return DB::transaction(function () use ($sale, $data) {
             $totals = isset($data['items']) ? LineItemTotalCalculator::calculate($data['items']) : null;
+            $previousNetTotal = (float) $sale->net_total;
 
             if ($totals && $totals['net_total'] < $sale->paid_amount) {
                 throw ValidationException::withMessages([
@@ -110,6 +117,10 @@ class SaleService
                 $sale->items()->createMany($totals['items']);
             }
 
+            if ($sale->is_ledger_posted && (float) $sale->net_total !== $previousNetTotal) {
+                $this->postToLedger((float) $sale->net_total - $previousNetTotal);
+            }
+
             if ($sale->ledgerTransaction) {
                 $this->customerTransactionService->updateAmounts($sale->ledgerTransaction, [
                     'invoice_no' => $sale->invoice_number,
@@ -134,6 +145,10 @@ class SaleService
                 $this->customerTransactionService->reverse($sale->ledgerTransaction);
             }
 
+            if ($sale->is_ledger_posted) {
+                $this->postToLedger(-(float) $sale->net_total);
+            }
+
             $sale->delete();
         });
     }
@@ -141,9 +156,10 @@ class SaleService
     /**
      * Record a payment received against a sale, posting a credit ledger
      * entry that reduces what the customer owes and tracking how much of
-     * the sale has been paid so far.
+     * the sale has been paid so far. The payment is also posted to the chart
+     * of accounts: debit the cash/bank account, credit Accounts Receivable.
      *
-     * @param  array{amount: float, payment_date: string, notes?: ?string}  $data
+     * @param  array{payment_account_id: int, amount: float, payment_date: string, notes?: ?string}  $data
      */
     public function recordPayment(Sale $sale, array $data): Sale
     {
@@ -152,6 +168,7 @@ class SaleService
                 'transaction_type' => 'Payment Received',
                 'invoice_no' => $sale->invoice_number,
                 'credit' => $data['amount'],
+                'payment_account_id' => $data['payment_account_id'],
                 'transaction_date' => $data['payment_date'],
                 'notes' => $data['notes'] ?? null,
             ]);
@@ -163,5 +180,28 @@ class SaleService
 
             return $sale->load(['items', 'customer']);
         });
+    }
+
+    /**
+     * Post a sale amount (negative to reverse) as a double entry: debit
+     * Accounts Receivable and credit Sales Revenue, mirroring the debit the
+     * sale adds to the customer ledger.
+     *
+     * Returns false without posting when the predefined accounts have not
+     * been seeded, so sales still work before the chart is set up.
+     */
+    private function postToLedger(float $amount): bool
+    {
+        $receivableAccount = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_RECEIVABLE_NUMBER);
+        $revenueAccount = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::SALES_REVENUE_NUMBER);
+
+        if (! $receivableAccount || ! $revenueAccount) {
+            return false;
+        }
+
+        $this->ledgerPostingService->debit($receivableAccount, $amount);
+        $this->ledgerPostingService->credit($revenueAccount, $amount);
+
+        return true;
     }
 }

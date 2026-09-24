@@ -11,6 +11,7 @@ class ChartOfAccountService
 {
     /**
      * @param  bool|null  $transactionOnly  Restrict to (non-)transaction accounts, or null for all.
+     * @param  bool|null  $closed  Restrict to closed or open accounts, or null for all.
      */
     public function paginate(
         int $perPage = 15,
@@ -19,14 +20,16 @@ class ChartOfAccountService
         ?int $parentId = null,
         ?bool $active = null,
         ?bool $transactionOnly = null,
+        ?bool $closed = null,
     ): LengthAwarePaginator {
         return ChartOfAccount::query()
-            ->with(['accountType:id,name', 'parent:id,name'])
+            ->with(['accountType:id,name', 'parent:id,name', 'creator:id,name'])
             ->when($search, fn ($query) => $query->search($search))
             ->when($accountTypeId, fn ($query) => $query->ofType($accountTypeId))
             ->when($parentId, fn ($query) => $query->where('parent_id', $parentId))
             ->when(! is_null($active), fn ($query) => $query->where('active_status', $active))
             ->when(! is_null($transactionOnly), fn ($query) => $query->where('is_transaction', $transactionOnly))
+            ->when(! is_null($closed), fn ($query) => $query->where('is_closed', $closed))
             ->orderBy('account_type_id')
             ->orderBy('account_number')
             ->orderBy('name')
@@ -39,7 +42,7 @@ class ChartOfAccountService
     }
 
     /**
-     * @param  array{name: string, account_number?: ?string, account_type_id?: ?int, parent_id?: ?int, opening_date?: ?string, is_transaction?: ?bool, active_status?: ?bool}  $data
+     * @param  array{name: string, account_number?: ?string, account_type_id?: ?int, parent_id?: ?int, opening_date?: ?string, balance?: ?float, is_transaction?: ?bool, active_status?: ?bool}  $data
      */
     public function create(array $data): ChartOfAccount
     {
@@ -50,6 +53,7 @@ class ChartOfAccountService
             'account_type_id' => $parent?->account_type_id ?? $data['account_type_id'],
             'sibling_level' => $parent ? $parent->sibling_level + 1 : 0,
             'opening_date' => $data['opening_date'] ?? today()->toDateString(),
+            'balance' => $data['balance'] ?? 0,
             'is_transaction' => $data['is_transaction'] ?? false,
             'active_status' => $data['active_status'] ?? true,
             'created_by' => Auth::id(),
@@ -81,6 +85,22 @@ class ChartOfAccountService
 
             return $this->find($account);
         });
+    }
+
+    /**
+     * Suggests the next child account number under a parent, e.g. `1000.3`
+     * for the third child of account `1000`, skipping numbers already taken.
+     */
+    public function nextChildAccountNumber(ChartOfAccount $parent): string
+    {
+        $sequence = ChartOfAccount::withTrashed()->where('parent_id', $parent->id)->count() + 1;
+
+        do {
+            $accountNumber = $parent->account_number ? "{$parent->account_number}.{$sequence}" : (string) $sequence;
+            $sequence++;
+        } while (ChartOfAccount::withTrashed()->where('account_number', $accountNumber)->exists());
+
+        return $accountNumber;
     }
 
     public function delete(ChartOfAccount $account): void

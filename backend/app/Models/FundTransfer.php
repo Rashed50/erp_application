@@ -7,10 +7,9 @@ use App\Models\Concerns\RecordsDeleter;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Purchase extends Model
+class FundTransfer extends Model
 {
     use Approvable, HasFactory, RecordsDeleter, SoftDeletes;
 
@@ -22,30 +21,28 @@ class Purchase extends Model
     protected function casts(): array
     {
         return [
-            'issue_date' => 'date',
-            'purchase_date' => 'date',
+            'transfer_date' => 'date',
+            'amount' => 'decimal:2',
+            'bank_charge' => 'decimal:2',
+            'vat' => 'decimal:2',
             'total_amount' => 'decimal:2',
-            'discount_amount' => 'decimal:2',
-            'vat_amount' => 'decimal:2',
-            'net_total' => 'decimal:2',
-            'paid_amount' => 'decimal:2',
-            'is_ledger_posted' => 'boolean',
         ];
     }
 
-    public function supplier(): BelongsTo
+    /**
+     * The sender account the money leaves from.
+     */
+    public function creditAccount(): BelongsTo
     {
-        return $this->belongsTo(Supplier::class);
+        return $this->belongsTo(ChartOfAccount::class, 'credit_account_id');
     }
 
-    public function ledgerTransaction(): BelongsTo
+    /**
+     * The receiver account the money arrives in.
+     */
+    public function debitAccount(): BelongsTo
     {
-        return $this->belongsTo(SupplierTransaction::class, 'supplier_transaction_id');
-    }
-
-    public function items(): HasMany
-    {
-        return $this->hasMany(PurchaseItem::class);
+        return $this->belongsTo(ChartOfAccount::class, 'debit_account_id');
     }
 
     public function creator(): BelongsTo
@@ -58,8 +55,11 @@ class Purchase extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    public function getDueAmountAttribute(): float
+    /**
+     * Bank charge plus VAT, posted together to the Bank Charges expense account.
+     */
+    public function charges(): float
     {
-        return (float) $this->net_total - (float) $this->paid_amount;
+        return (float) $this->bank_charge + (float) $this->vat;
     }
 }

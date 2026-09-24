@@ -130,7 +130,8 @@
             </v-card>
 
             <PaymentDialog v-model="paymentDialogOpen" :endpoint="`/api/purchases/${selectedPurchase?.id}/payments`"
-                :due-amount="selectedPurchase?.due_amount ?? 0" title="Record Bill Payment" @recorded="fetchData" />
+                :due-amount="selectedPurchase?.due_amount ?? 0" title="Record Bill Payment" with-payment-account
+                @recorded="fetchData" />
 
         </div>
     </div>

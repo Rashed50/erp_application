@@ -2,12 +2,17 @@
 
 namespace App\Http\Requests\Purchase;
 
+use App\Http\Requests\Concerns\ValidatesPaymentAccounts;
+use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePurchasePaymentRequest extends FormRequest
 {
+    use ValidatesPaymentAccounts;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -27,18 +32,24 @@ class StorePurchasePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'payment_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'payment_date' => ['required', 'date'],
+            'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string'],
         ];
     }
 
     /**
-     * A payment can never exceed what is still outstanding on the purchase.
+     * A payment can never exceed what is still outstanding on the purchase,
+     * and must leave an open cash/bank account.
      */
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            if (! $validator->errors()->has('payment_account_id')) {
+                $this->validatePaymentAccounts($validator, 'payment_account_id', (int) $this->input('payment_account_id'), [LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER]);
+            }
+
             if ($validator->errors()->has('amount')) {
                 return;
             }
