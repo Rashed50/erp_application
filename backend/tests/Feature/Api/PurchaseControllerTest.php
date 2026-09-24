@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ChartOfAccount;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
 use Database\Seeders\ChartOfAccountSeeder;
@@ -104,6 +105,38 @@ describe('store', function () {
             'transaction_type' => 'Purchase',
             'credit' => 88,
         ]);
+    });
+});
+
+describe('store with products', function () {
+    it('links a line item to the selected product', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $product = Product::factory()->create(['name' => 'Cement Bag']);
+
+        $response = $this->actingAs($actor, 'sanctum')->postJson('/api/purchases', purchasePayload($supplier->id, [
+            'items' => [
+                ['product_id' => $product->id, 'item_name' => 'Cement Bag', 'qty' => 2, 'unit_price' => 10],
+                ['item_name' => 'Custom item', 'qty' => 1, 'unit_price' => 5],
+            ],
+        ]));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.items.0.product_id', $product->id)
+            ->assertJsonPath('data.items.1.product_id', null);
+
+        $this->assertDatabaseHas('purchase_items', ['product_id' => $product->id, 'item_name' => 'Cement Bag']);
+    });
+
+    it('rejects a deleted product', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $product = Product::factory()->create();
+        $product->delete();
+
+        $this->actingAs($actor, 'sanctum')->postJson('/api/purchases', purchasePayload($supplier->id, [
+            'items' => [['product_id' => $product->id, 'item_name' => 'Gone', 'qty' => 1, 'unit_price' => 1]],
+        ]))->assertStatus(422);
     });
 });
 

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CustomerTransactionController;
 use App\Http\Controllers\Api\FundTransferController;
 use App\Http\Controllers\Api\IncomeExpenseTransactionController;
 use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\PurchasePaymentController;
 use App\Http\Controllers\Api\RoleController;
@@ -61,6 +62,12 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('store', 'permission:customers.create')
         ->middlewareFor('update', 'permission:customers.update')
         ->middlewareFor('destroy', 'permission:customers.delete');
+
+    Route::apiResource('products', ProductController::class)
+        ->middlewareFor(['index', 'show'], 'permission:products.view')
+        ->middlewareFor('store', 'permission:products.create')
+        ->middlewareFor('update', 'permission:products.update')
+        ->middlewareFor('destroy', 'permission:products.delete');
 
     Route::get('/customers/{customer}/transactions', [CustomerTransactionController::class, 'index'])
         ->name('customers.transactions.index')

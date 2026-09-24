@@ -250,6 +250,18 @@ const routes = [
             },
             /* ====================== Supplier Payment Route END ====================== */
 
+            /* ====================== Product Route START ====================== */
+            {
+                path: 'accounting/product/list',
+                name: 'admin_products_list',
+                component: () => import('@/views/products/Index.vue'),
+                meta: {
+                    title: 'Products',
+                    permissions: ['products.view']
+                }
+            },
+            /* ====================== Product Route END ====================== */
+
             /* ====================== Sale Route START ====================== */
             {
                 path: 'sales',
