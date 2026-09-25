@@ -25,6 +25,7 @@ class ChartOfAccountController extends Controller
             $request->filled('parent_id') ? $request->integer('parent_id') : null,
             $request->filled('active_status') ? $request->boolean('active_status') : null,
             $request->filled('is_transaction') ? $request->boolean('is_transaction') : null,
+            $request->filled('is_closed') ? $request->boolean('is_closed') : null,
         );
 
         return ApiResponse::success([
@@ -55,6 +56,13 @@ class ChartOfAccountController extends Controller
         $account = $this->accountService->update($ledger_account, $request->validated());
 
         return ApiResponse::success(new ChartOfAccountResource($account), 'Account updated successfully.');
+    }
+
+    public function nextAccountNumber(ChartOfAccount $ledger_account): JsonResponse
+    {
+        return ApiResponse::success([
+            'account_number' => $this->accountService->nextChildAccountNumber($ledger_account),
+        ]);
     }
 
     public function destroy(ChartOfAccount $ledger_account): JsonResponse

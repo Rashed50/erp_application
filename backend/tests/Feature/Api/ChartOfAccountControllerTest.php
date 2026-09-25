@@ -41,6 +41,35 @@ describe('index', function () {
         $this->actingAs($actor, 'sanctum')->getJson('/api/ledger-accounts?is_transaction=0')
             ->assertOk()->assertJsonCount(1, 'data.accounts');
     });
+
+    it('filters accounts by closed flag', function () {
+        $actor = adminUser();
+        ChartOfAccount::factory()->create(['is_closed' => true]);
+        ChartOfAccount::factory()->count(2)->create(['is_closed' => false]);
+
+        $this->actingAs($actor, 'sanctum')->getJson('/api/ledger-accounts?is_closed=0')
+            ->assertOk()->assertJsonCount(2, 'data.accounts');
+    });
+
+    it('searches accounts by account type name', function () {
+        $actor = adminUser();
+        ChartOfAccount::factory()->asset()->create();
+        ChartOfAccount::factory()->expense()->create();
+
+        $this->actingAs($actor, 'sanctum')->getJson('/api/ledger-accounts?search=Expense')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.accounts')
+            ->assertJsonPath('data.accounts.0.account_type', 'Expense');
+    });
+
+    it('includes the creator name', function () {
+        $actor = adminUser();
+        ChartOfAccount::factory()->create(['created_by' => $actor->id]);
+
+        $this->actingAs($actor, 'sanctum')->getJson('/api/ledger-accounts')
+            ->assertOk()
+            ->assertJsonPath('data.accounts.0.created_by_name', $actor->name);
+    });
 });
 
 describe('account types', function () {
@@ -127,6 +156,50 @@ describe('store', function () {
             ->postJson('/api/ledger-accounts', ['name' => 'Dup', 'account_number' => '1010', 'account_type_id' => AccountType::ASSET])
             ->assertStatus(422)
             ->assertJsonStructure(['data' => ['account_number']]);
+    });
+});
+
+describe('store opening balance', function () {
+    it('stores the opening balance as the account balance', function () {
+        $actor = adminUser();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/ledger-accounts', ['name' => 'Cash', 'account_type_id' => AccountType::ASSET, 'is_transaction' => true, 'balance' => 500])
+            ->assertStatus(201)
+            ->assertJsonPath('data.balance', 500);
+    });
+
+    it('rejects a negative opening balance', function () {
+        $actor = adminUser();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/ledger-accounts', ['name' => 'Cash', 'account_type_id' => AccountType::ASSET, 'balance' => -1])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['balance']]);
+    });
+});
+
+describe('next account number', function () {
+    it('suggests the next child number under the parent number', function () {
+        $actor = adminUser();
+        $group = ChartOfAccount::factory()->asset()->group()->create(['account_number' => '1000']);
+        ChartOfAccount::factory()->asset()->create(['parent_id' => $group->id, 'account_number' => '1000.1']);
+
+        $this->actingAs($actor, 'sanctum')
+            ->getJson("/api/ledger-accounts/{$group->id}/next-account-number")
+            ->assertOk()
+            ->assertJsonPath('data.account_number', '1000.2');
+    });
+
+    it('skips a number that is already taken', function () {
+        $actor = adminUser();
+        $group = ChartOfAccount::factory()->asset()->group()->create(['account_number' => '2000']);
+        ChartOfAccount::factory()->asset()->create(['account_number' => '2000.1']);
+
+        $this->actingAs($actor, 'sanctum')
+            ->getJson("/api/ledger-accounts/{$group->id}/next-account-number")
+            ->assertOk()
+            ->assertJsonPath('data.account_number', '2000.2');
     });
 });
 
@@ -244,7 +317,7 @@ describe('seeder', function () {
 
         $cash = ChartOfAccount::where('account_number', '1010')->first();
 
-        expect(ChartOfAccount::count())->toBe(31)
+        expect(ChartOfAccount::count())->toBe(32)
             ->and($cash->parent->account_number)->toBe('1000')
             ->and($cash->sibling_level)->toBe(1)
             ->and($cash->is_transaction)->toBeTrue()

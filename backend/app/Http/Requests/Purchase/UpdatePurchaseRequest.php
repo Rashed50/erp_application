@@ -41,6 +41,7 @@ class UpdatePurchaseRequest extends FormRequest
             'notes' => ['sometimes', 'nullable', 'string'],
 
             'items' => ['sometimes', 'required', 'array', 'min:1'],
+            'items.*.product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->withoutTrashed()],
             'items.*.item_name' => ['required', 'string', 'max:255'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],

@@ -69,6 +69,7 @@
                                 <table class="table table-bordered align-middle">
                                     <thead>
                                         <tr>
+                                            <th style="width: 200px;">Product</th>
                                             <th>Item Name</th>
                                             <th>Description</th>
                                             <th style="width: 90px;">Qty</th>
@@ -81,6 +82,14 @@
                                     </thead>
                                     <tbody>
                                         <tr v-for="(item, index) in form.items" :key="index">
+                                            <td>
+                                                <select class="form-control" v-model="item.product_id" @change="onProductChange(item)">
+                                                    <option value="">Custom item</option>
+                                                    <option v-for="product in products" :key="product.id" :value="product.id">
+                                                        {{ product.code }} - {{ product.name }}
+                                                    </option>
+                                                </select>
+                                            </td>
                                             <td><input type="text" class="form-control" v-model="item.item_name" required /></td>
                                             <td><input type="text" class="form-control" v-model="item.description" /></td>
                                             <td><input type="number" min="0.01" step="0.01" class="form-control" v-model.number="item.qty" required /></td>
@@ -157,6 +166,7 @@
 <script setup>
 import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
 import { useRouter, useRoute } from 'vue-router';
@@ -168,7 +178,7 @@ const customerName = ref('')
 const paidAmount = ref(0)
 const dueAmount = ref(0)
 
-const emptyItem = () => ({ item_name: '', description: '', qty: 1, unit_price: 0, discount: 0, vat: 0 })
+const emptyItem = () => ({ product_id: '', item_name: '', description: '', qty: 1, unit_price: 0, discount: 0, vat: 0 })
 
 // customer_id is intentionally not part of the submitted form — the backend
 // does not accept changing a sale's customer after creation.
@@ -180,6 +190,15 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     notes: '',
     items: [emptyItem()],
 })
+
+// Only active products are offered; a line can still be a free-text custom item.
+const { items: products, fetchData: loadProducts } = useFetch('/api/products', { per_page: 500, active_status: 1 })
+
+// Picking a product fills in its name, which is stored on the line as a snapshot.
+const onProductChange = (item) => {
+    const product = products.value.find((p) => p.id === item.product_id)
+    if (product) item.item_name = product.name
+}
 
 const addItem = () => form.items.push(emptyItem())
 const removeItem = (index) => {
@@ -236,6 +255,7 @@ const loadSale = async () => {
             form.description = sale.description
             form.notes = sale.notes
             form.items = (sale.items ?? []).map((item) => ({
+                product_id: item.product_id ?? '',
                 item_name: item.item_name,
                 description: item.description,
                 qty: item.qty,
@@ -252,5 +272,6 @@ const loadSale = async () => {
 
 onMounted(() => {
     loadSale()
+    loadProducts()
 })
 </script>

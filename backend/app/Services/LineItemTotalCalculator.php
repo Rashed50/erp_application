@@ -9,7 +9,7 @@ class LineItemTotalCalculator
      * Shared by SaleService and PurchaseService so the same money math can't
      * drift between the two — a client-supplied total is never trusted.
      *
-     * @param  array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>  $items
+     * @param  array<int, array{product_id?: ?int, item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>  $items
      * @return array{items: array<int, array<string, mixed>>, total_amount: float, discount_amount: float, vat_amount: float, net_total: float}
      */
     public static function calculate(array $items): array
@@ -32,6 +32,7 @@ class LineItemTotalCalculator
             $vatAmount += $vat;
 
             $computedItems[] = [
+                'product_id' => $item['product_id'] ?? null,
                 'item_name' => $item['item_name'],
                 'description' => $item['description'] ?? null,
                 'qty' => $qty,

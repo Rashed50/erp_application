@@ -30,6 +30,7 @@ class ChartOfAccountResource extends JsonResource
             'is_predefined' => $this->is_predefined,
             'is_closed' => $this->is_closed,
             'created_by' => $this->created_by,
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'approved_by' => $this->approved_by,
             'approved_at' => $this->approved_at,
             'created_at' => $this->created_at,

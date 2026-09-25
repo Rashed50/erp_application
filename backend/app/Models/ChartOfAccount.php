@@ -87,7 +87,8 @@ class ChartOfAccount extends Model
     {
         return $query->where(function (Builder $query) use ($search) {
             $query->where('name', 'like', "%{$search}%")
-                ->orWhere('account_number', 'like', "%{$search}%");
+                ->orWhere('account_number', 'like', "%{$search}%")
+                ->orWhereHas('accountType', fn (Builder $query) => $query->where('name', 'like', "%{$search}%"));
         });
     }
 

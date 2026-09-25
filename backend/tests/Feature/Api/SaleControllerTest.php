@@ -1,7 +1,20 @@
 <?php
 
+use App\Models\ChartOfAccount;
 use App\Models\Customer;
+use App\Models\Product;
 use App\Models\Sale;
+use Database\Seeders\ChartOfAccountSeeder;
+
+/**
+ * Seeds the predefined chart of accounts (idempotent) and returns the Cash in Hand account id.
+ */
+function saleCashAccountId(): int
+{
+    (new ChartOfAccountSeeder)->run();
+
+    return ChartOfAccount::query()->where('account_number', '1010')->value('id');
+}
 
 function salePayload(int $customerId, array $overrides = []): array
 {
@@ -103,6 +116,38 @@ describe('store', function () {
     });
 });
 
+describe('store with products', function () {
+    it('links a line item to the selected product', function () {
+        $actor = adminUser();
+        $customer = Customer::factory()->create();
+        $product = Product::factory()->create(['name' => 'Cement Bag']);
+
+        $response = $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id, [
+            'items' => [
+                ['product_id' => $product->id, 'item_name' => 'Cement Bag', 'qty' => 2, 'unit_price' => 10],
+                ['item_name' => 'Custom work', 'qty' => 1, 'unit_price' => 5],
+            ],
+        ]));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.items.0.product_id', $product->id)
+            ->assertJsonPath('data.items.1.product_id', null);
+
+        $this->assertDatabaseHas('sale_items', ['product_id' => $product->id, 'item_name' => 'Cement Bag']);
+    });
+
+    it('rejects a deleted product', function () {
+        $actor = adminUser();
+        $customer = Customer::factory()->create();
+        $product = Product::factory()->create();
+        $product->delete();
+
+        $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id, [
+            'items' => [['product_id' => $product->id, 'item_name' => 'Gone', 'qty' => 1, 'unit_price' => 1]],
+        ]))->assertStatus(422);
+    });
+});
+
 describe('update', function () {
     it('ignores a customer_id sent in the update payload', function () {
         $actor = adminUser();
@@ -152,7 +197,7 @@ describe('update', function () {
 
         // net_total is 88; pay 50 of it.
         $this->actingAs($actor, 'sanctum')
-            ->postJson("/api/sales/{$sale['id']}/payments", ['amount' => 50, 'payment_date' => now()->toDateString()])
+            ->postJson("/api/sales/{$sale['id']}/payments", ['payment_account_id' => saleCashAccountId(), 'amount' => 50, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
 
         $this->actingAs($actor, 'sanctum')
@@ -195,7 +240,7 @@ describe('payments', function () {
 
         // net_total is 88.
         $this->actingAs($actor, 'sanctum')
-            ->postJson("/api/sales/{$sale['id']}/payments", ['amount' => 200, 'payment_date' => now()->toDateString()])
+            ->postJson("/api/sales/{$sale['id']}/payments", ['payment_account_id' => saleCashAccountId(), 'amount' => 200, 'payment_date' => now()->toDateString()])
             ->assertStatus(422)
             ->assertJsonStructure(['data' => ['amount']]);
     });
@@ -210,6 +255,7 @@ describe('payments', function () {
         // net_total is 88.
         $response = $this->actingAs($actor, 'sanctum')
             ->postJson("/api/sales/{$sale['id']}/payments", [
+                'payment_account_id' => saleCashAccountId(),
                 'amount' => 30,
                 'payment_date' => now()->toDateString(),
                 'notes' => 'partial payment',
@@ -236,14 +282,117 @@ describe('payments', function () {
 
         // net_total is 88.
         $this->actingAs($actor, 'sanctum')
-            ->postJson("/api/sales/{$sale['id']}/payments", ['amount' => 58, 'payment_date' => now()->toDateString()])
+            ->postJson("/api/sales/{$sale['id']}/payments", ['payment_account_id' => saleCashAccountId(), 'amount' => 58, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
 
         $response = $this->actingAs($actor, 'sanctum')
-            ->postJson("/api/sales/{$sale['id']}/payments", ['amount' => 30, 'payment_date' => now()->toDateString()]);
+            ->postJson("/api/sales/{$sale['id']}/payments", ['payment_account_id' => saleCashAccountId(), 'amount' => 30, 'payment_date' => now()->toDateString()]);
 
         $response->assertStatus(201)
             ->assertJsonPath('data.paid_amount', 88)
             ->assertJsonPath('data.due_amount', 0);
+    });
+});
+
+describe('chart of account posting', function () {
+    beforeEach(function () {
+        $this->seed(ChartOfAccountSeeder::class);
+
+        $this->cash = ChartOfAccount::query()->where('account_number', '1010')->first();
+        $this->receivable = ChartOfAccount::query()->where('account_number', '1030')->first();
+        $this->revenue = ChartOfAccount::query()->where('account_number', '4010')->first();
+    });
+
+    it('debits Accounts Receivable and credits Sales Revenue with the net total', function () {
+        $saleId = $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/sales', salePayload(Customer::factory()->create()->id))
+            ->assertStatus(201)
+            ->json('data.id');
+
+        expect((float) $this->receivable->fresh()->balance)->toBe(88.0)
+            ->and((float) $this->revenue->fresh()->balance)->toBe(88.0)
+            ->and(Sale::find($saleId)->is_ledger_posted)->toBeTrue();
+    });
+
+    it('posts only the difference when the items change and reverses on delete', function () {
+        $actor = adminUser();
+        $saleId = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/sales', salePayload(Customer::factory()->create()->id))
+            ->json('data.id');
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/sales/{$saleId}", [
+                'items' => [['item_name' => 'Consulting', 'qty' => 20, 'unit_price' => 5, 'discount' => 0, 'vat' => 0]],
+            ])
+            ->assertOk();
+
+        expect((float) $this->receivable->fresh()->balance)->toBe(100.0)
+            ->and((float) $this->revenue->fresh()->balance)->toBe(100.0);
+
+        $this->actingAs($actor, 'sanctum')->deleteJson("/api/sales/{$saleId}")->assertOk();
+
+        expect((float) $this->receivable->fresh()->balance)->toBe(0.0)
+            ->and((float) $this->revenue->fresh()->balance)->toBe(0.0);
+    });
+
+    it('never reverses a sale that was created before posting existed', function () {
+        $sale = Sale::factory()->create(['is_ledger_posted' => false]);
+
+        $this->actingAs(adminUser(), 'sanctum')->deleteJson("/api/sales/{$sale->id}")->assertOk();
+
+        expect((float) $this->receivable->fresh()->balance)->toBe(0.0);
+    });
+
+    it('debits the cash account and nets Accounts Receivable to zero once paid', function () {
+        $actor = adminUser();
+        $saleId = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/sales', salePayload(Customer::factory()->create()->id))
+            ->json('data.id');
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 88, 'payment_date' => now()->toDateString()])
+            ->assertStatus(201);
+
+        expect((float) $this->cash->fresh()->balance)->toBe(88.0)
+            ->and((float) $this->receivable->fresh()->balance)->toBe(0.0);
+
+        $this->assertDatabaseHas('customer_transactions', [
+            'transaction_type' => 'Payment Received',
+            'payment_account_id' => $this->cash->id,
+            'credit' => 88,
+        ]);
+    });
+
+    it('reverses the cash posting when the payment ledger entry is reversed', function () {
+        $actor = adminUser();
+        $customer = Customer::factory()->create();
+        $saleId = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/sales', salePayload($customer->id))
+            ->json('data.id');
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 30, 'payment_date' => now()->toDateString()])
+            ->assertStatus(201);
+
+        $paymentEntryId = $customer->transactions()->where('transaction_type', 'Payment Received')->value('id');
+
+        $this->actingAs($actor, 'sanctum')
+            ->deleteJson("/api/customers/{$customer->id}/transactions/{$paymentEntryId}")
+            ->assertOk();
+
+        expect((float) $this->cash->fresh()->balance)->toBe(0.0)
+            ->and((float) $this->receivable->fresh()->balance)->toBe(88.0);
+    });
+
+    it('requires an open cash/bank payment account', function () {
+        $actor = adminUser();
+        $saleId = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/sales', salePayload(Customer::factory()->create()->id))
+            ->json('data.id');
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->revenue->id, 'amount' => 10, 'payment_date' => now()->toDateString()])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['payment_account_id']]);
     });
 });

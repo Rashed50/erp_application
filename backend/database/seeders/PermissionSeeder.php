@@ -25,6 +25,10 @@ class PermissionSeeder extends Seeder
         'customers.create',
         'customers.update',
         'customers.delete',
+        'products.view',
+        'products.create',
+        'products.update',
+        'products.delete',
         'customer-transactions.view',
         'customer-transactions.create',
         'customer-transactions.delete',
@@ -40,6 +44,12 @@ class PermissionSeeder extends Seeder
         'purchases.update',
         'purchases.delete',
         'purchase-payments.create',
+        'supplier-payments.view',
+        'supplier-payments.create',
+        'supplier-payments.delete',
+        'fund-transfers.view',
+        'fund-transfers.create',
+        'fund-transfers.delete',
         'sales.view',
         'sales.create',
         'sales.update',
@@ -59,6 +69,8 @@ class PermissionSeeder extends Seeder
         'sales.approve',
         'ledger-accounts.approve',
         'income-expenses.approve',
+        'supplier-payments.approve',
+        'fund-transfers.approve',
     ];
 
     /**

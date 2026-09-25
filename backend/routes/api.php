@@ -6,14 +6,17 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChartOfAccountController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerTransactionController;
+use App\Http\Controllers\Api\FundTransferController;
 use App\Http\Controllers\Api\IncomeExpenseTransactionController;
 use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\PurchasePaymentController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SalePaymentController;
 use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\SupplierPaymentController;
 use App\Http\Controllers\Api\SupplierTransactionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UserRoleController;
@@ -60,6 +63,12 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('update', 'permission:customers.update')
         ->middlewareFor('destroy', 'permission:customers.delete');
 
+    Route::apiResource('products', ProductController::class)
+        ->middlewareFor(['index', 'show'], 'permission:products.view')
+        ->middlewareFor('store', 'permission:products.create')
+        ->middlewareFor('update', 'permission:products.update')
+        ->middlewareFor('destroy', 'permission:products.delete');
+
     Route::get('/customers/{customer}/transactions', [CustomerTransactionController::class, 'index'])
         ->name('customers.transactions.index')
         ->middleware('permission:customer-transactions.view');
@@ -92,6 +101,44 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('update', 'permission:purchases.update')
         ->middlewareFor('destroy', 'permission:purchases.delete');
 
+    // Supplier (purchase bill) payments, at the same URLs as the payroll_software
+    // Account module's admin/accounting/purchase/payment/* pages.
+    Route::prefix('/accounting/purchase/payment')->name('supplier-payments.')->group(function () {
+        Route::get('/list', [SupplierPaymentController::class, 'index'])
+            ->name('index')
+            ->middleware('permission:supplier-payments.view');
+        Route::post('/store', [SupplierPaymentController::class, 'store'])
+            ->name('store')
+            ->middleware('permission:supplier-payments.create');
+        Route::get('/{supplier_payment}', [SupplierPaymentController::class, 'show'])
+            ->whereNumber('supplier_payment')
+            ->name('show')
+            ->middleware('permission:supplier-payments.view');
+        Route::delete('/{supplier_payment}', [SupplierPaymentController::class, 'destroy'])
+            ->whereNumber('supplier_payment')
+            ->name('destroy')
+            ->middleware('permission:supplier-payments.delete');
+    });
+
+    // Internal fund transfers, at the same URLs as the payroll_software Account
+    // module's admin/accounting/internal-fund-transfer* pages.
+    Route::prefix('/accounting')->name('fund-transfers.')->group(function () {
+        Route::get('/internal-fund-transfer/list', [FundTransferController::class, 'index'])
+            ->name('index')
+            ->middleware('permission:fund-transfers.view');
+        Route::post('/internal-fund-transfer-store', [FundTransferController::class, 'store'])
+            ->name('store')
+            ->middleware('permission:fund-transfers.create');
+        Route::get('/internal-fund-transfer/{fund_transfer}', [FundTransferController::class, 'show'])
+            ->whereNumber('fund_transfer')
+            ->name('show')
+            ->middleware('permission:fund-transfers.view');
+        Route::delete('/internal-fund-transfer/{fund_transfer}', [FundTransferController::class, 'destroy'])
+            ->whereNumber('fund_transfer')
+            ->name('destroy')
+            ->middleware('permission:fund-transfers.delete');
+    });
+
     Route::post('/purchases/{purchase}/payments', [PurchasePaymentController::class, 'store'])
         ->name('purchases.payments.store')
         ->middleware('permission:purchase-payments.create');
@@ -109,6 +156,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/account-types', [AccountTypeController::class, 'index'])
         ->name('account-types.index')
         ->middleware('permission:ledger-accounts.view');
+
+    Route::get('/ledger-accounts/{ledger_account}/next-account-number', [ChartOfAccountController::class, 'nextAccountNumber'])
+        ->name('ledger-accounts.next-account-number')
+        ->middleware('permission:ledger-accounts.create|ledger-accounts.update');
 
     Route::apiResource('ledger-accounts', ChartOfAccountController::class)
         ->middlewareFor(['index', 'show'], 'permission:ledger-accounts.view')
@@ -136,6 +187,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/sales/{sale}/approve', [ApprovalController::class, 'sale'])
         ->name('sales.approve')
         ->middleware('permission:sales.approve');
+
+    Route::post('/accounting/internal-fund-transfer/{fund_transfer}/approve', [ApprovalController::class, 'fundTransfer'])
+        ->name('fund-transfers.approve')
+        ->middleware('permission:fund-transfers.approve');
+
+    Route::post('/accounting/purchase/payment/{supplier_payment}/approve', [ApprovalController::class, 'supplierPayment'])
+        ->name('supplier-payments.approve')
+        ->middleware('permission:supplier-payments.approve');
 
     Route::post('/ledger-accounts/{ledger_account}/approve', [ApprovalController::class, 'ledgerAccount'])
         ->name('ledger-accounts.approve')

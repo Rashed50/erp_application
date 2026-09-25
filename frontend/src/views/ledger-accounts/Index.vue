@@ -11,9 +11,16 @@
                         <div class="row align-items-center">
                             <div class="col-md-3">
                                 <input type="text" class="form-control" v-model="filters.search"
-                                    placeholder="Search name or number" />
+                                    placeholder="Search name, number or type" />
                             </div>
-                            <div class="col-md-3"></div>
+                            <div class="col-md-1"></div>
+                            <div class="col-md-2">
+                                <select class="form-select" v-model="filters.is_closed">
+                                    <option value="">Open &amp; Closed</option>
+                                    <option value="0">Open only</option>
+                                    <option value="1">Closed only</option>
+                                </select>
+                            </div>
                             <div class="col-md-2">
                                 <select class="form-select" v-model="filters.account_type_id">
                                     <option value="">All Types</option>
@@ -43,44 +50,54 @@
                     <v-table class="custom-bordered">
                         <thead>
                             <tr>
-                                <th class="text-left">#</th>
-                                <th class="text-left">Number</th>
-                                <th class="text-left">Name</th>
+                                <th class="text-left">S.N</th>
                                 <th class="text-left">Type</th>
+                                <th class="text-left">Acc. Name</th>
+                                <th class="text-left">Number</th>
                                 <th class="text-left">Parent</th>
-                                <th class="text-right">Balance</th>
+                                <th class="text-left">Opening</th>
+                                <th class="text-center">Predefined</th>
                                 <th class="text-center">Status</th>
+                                <th class="text-center">Is Closed</th>
+                                <th class="text-left">Created</th>
                                 <th class="text-center">Approval</th>
-                                <th class="text-center">Action</th>
+                                <th class="text-center">Manage</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="9" class="text-center py-4">
+                                <td colspan="12" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     Loading...
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="9" class="text-center py-4">No records found.</td>
+                                <td colspan="12" class="text-center py-4">No data available in table</td>
                             </tr>
                             <tr v-else v-for="(item, index) in items" :key="item.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
-                                <td>{{ item.account_number }}</td>
+                                <td>
+                                    <span class="badge bg-primary p-2 w-100">{{ item.account_type }}</span>
+                                </td>
                                 <td :style="{ paddingLeft: `${item.sibling_level * 20 + 16}px` }">
                                     <span :class="{ 'fw-bold': !item.is_transaction }">{{ item.name }}</span>
                                     <span v-if="!item.is_transaction" class="badge bg-info text-dark ms-2">Group</span>
-                                    <span v-if="item.is_predefined" class="badge bg-secondary ms-1">Predefined</span>
-                                    <span v-if="item.is_closed" class="badge bg-dark ms-1">Closed</span>
                                 </td>
-                                <td>{{ item.account_type }}</td>
-                                <td>{{ item.parent_name }}</td>
-                                <td class="text-right">{{ Number(item.balance).toFixed(2) }}</td>
+                                <td>{{ item.account_number || 'N/A' }}</td>
+                                <td>{{ item.parent_name || 'N/A' }}</td>
+                                <td>{{ item.opening_date ? new Date(item.opening_date).toLocaleDateString() : 'N/A' }}</td>
+                                <td class="text-center">{{ item.is_predefined ? 'Yes' : 'No' }}</td>
                                 <td class="text-center">
                                     <span :class="item.active_status ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ item.active_status ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
+                                <td class="text-center">
+                                    <span :class="item.is_closed ? 'badge bg-dark' : ''">
+                                        {{ item.is_closed ? 'Yes' : 'No' }}
+                                    </span>
+                                </td>
+                                <td>{{ item.created_by_name || 'Unknown' }}</td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
                                 </td>
@@ -155,11 +172,12 @@ const {
     account_type_id: '',
     is_transaction: '',
     active_status: '',
+    is_closed: '0',
 }, { perPage: 50 })
 
 const { items: accountTypes, fetchData: loadAccountTypes } = useFetch('/api/account-types')
 
-watch(() => [filters.search, filters.account_type_id, filters.is_transaction, filters.active_status], fetchData)
+watch(() => [filters.search, filters.account_type_id, filters.is_transaction, filters.active_status, filters.is_closed], fetchData)
 
 const { approve } = useApproval('/api/ledger-accounts', () => fetchData())
 

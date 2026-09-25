@@ -35,6 +35,7 @@ class StoreChartOfAccountRequest extends FormRequest
             'account_type_id' => ['required_without:parent_id', 'nullable', Rule::exists('account_types', 'id')],
             'parent_id' => ['nullable', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
             'opening_date' => ['nullable', 'date'],
+            'balance' => ['nullable', 'numeric', 'min:0'],
             'is_transaction' => ['nullable', 'boolean'],
             'active_status' => ['nullable', 'boolean'],
         ];

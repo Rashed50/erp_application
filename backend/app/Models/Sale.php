@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-
 class Sale extends Model
 {
     use Approvable, HasFactory, RecordsDeleter, SoftDeletes;
@@ -30,6 +29,7 @@ class Sale extends Model
             'vat_amount' => 'decimal:2',
             'net_total' => 'decimal:2',
             'paid_amount' => 'decimal:2',
+            'is_ledger_posted' => 'boolean',
         ];
     }
 
