@@ -266,6 +266,82 @@
             </v-list-group>
             <!-- Accounts Menu END -->
 
+            <!-- HR Menu START -->
+            <v-list-group value="hr" v-if="canAny([
+                'employees.view', 'employees.create', 'employee-works.view', 'employee-works.create',
+                'payroll.view', 'payroll.generate', 'hr-reports.view',
+            ])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-people-group"></i>
+                            </span>
+                            HR
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
+                    <router-link :to="{ name: 'admin_hr_dashboard' }" class="custom_router_sub_link"
+                        v-if="canAny(['employees.view', 'payroll.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            HR Dashboard
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_employees_list' }" class="custom_router_sub_link"
+                        v-if="can(['employees.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Employees
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_employee_add' }" class="custom_router_sub_link"
+                        v-if="can(['employees.create'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Add Employee
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_works_entry' }" class="custom_router_sub_link"
+                        v-if="canAny(['employee-works.create', 'employee-works.update'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Monthly Work Entry
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_works_list' }" class="custom_router_sub_link"
+                        v-if="can(['employee-works.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Work History
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_payroll_generate' }" class="custom_router_sub_link"
+                        v-if="can(['payroll.generate'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Generate Salary
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_salary_sheet' }" class="custom_router_sub_link"
+                        v-if="can(['payroll.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Salary Sheet
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_reports' }" class="custom_router_sub_link"
+                        v-if="can(['hr-reports.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Reports
+                        </span>
+                    </router-link>
+                </div>
+            </v-list-group>
+            <!-- HR Menu END -->
+
             <v-list-item class="" v-if="can(['settings.update'])">
                 <router-link :to="{ name: 'admin_settings' }" class="custom_router_link">
                     <span class="sidebar-menu-icon">

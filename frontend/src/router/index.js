@@ -186,6 +186,108 @@ const routes = [
             },
             /* ====================== Work Order Route END ====================== */
 
+            /* ====================== HR Route START ====================== */
+            {
+                path: 'hr/dashboard',
+                name: 'admin_hr_dashboard',
+                component: () => import('@/views/hr/Dashboard.vue'),
+                meta: {
+                    title: 'HR Dashboard',
+                    permissions: ['employees.view', 'payroll.view']
+                }
+            },
+
+            {
+                path: 'hr/employees',
+                name: 'admin_hr_employees_list',
+                component: () => import('@/views/hr/employees/Index.vue'),
+                meta: {
+                    title: 'Employees',
+                    permissions: ['employees.view']
+                }
+            },
+
+            {
+                path: 'hr/employee-add',
+                name: 'admin_hr_employee_add',
+                component: () => import('@/views/hr/employees/Add.vue'),
+                meta: {
+                    title: 'Add Employee',
+                    permissions: ['employees.create']
+                }
+            },
+
+            {
+                path: 'hr/employee-edit/:id',
+                name: 'admin_hr_employee_edit',
+                component: () => import('@/views/hr/employees/Edit.vue'),
+                meta: {
+                    title: 'Edit Employee',
+                    permissions: ['employees.update']
+                }
+            },
+
+            {
+                path: 'hr/employees/:id',
+                name: 'admin_hr_employee_show',
+                component: () => import('@/views/hr/employees/Show.vue'),
+                meta: {
+                    title: 'Employee Details',
+                    permissions: ['employees.view']
+                }
+            },
+
+            {
+                path: 'hr/work-history',
+                name: 'admin_hr_works_list',
+                component: () => import('@/views/hr/works/Index.vue'),
+                meta: {
+                    title: 'Monthly Work History',
+                    permissions: ['employee-works.view']
+                }
+            },
+
+            {
+                path: 'hr/work-entry',
+                name: 'admin_hr_works_entry',
+                component: () => import('@/views/hr/works/Entry.vue'),
+                meta: {
+                    title: 'Monthly Work Entry',
+                    permissions: ['employee-works.create', 'employee-works.update']
+                }
+            },
+
+            {
+                path: 'hr/salary-generate',
+                name: 'admin_hr_payroll_generate',
+                component: () => import('@/views/hr/payroll/Generate.vue'),
+                meta: {
+                    title: 'Generate Salary',
+                    permissions: ['payroll.generate']
+                }
+            },
+
+            {
+                path: 'hr/salary-sheet',
+                name: 'admin_hr_salary_sheet',
+                component: () => import('@/views/hr/payroll/SalarySheet.vue'),
+                meta: {
+                    title: 'Salary Sheet',
+                    permissions: ['payroll.view']
+                }
+            },
+
+            {
+                path: 'hr/reports',
+                name: 'admin_hr_reports',
+                component: () => import('@/views/hr/reports/Index.vue'),
+                meta: {
+                    title: 'HR Reports',
+                    permissions: ['hr-reports.view']
+                }
+            },
+            /* ====================== HR Route END ====================== */
+
             /* ====================== Supplier Route START ====================== */
             {
                 path: 'suppliers',
