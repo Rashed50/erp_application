@@ -5,6 +5,7 @@ namespace App\Http\Requests\Customer;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCustomerTransactionRequest extends FormRequest
 {
@@ -28,6 +29,7 @@ class StoreCustomerTransactionRequest extends FormRequest
     {
         return [
             'transaction_type' => ['required', 'string', 'max:100'],
+            'work_order_id' => ['nullable', Rule::exists('work_orders', 'id')->where('customer_id', $this->route('customer')?->id)->withoutTrashed()],
             'invoice_no' => ['nullable', 'string', 'max:100'],
             'debit' => ['nullable', 'numeric', 'min:0'],
             'credit' => ['nullable', 'numeric', 'min:0'],

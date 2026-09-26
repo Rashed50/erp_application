@@ -62,6 +62,10 @@ class CustomerController extends Controller
             return ApiResponse::error('This customer has ledger transactions and cannot be deleted.', 422);
         }
 
+        if ($customer->hasWorkOrders()) {
+            return ApiResponse::error('This customer has work orders and cannot be deleted.', 422);
+        }
+
         $this->customerService->delete($customer);
 
         return ApiResponse::success(message: 'Customer deleted successfully.');

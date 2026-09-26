@@ -1,5 +1,5 @@
 <template lang="html">
-    <Breadcrumb title="Account Settings" />
+    <Breadcrumb title="Company Settings" />
 
     <div class="main-content-wrapper mt-4">
         <div class="container">
@@ -8,7 +8,7 @@
                     <v-card elevation="2" class="rounded-lg overflow-hidden">
                         <div class="bg-blue-darken-4 px-4 py-3 d-flex align-items-center">
                             <v-icon color="white" class="me-2">mdi-cog-outline</v-icon>
-                            <h5 class="mb-0 text-white font-weight-bold">Update Profile Settings</h5>
+                            <h5 class="mb-0 text-white font-weight-bold">Company Settings</h5>
                         </div>
 
                         <v-card-text class="p-4 p-md-5">
@@ -17,125 +17,66 @@
 
                                     <div class="col-12">
                                         <h6 class="text-blue-darken-4 fw-bold border-bottom pb-2 mb-3">
-                                            <i class="fas fa-user-circle me-2"></i>Personal Information
+                                            <i class="fas fa-building me-2"></i>Company Information
                                         </h6>
                                     </div>
 
-                                    <div class="col-md-6">
-                                        <label class="form-label custom-label">Full Name</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light border-end-0"><i
-                                                    class="fas fa-user text-muted"></i></span>
-                                            <input type="text" v-model="form.name"
-                                                class="form-control custom-input border-start-0"
-                                                placeholder="Enter full name">
-                                        </div>
-                                        <small v-if="errors.name" class="text-danger mt-1 d-block">{{ errors.name
-                                        }}</small>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <label class="form-label custom-label">Designation</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light border-end-0"><i
-                                                    class="fas fa-briefcase text-muted"></i></span>
-                                            <input type="text" v-model="form.designation"
-                                                class="form-control custom-input border-start-0"
-                                                placeholder="e.g. Medical Specialist">
-                                        </div>
-                                        <small v-if="errors.designation" class="text-danger mt-1 d-block">{{
-                                            errors.designation }}</small>
-                                    </div>
-
-                                    <div class="col-12 mt-4">
-                                        <h6 class="text-blue-darken-4 fw-bold border-bottom pb-2 mb-3">
-                                            <i class="fas fa-address-book me-2"></i>Contact & Professional Info
-                                        </h6>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label custom-label">Contact No</label>
-                                        <input type="text" v-model="form.contact_no" class="form-control custom-input"
-                                            placeholder="01XXXXXXXXX">
-                                        <small v-if="errors.contact_no" class="text-danger mt-1 d-block">{{
-                                            errors.contact_no }}</small>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label custom-label">Email Address</label>
-                                        <input type="email" v-model="form.email" class="form-control custom-input"
-                                            placeholder="example@mail.com">
-                                        <small v-if="errors.email" class="text-danger mt-1 d-block">{{ errors.email
-                                        }}</small>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label custom-label">Registration No</label>
-                                        <input type="text" v-model="form.regis_no" class="form-control custom-input"
-                                            placeholder="Reg-12345">
-                                        <small v-if="errors.regis_no" class="text-danger mt-1 d-block">{{
-                                            errors.regis_no }}</small>
-                                    </div>
-
                                     <div class="col-md-12">
-                                        <label class="form-label custom-label">Chamber Address</label>
-                                        <textarea v-model="form.chamber_address" class="form-control custom-input"
-                                            rows="2" placeholder="Enter full address"></textarea>
-                                        <small v-if="errors.chamber_address" class="text-danger mt-1 d-block">{{
-                                            errors.chamber_address }}</small>
-                                    </div>
-
-                                    <!-- company info -->
-                                    <div class="col-md-12">
-                                        <label class="form-label custom-label">Company Name</label>
+                                        <label class="form-label custom-label">Company Name <span
+                                                class="text-danger">*</span></label>
                                         <input type="text" v-model="form.company_name" class="form-control custom-input"
                                             placeholder="Enter company name">
                                         <small v-if="errors.company_name" class="text-danger mt-1 d-block">{{
                                             errors.company_name }}</small>
                                     </div>
 
+                                    <div class="col-md-6">
+                                        <label class="form-label custom-label">Email Address</label>
+                                        <input type="email" v-model="form.email" class="form-control custom-input"
+                                            placeholder="info@company.com">
+                                        <small v-if="errors.email" class="text-danger mt-1 d-block">{{ errors.email
+                                        }}</small>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label custom-label">Phone</label>
+                                        <input type="text" v-model="form.phone" class="form-control custom-input"
+                                            placeholder="01XXXXXXXXX">
+                                        <small v-if="errors.phone" class="text-danger mt-1 d-block">{{ errors.phone
+                                        }}</small>
+                                    </div>
+
                                     <div class="col-md-12">
-                                        <label class="form-label custom-label">Company Address</label>
-                                        <textarea v-model="form.company_description" class="form-control custom-input"
-                                            rows="2" placeholder="Enter company Address"></textarea>
-                                        <small v-if="errors.company_description" class="text-danger mt-1 d-block">{{
-                                            errors.company_description }}</small>
+                                        <label class="form-label custom-label">Address</label>
+                                        <textarea v-model="form.address" class="form-control custom-input" rows="2"
+                                            placeholder="Enter company address"></textarea>
+                                        <small v-if="errors.address" class="text-danger mt-1 d-block">{{
+                                            errors.address }}</small>
                                     </div>
 
                                     <div class="col-12 mt-4">
                                         <h6 class="text-blue-darken-4 fw-bold border-bottom pb-2 mb-3">
-                                            <i class="fas fa-image me-2"></i>Media & Branding
+                                            <i class="fas fa-image me-2"></i>Branding
                                         </h6>
                                     </div>
 
-
                                     <div class="col-md-6">
                                         <div class="upload-box p-3 border rounded bg-light">
-                                            <label class="form-label fw-bold">Official Logo</label>
-                                            <input type="file" class="form-control mb-2"
-                                                @change="e => form.logo = e.target.files[0]">
+                                            <label class="form-label fw-bold">Company Logo</label>
+                                            <input type="file" ref="logoInput" class="form-control mb-2"
+                                                accept=".jpg,.jpeg,.png,.webp,.svg" @change="handleLogoChange">
+                                            <small class="text-muted">JPG, PNG, WEBP or SVG, max 2MB.</small>
                                             <div class="preview-wrapper mt-2">
-                                                <img v-if="preview.logo" :src="preview.logo"
-                                                    class="img-thumbnail shadow-sm" style="max-height: 80px;">
-                                                <div v-else class="text-muted small">No logo uploaded</div>
+                                                <img :src="logoPreview || logoPlaceholder" :data-placeholder="logoPlaceholder"
+                                                    class="img-thumbnail shadow-sm" style="max-height: 80px;"
+                                                    alt="Logo preview">
                                             </div>
+                                            <v-btn v-if="logoPreview" size="small" variant="text" color="error"
+                                                class="text-none mt-1" @click="removeLogo">
+                                                Remove logo
+                                            </v-btn>
                                             <small v-if="errors.logo" class="text-danger d-block">{{ errors.logo
                                             }}</small>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="upload-box p-3 border rounded bg-light">
-                                            <label class="form-label fw-bold">Doctor's Signature</label>
-                                            <input type="file" class="form-control mb-2"
-                                                @change="e => form.signature = e.target.files[0]">
-                                            <div class="preview-wrapper mt-2">
-                                                <img v-if="preview.signature" :src="preview.signature"
-                                                    class="img-thumbnail shadow-sm" style="max-height: 80px;">
-                                                <div v-else class="text-muted small">No signature uploaded</div>
-                                            </div>
-                                            <small v-if="errors.signature" class="text-danger d-block">{{
-                                                errors.signature }}</small>
                                         </div>
                                     </div>
 
@@ -158,58 +99,95 @@
     </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import Breadcrumb from '@/components/common/Breadcrumb.vue'
-import { useStoreForm } from '@/composables/useStoreForm'
 import { toast } from 'vue3-toastify'
+import Breadcrumb from '@/components/common/Breadcrumb.vue'
+import { objectToFormData } from '@/helpers/objectToFormData'
+import { useSettingStore } from '@/stores/settings'
+import { logoPlaceholder } from '@/helpers/imagePlaceholder'
 
-const { image_path } = usePaths()
+const settings = useSettingStore()
 
-const preview = ref({
-    logo: '',
-    signature: ''
-})
-
-const {
-    form,
-    errors,
-    isSubmitting,
-    submit
-} = useStoreForm({
-    name: '',
-    designation: '',
-    contact_no: '',
-    email: '',
-    chamber_address: '',
-    regis_no: '',
-    footer_content: '',
+const form = reactive({
     company_name: '',
-    company_description: '',
+    email: '',
+    phone: '',
+    address: '',
     logo: null,
-    signature: null,
+    remove_logo: 0,
 })
+const errors = reactive({})
+const isSubmitting = ref(false)
+const logoPreview = ref('')
+const logoInput = ref(null)
 
-const handleSubmit = async () => {
-    try {
-        const resp = await submit('/apis/setting-store-update', 'post')
-        if (resp?.status) {
-            toast.success(resp.message)
-            loadSettings()
-        }
-    } catch (e) { }
+const clearErrors = () => {
+    for (const key in errors) delete errors[key]
 }
 
-const loadSettings = async () => {
-    const { data } = await axios.get('/apis/settings')
-    if (data.status) {
-        Object.assign(form, data.data_list)
-        preview.value.logo = data.data_list.logo_url
-        preview.value.signature = data.data_list.signature_url
+const fillForm = (company) => {
+    Object.assign(form, {
+        company_name: company.company_name ?? '',
+        email: company.email ?? '',
+        phone: company.phone ?? '',
+        address: company.address ?? '',
+        logo: null,
+        remove_logo: 0,
+    })
+    logoPreview.value = company.logo_url ?? ''
+    if (logoInput.value) logoInput.value.value = ''
+}
+
+const handleLogoChange = (event) => {
+    const file = event.target.files[0] ?? null
+    form.logo = file
+    form.remove_logo = 0
+    logoPreview.value = file ? URL.createObjectURL(file) : (settings.company.logo_url ?? '')
+}
+
+const removeLogo = () => {
+    form.logo = null
+    form.remove_logo = 1
+    logoPreview.value = ''
+    if (logoInput.value) logoInput.value.value = ''
+}
+
+const handleSubmit = async () => {
+    if (!form.company_name) {
+        errors.company_name = 'The company name field is required.'
+        return
+    }
+
+    isSubmitting.value = true
+    clearErrors()
+
+    try {
+        const { data } = await axios.post('/api/settings', objectToFormData({ ...form }))
+
+        if (data.success) {
+            toast.success(data.message)
+            // Updating the store refreshes the sidebar logo and name immediately.
+            settings.setCompany(data.data)
+            fillForm(data.data)
+        }
+    } catch (err) {
+        if (err.response?.status === 422) {
+            const respErrors = err.response.data.data
+            for (const key in respErrors) {
+                errors[key] = respErrors[key].join(' ')
+            }
+        } else {
+            toast.error(err.response?.data?.message || 'An error occurred while saving.')
+        }
+    } finally {
+        isSubmitting.value = false
     }
 }
 
-onMounted(loadSettings)
+onMounted(async () => {
+    await settings.fetchCompany()
+    fillForm(settings.company)
+})
 </script>
 <style scoped>
 .custom-label {
@@ -252,9 +230,5 @@ onMounted(loadSettings)
 
 .img-thumbnail {
     border: 2px solid #fff;
-}
-
-.input-group-text {
-    color: #64748b;
 }
 </style>

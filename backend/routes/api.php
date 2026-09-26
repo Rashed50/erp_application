@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AccountTypeController;
 use App\Http\Controllers\Api\ApprovalController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChartOfAccountController;
+use App\Http\Controllers\Api\CompanySettingController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerTransactionController;
 use App\Http\Controllers\Api\FundTransferController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Api\SupplierPaymentController;
 use App\Http\Controllers\Api\SupplierTransactionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UserRoleController;
+use App\Http\Controllers\Api\WorkOrderController;
 use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\Request;
@@ -33,6 +35,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return ApiResponse::success(new UserResource($request->user()->load('roles')));
     });
+
+    // Every signed-in user needs the company branding (sidebar logo); only editing is gated.
+    Route::get('/settings', [CompanySettingController::class, 'show'])->name('settings.show');
+    Route::post('/settings', [CompanySettingController::class, 'update'])
+        ->name('settings.update')
+        ->middleware('permission:settings.update');
 
     Route::apiResource('users', UserController::class)
         ->middlewareFor(['index', 'show'], 'permission:users.view')
@@ -62,6 +70,17 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('store', 'permission:customers.create')
         ->middlewareFor('update', 'permission:customers.update')
         ->middlewareFor('destroy', 'permission:customers.delete');
+
+    Route::apiResource('work-orders', WorkOrderController::class)
+        ->middlewareFor(['index', 'show'], 'permission:work-orders.view')
+        ->middlewareFor('store', 'permission:work-orders.create')
+        ->middlewareFor('update', 'permission:work-orders.update')
+        ->middlewareFor('destroy', 'permission:work-orders.delete');
+
+    // The sale form needs a customer's work orders even without work-orders.view.
+    Route::get('/customers/{customer}/work-orders', [WorkOrderController::class, 'forCustomer'])
+        ->name('customers.work-orders.index')
+        ->middleware('permission:work-orders.view|sales.create|sales.update');
 
     Route::apiResource('products', ProductController::class)
         ->middlewareFor(['index', 'show'], 'permission:products.view')
@@ -175,6 +194,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/customers/{customer}/approve', [ApprovalController::class, 'customer'])
         ->name('customers.approve')
         ->middleware('permission:customers.approve');
+
+    Route::post('/work-orders/{work_order}/approve', [ApprovalController::class, 'workOrder'])
+        ->name('work-orders.approve')
+        ->middleware('permission:work-orders.approve');
 
     Route::post('/suppliers/{supplier}/approve', [ApprovalController::class, 'supplier'])
         ->name('suppliers.approve')

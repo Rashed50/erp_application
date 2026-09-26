@@ -11,6 +11,7 @@ use App\Http\Resources\PurchaseResource;
 use App\Http\Resources\SaleResource;
 use App\Http\Resources\SupplierPaymentResource;
 use App\Http\Resources\SupplierResource;
+use App\Http\Resources\WorkOrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\ChartOfAccount;
 use App\Models\Customer;
@@ -20,6 +21,7 @@ use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
+use App\Models\WorkOrder;
 use App\Services\ApprovalService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +34,11 @@ class ApprovalController extends Controller
     public function customer(Customer $customer): JsonResponse
     {
         return $this->approve($customer, CustomerResource::class);
+    }
+
+    public function workOrder(WorkOrder $work_order): JsonResponse
+    {
+        return $this->approve($work_order, WorkOrderResource::class);
     }
 
     public function supplier(Supplier $supplier): JsonResponse

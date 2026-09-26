@@ -19,7 +19,7 @@ class SaleService
     public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null): LengthAwarePaginator
     {
         return Sale::query()
-            ->with('customer:id,name')
+            ->with(['customer:id,name', 'workOrder:id,work_order_no'])
             ->when($search, fn ($query) => $query->where('invoice_number', 'like', "%{$search}%"))
             ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
             ->latest('issue_date')
@@ -28,7 +28,7 @@ class SaleService
 
     public function find(Sale $sale): Sale
     {
-        return $sale->load(['items', 'customer']);
+        return $sale->load(['items', 'customer', 'workOrder']);
     }
 
     /**
@@ -36,7 +36,7 @@ class SaleService
      * it posts to the customer's subsidiary ledger — all totals are computed
      * here from `items` rather than trusted from the request.
      *
-     * @param  array{customer_id: int, invoice_number: string, description?: ?string, issue_date: string, due_date?: ?string, notes?: ?string, items: array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
+     * @param  array{customer_id: int, work_order_id?: ?int, invoice_number: string, description?: ?string, issue_date: string, due_date?: ?string, notes?: ?string, items: array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
      */
     public function create(array $data): Sale
     {
@@ -45,6 +45,7 @@ class SaleService
 
             $sale = Sale::create([
                 'customer_id' => $data['customer_id'],
+                'work_order_id' => $data['work_order_id'] ?? null,
                 'invoice_number' => $data['invoice_number'],
                 'description' => $data['description'] ?? null,
                 'issue_date' => $data['issue_date'],
@@ -64,6 +65,7 @@ class SaleService
 
             $transaction = $this->customerTransactionService->create($customer, [
                 'transaction_type' => 'Invoice',
+                'work_order_id' => $sale->work_order_id,
                 'invoice_no' => $data['invoice_number'],
                 'debit' => $totals['net_total'],
                 'transaction_date' => $data['issue_date'],
@@ -75,7 +77,7 @@ class SaleService
                 'is_ledger_posted' => $this->postToLedger((float) $sale->net_total),
             ]);
 
-            return $sale->load(['items', 'customer']);
+            return $sale->load(['items', 'customer', 'workOrder']);
         });
     }
 
@@ -123,6 +125,7 @@ class SaleService
 
             if ($sale->ledgerTransaction) {
                 $this->customerTransactionService->updateAmounts($sale->ledgerTransaction, [
+                    'work_order_id' => $sale->work_order_id,
                     'invoice_no' => $sale->invoice_number,
                     'debit' => $sale->net_total,
                     'transaction_date' => $sale->issue_date,
@@ -130,7 +133,7 @@ class SaleService
                 ]);
             }
 
-            return $sale->load(['items', 'customer']);
+            return $sale->load(['items', 'customer', 'workOrder']);
         });
     }
 
@@ -166,6 +169,7 @@ class SaleService
         return DB::transaction(function () use ($sale, $data) {
             $this->customerTransactionService->create($sale->customer, [
                 'transaction_type' => 'Payment Received',
+                'work_order_id' => $sale->work_order_id,
                 'invoice_no' => $sale->invoice_number,
                 'credit' => $data['amount'],
                 'payment_account_id' => $data['payment_account_id'],
@@ -178,7 +182,7 @@ class SaleService
                 'updated_by' => Auth::id(),
             ]);
 
-            return $sale->load(['items', 'customer']);
+            return $sale->load(['items', 'customer', 'workOrder']);
         });
     }
 

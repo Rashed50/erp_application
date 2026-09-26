@@ -15,6 +15,7 @@ import * as directives from 'vuetify/directives'
 
 import App from './App.vue'
 import router from './router'
+import { registerImageFallback } from './helpers/imagePlaceholder'
 
 const vuetify = createVuetify({
   components,
@@ -29,5 +30,7 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(vuetify)
+
+registerImageFallback()
 
 app.mount('#app')

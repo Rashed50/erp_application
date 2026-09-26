@@ -25,6 +25,11 @@ class PermissionSeeder extends Seeder
         'customers.create',
         'customers.update',
         'customers.delete',
+        'work-orders.view',
+        'work-orders.create',
+        'work-orders.update',
+        'work-orders.delete',
+        'work-orders.approve',
         'products.view',
         'products.create',
         'products.update',
@@ -71,6 +76,7 @@ class PermissionSeeder extends Seeder
         'income-expenses.approve',
         'supplier-payments.approve',
         'fund-transfers.approve',
+        'settings.update',
     ];
 
     /**

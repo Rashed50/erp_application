@@ -154,6 +154,38 @@ const routes = [
             },
             /* ====================== Customer Route END ====================== */
 
+            /* ====================== Work Order Route START ====================== */
+            {
+                path: 'work-orders',
+                name: 'admin_work_orders_list',
+                component: () => import('@/views/work-orders/Index.vue'),
+                meta: {
+                    title: 'All Work Order List',
+                    permissions: ['work-orders.view']
+                }
+            },
+
+            {
+                path: 'work-order-add',
+                name: 'admin_work_order_add',
+                component: () => import('@/views/work-orders/Add.vue'),
+                meta: {
+                    title: 'Add Work Order',
+                    permissions: ['work-orders.create']
+                }
+            },
+
+            {
+                path: 'work-order-edit/:id',
+                name: 'admin_work_order_edit',
+                component: () => import('@/views/work-orders/Edit.vue'),
+                meta: {
+                    title: 'Edit Work Order',
+                    permissions: ['work-orders.update']
+                }
+            },
+            /* ====================== Work Order Route END ====================== */
+
             /* ====================== Supplier Route START ====================== */
             {
                 path: 'suppliers',
@@ -379,6 +411,16 @@ const routes = [
                 }
             },
             /* ====================== Income/Expense Route END ====================== */
+
+            {
+                path: 'settings',
+                name: 'admin_settings',
+                component: () => import('@/views/settings/Index.vue'),
+                meta: {
+                    title: 'Settings',
+                    permissions: ['settings.update']
+                }
+            },
 
             {
                 path: 'profile',

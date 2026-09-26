@@ -18,6 +18,12 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-8">
+                                    <WorkOrderSelect v-model="form.work_order_id" :customer-id="customerId"
+                                        :error="errors.work_order_id" :disabled="paidAmount > 0"
+                                        :hint="paidAmount > 0 ? 'The work order cannot be changed after a payment has been received.' : ''" />
+                                </div>
+
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
                                         <label for="invoice_number">Invoice Number:</label>
@@ -166,6 +172,7 @@
 <script setup>
 import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import WorkOrderSelect from '@/components/common/WorkOrderSelect.vue';
 import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
@@ -175,6 +182,7 @@ const router = useRouter();
 const route = useRoute();
 
 const customerName = ref('')
+const customerId = ref('')
 const paidAmount = ref(0)
 const dueAmount = ref(0)
 
@@ -183,6 +191,7 @@ const emptyItem = () => ({ product_id: '', item_name: '', description: '', qty: 
 // customer_id is intentionally not part of the submitted form — the backend
 // does not accept changing a sale's customer after creation.
 const { form, errors, isSubmitting, submit } = useStoreForm({
+    work_order_id: '',
     invoice_number: '',
     issue_date: '',
     due_date: '',
@@ -247,6 +256,8 @@ const loadSale = async () => {
         if (data.success) {
             const sale = data.data
             customerName.value = sale.customer_name
+            customerId.value = sale.customer_id
+            form.work_order_id = sale.work_order_id ?? ''
             paidAmount.value = Number(sale.paid_amount)
             dueAmount.value = Number(sale.due_amount)
             form.invoice_number = sale.invoice_number
