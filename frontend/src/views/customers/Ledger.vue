@@ -70,6 +70,10 @@
                             </div>
                         </div>
                         <div class="col-md-8">
+                            <WorkOrderSelect ref="workOrderSelect" v-model="form.work_order_id"
+                                :customer-id="route.params.id" :error="errors.work_order_id" />
+                        </div>
+                        <div class="col-md-12">
                             <div class="form-group mb-3">
                                 <label>Notes:</label>
                                 <input type="text" class="form-control" v-model="form.notes" />
@@ -91,6 +95,7 @@
                             <th class="text-left">Date</th>
                             <th class="text-left">Type</th>
                             <th class="text-left">Invoice No</th>
+                            <th class="text-left">Work Order</th>
                             <th class="text-right">Debit</th>
                             <th class="text-right">Credit</th>
                             <th class="text-left">Notes</th>
@@ -100,18 +105,19 @@
                     </thead>
                     <tbody>
                         <tr v-if="loading">
-                            <td colspan="8" class="text-center py-4">
+                            <td colspan="9" class="text-center py-4">
                                 <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                 Loading...
                             </td>
                         </tr>
                         <tr v-else-if="!items.length">
-                            <td colspan="8" class="text-center py-4">No transactions found.</td>
+                            <td colspan="9" class="text-center py-4">No transactions found.</td>
                         </tr>
                         <tr v-else v-for="item in items" :key="item.id">
                             <td>{{ item.transaction_date }}</td>
                             <td>{{ item.transaction_type }}</td>
                             <td>{{ item.invoice_no }}</td>
+                            <td>{{ item.work_order_no || '-' }}</td>
                             <td class="text-right">{{ Number(item.debit).toFixed(2) }}</td>
                             <td class="text-right">{{ Number(item.credit).toFixed(2) }}</td>
                             <td>{{ item.notes }}</td>
@@ -145,6 +151,7 @@ import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import WorkOrderSelect from '@/components/common/WorkOrderSelect.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
 import { useRoute } from 'vue-router';
@@ -169,8 +176,10 @@ const form = reactive({
     amount: null,
     transaction_date: new Date().toISOString().slice(0, 10),
     invoice_no: '',
+    work_order_id: '',
     notes: '',
 })
+const workOrderSelect = ref(null)
 const errors = reactive({})
 const isSubmitting = ref(false)
 
@@ -190,6 +199,7 @@ const handleAddTransaction = async () => {
     const payload = {
         transaction_type: form.transaction_type,
         invoice_no: form.invoice_no || null,
+        work_order_id: form.work_order_id || null,
         transaction_date: form.transaction_date,
         notes: form.notes || null,
         debit: form.direction === 'debit' ? form.amount : 0,
@@ -205,6 +215,7 @@ const handleAddTransaction = async () => {
             form.notes = ''
             fetchData()
             loadCustomer()
+            workOrderSelect.value?.reload()
         }
     } catch (e) {
         if (e.response?.status === 422) {
@@ -236,6 +247,7 @@ const handleReverse = async (item) => {
             toast.success(data.message)
             fetchData()
             loadCustomer()
+            workOrderSelect.value?.reload()
         }
     } catch (e) {
         toast.error(e.response?.data?.message || 'Failed to reverse transaction.')

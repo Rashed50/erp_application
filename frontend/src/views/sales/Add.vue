@@ -23,6 +23,11 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-8">
+                                    <WorkOrderSelect v-model="form.work_order_id" :customer-id="form.customer_id"
+                                        :error="errors.work_order_id" />
+                                </div>
+
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
                                         <label for="invoice_number">Invoice Number:</label>
@@ -163,6 +168,7 @@
 </template>
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import WorkOrderSelect from '@/components/common/WorkOrderSelect.vue';
 import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
@@ -174,6 +180,7 @@ const emptyItem = () => ({ product_id: '', item_name: '', description: '', qty: 
 
 const { form, errors, isSubmitting, submit } = useStoreForm({
     customer_id: '',
+    work_order_id: '',
     invoice_number: '',
     issue_date: new Date().toISOString().slice(0, 10),
     due_date: '',

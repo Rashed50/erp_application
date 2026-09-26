@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-
 class Customer extends Model
 {
     use Approvable, HasFactory, RecordsDeleter, SoftDeletes;
@@ -34,6 +33,11 @@ class Customer extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(CustomerTransaction::class);
+    }
+
+    public function workOrders(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class);
     }
 
     public function creator(): BelongsTo
@@ -68,5 +72,14 @@ class Customer extends Model
     public function canBeDeleted(): bool
     {
         return ! $this->transactions()->exists();
+    }
+
+    /**
+     * Soft-deleting a customer would leave its work orders pointing at a
+     * customer that no longer shows up anywhere.
+     */
+    public function hasWorkOrders(): bool
+    {
+        return $this->workOrders()->exists();
     }
 }
