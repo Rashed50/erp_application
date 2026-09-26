@@ -13,7 +13,8 @@
                         <div class="row">
                             <div class="col-md-12 text-center mb-4">
                                 <div class="profile-image-wrapper">
-                                    <img :src="profileImagePreview || profileForm.profile_image_url"
+                                    <img :src="profileImagePreview || profileForm.profile_image_url || userPlaceholder"
+                                        :data-placeholder="userPlaceholder"
                                         class="profile-image" alt="Profile Image">
                                     <label for="image" class="image-upload-label">
                                         <i class="fa-solid fa-camera"></i>
@@ -103,6 +104,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
 import { toast } from 'vue3-toastify';
+import { userPlaceholder } from '@/helpers/imagePlaceholder';
 import axios from 'axios';
 
 const activeTab = ref('profile');

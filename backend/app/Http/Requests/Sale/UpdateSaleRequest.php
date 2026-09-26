@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Sale;
 
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -32,6 +33,7 @@ class UpdateSaleRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'work_order_id' => ['sometimes', 'nullable', Rule::exists('work_orders', 'id')->where('customer_id', $this->route('sale')?->customer_id)->withoutTrashed()],
             'invoice_number' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('sales', 'invoice_number')->ignore($this->route('sale'))],
             'description' => ['sometimes', 'nullable', 'string'],
             'issue_date' => ['sometimes', 'required', 'date'],
@@ -47,5 +49,24 @@ class UpdateSaleRequest extends FormRequest
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'items.*.vat' => ['nullable', 'numeric', 'min:0'],
         ];
+    }
+
+    /**
+     * Payments already received on the sale are tagged with its work order,
+     * so the work order can only change while nothing has been paid.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $sale = $this->route('sale');
+
+            if (! $this->exists('work_order_id') || ! $sale || (float) $sale->paid_amount <= 0) {
+                return;
+            }
+
+            if ((int) $this->input('work_order_id') !== (int) $sale->work_order_id) {
+                $validator->errors()->add('work_order_id', 'The work order cannot be changed after a payment has been received.');
+            }
+        });
     }
 }

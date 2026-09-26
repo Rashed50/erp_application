@@ -2,8 +2,11 @@
     <!-- Menu Bar -->
     <v-navigation-drawer v-model="drawer" class="navigation__drawer">
         <div class="sidebar__header">
+            <img :src="settings.company?.logo_url || logoPlaceholder" :data-placeholder="logoPlaceholder"
+                alt="Company Logo" />
             <div class="identity">
-                <p><span class="badge rounded-pill bg-success">{{ auth?.user?.roles?.[0] }}</span></p>
+                <p class="mb-1 company-name">{{ settings.company?.company_name || 'SN' }}</p>
+                <!-- <p><span class="badge rounded-pill bg-success">{{ auth?.user?.roles?.[0] }}</span></p> -->
             </div>
         </div>
         <!-- sidebar body -->
@@ -34,7 +37,7 @@
             <!-- Grouped and named like the payroll_software Accounting sidebar. -->
             <v-list-group value="accounts" v-if="canAny([
                 'ledger-accounts.view', 'supplier-payments.view', 'supplier-payments.create',
-                'fund-transfers.view', 'fund-transfers.create', 'customers.view', 'products.view', 'sales.view',
+                'fund-transfers.view', 'fund-transfers.create', 'customers.view', 'work-orders.view', 'products.view', 'sales.view',
                 'sales.create', 'purchases.view', 'purchases.create', 'income-expenses.view',
                 'income-expenses.create', 'suppliers.view', 'suppliers.create',
             ])">
@@ -120,7 +123,7 @@
 
                 <!-- Sales -->
                 <v-list-group value="accounts-sales"
-                    v-if="canAny(['customers.view', 'products.view', 'sales.create', 'sales.view'])">
+                    v-if="canAny(['customers.view', 'work-orders.view', 'products.view', 'sales.create', 'sales.view'])">
                     <template v-slot:activator="{ props }">
                         <v-list-item v-bind="props">
                             <div class="custom_dropdown_router_link custom_mb_10 ml-3">
@@ -136,7 +139,14 @@
                             v-if="can(['customers.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Main Contractor
+                                Customers
+                            </span>
+                        </router-link>
+                        <router-link :to="{ name: 'admin_work_orders_list' }" class="custom_router_sub_link"
+                            v-if="can(['work-orders.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                Work Order
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_products_list' }" class="custom_router_sub_link"
@@ -256,7 +266,83 @@
             </v-list-group>
             <!-- Accounts Menu END -->
 
-            <v-list-item class="" v-if="can(['settings-view'])">
+            <!-- HR Menu START -->
+            <v-list-group value="hr" v-if="canAny([
+                'employees.view', 'employees.create', 'employee-works.view', 'employee-works.create',
+                'payroll.view', 'payroll.generate', 'hr-reports.view',
+            ])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-people-group"></i>
+                            </span>
+                            HR
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
+                    <router-link :to="{ name: 'admin_hr_dashboard' }" class="custom_router_sub_link"
+                        v-if="canAny(['employees.view', 'payroll.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            HR Dashboard
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_employees_list' }" class="custom_router_sub_link"
+                        v-if="can(['employees.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Employees
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_employee_add' }" class="custom_router_sub_link"
+                        v-if="can(['employees.create'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Add Employee
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_works_entry' }" class="custom_router_sub_link"
+                        v-if="canAny(['employee-works.create', 'employee-works.update'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Monthly Work Entry
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_works_list' }" class="custom_router_sub_link"
+                        v-if="can(['employee-works.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Work History
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_payroll_generate' }" class="custom_router_sub_link"
+                        v-if="can(['payroll.generate'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Generate Salary
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_salary_sheet' }" class="custom_router_sub_link"
+                        v-if="can(['payroll.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Salary Sheet
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_reports' }" class="custom_router_sub_link"
+                        v-if="can(['hr-reports.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            Reports
+                        </span>
+                    </router-link>
+                </div>
+            </v-list-group>
+            <!-- HR Menu END -->
+
+            <v-list-item class="" v-if="can(['settings.update'])">
                 <router-link :to="{ name: 'admin_settings' }" class="custom_router_link">
                     <span class="sidebar-menu-icon">
                         <i class="fa-solid fa-gear"></i>
@@ -302,7 +388,8 @@
                                     </div>
 
 
-                                    <img :src="auth?.user?.image_url" alt="Profile" />
+                                    <img :src="auth?.user?.image_url || userPlaceholder" :data-placeholder="userPlaceholder"
+                                        alt="Profile" />
 
                                 </div>
                             </span>
@@ -332,6 +419,8 @@
 import { usePermission } from '@/composables/usePermission';
 import { setToast } from "@/helpers/toast";
 import { useAuthStore } from '@/stores/auth';
+import { useSettingStore } from '@/stores/settings';
+import { logoPlaceholder, userPlaceholder } from '@/helpers/imagePlaceholder';
 import { useRoute, useRouter } from 'vue-router';
 const route = useRoute();
 const { can } = usePermission()
@@ -343,6 +432,13 @@ const { static_image_path } = usePaths();
 
 const auth = useAuthStore()
 const router = useRouter()
+const settings = useSettingStore()
+
+onMounted(() => {
+    if (!settings.companyLoaded) {
+        settings.fetchCompany()
+    }
+})
 
 const logoutAccount = async () => {
     try {
@@ -376,6 +472,17 @@ const toggleDrawer = () => {
 </script>
 
 <style scoped>
+.sidebar__header img {
+    object-fit: contain;
+    background: #fff;
+}
+
+.sidebar__header .identity .company-name {
+    font-size: 15px;
+    font-weight: 600;
+    word-break: break-word;
+}
+
 .header_right_side_wrapper {
     display: flex;
     align-items: center;

@@ -30,6 +30,11 @@ class CustomerTransaction extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function workOrder(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrder::class)->withTrashed();
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

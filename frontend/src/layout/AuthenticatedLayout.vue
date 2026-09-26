@@ -10,7 +10,7 @@
         <!-- Footer -->
         <v-footer padless app inset style="padding: 0!important;">
             <div class="px-4 py-2 bg-gray text-center w-100">
-                {{ new Date().getFullYear() }} — <strong> Develop By CERRS</strong>
+                {{ new Date().getFullYear() }} — <strong> Develop by Rashedul</strong>
             </div>
         </v-footer>
 

@@ -1,3 +1,5 @@
+import { imagePlaceholder } from '@/helpers/imagePlaceholder'
+
 export function usePrintable() {
 
     // 🔹 Cell value formatter (array / object / primitive)
@@ -31,12 +33,15 @@ export function usePrintable() {
         if (!Array.isArray(items) || !items.length || !columns.length) return
 
         const win = window.open('', '_blank')
+        // The print window is a separate document, so the app-wide image
+        // fallback doesn't reach it; the placeholder needs an absolute URL.
+        const placeholderUrl = new URL(imagePlaceholder, window.location.origin).href
 
         /* ---------- HEADER ---------- */
         const headerHtml = `
             <div class="header">
                 <div class="logo-box">
-                    ${logo ? `<img src="${logo}" />` : ''}
+                    ${logo ? `<img src="${logo}" onerror="this.onerror=null;this.src='${placeholderUrl}'" />` : ''}
                 </div>
                 <div class="title-box">
                     <h5>ডেসটিনি মাল্টিপারপাস কো-অপারেটিভ সোসাইটি লিঃ</h5>

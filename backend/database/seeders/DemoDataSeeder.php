@@ -32,6 +32,10 @@ class DemoDataSeeder extends Seeder
      */
     public function run(): void
     {
+        // Has its own "already seeded" check, so it also runs on databases
+        // that got the accounting demo before the HR module existed.
+        $this->call(HrDemoDataSeeder::class);
+
         if (Customer::query()->where('email', 'demo.customer1@example.com')->exists()) {
             $this->command?->warn('Demo data already exists, skipping.');
 

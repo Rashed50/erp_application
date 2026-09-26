@@ -18,6 +18,8 @@ class SaleResource extends JsonResource
             'id' => $this->id,
             'customer_id' => $this->customer_id,
             'customer_name' => $this->whenLoaded('customer', fn () => $this->customer->name),
+            'work_order_id' => $this->work_order_id,
+            'work_order_no' => $this->whenLoaded('workOrder', fn () => $this->workOrder?->work_order_no),
             'invoice_number' => $this->invoice_number,
             'description' => $this->description,
             'issue_date' => $this->issue_date?->toDateString(),

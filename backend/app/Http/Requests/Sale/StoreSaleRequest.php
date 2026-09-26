@@ -32,6 +32,7 @@ class StoreSaleRequest extends FormRequest
     {
         return [
             'customer_id' => ['required', Rule::exists('customers', 'id')],
+            'work_order_id' => ['nullable', Rule::exists('work_orders', 'id')->where('customer_id', $this->input('customer_id'))->withoutTrashed()],
             'invoice_number' => ['required', 'string', 'max:255', Rule::unique('sales', 'invoice_number')],
             'description' => ['nullable', 'string'],
             'issue_date' => ['required', 'date'],

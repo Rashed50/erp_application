@@ -6,6 +6,7 @@ use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Models\WorkOrder;
 
 dataset('approvable resources', [
     'customers' => ['customers', fn () => Customer::factory()->create()],
@@ -13,6 +14,7 @@ dataset('approvable resources', [
     'purchases' => ['purchases', fn () => Purchase::factory()->create()],
     'sales' => ['sales', fn () => Sale::factory()->create()],
     'ledger-accounts' => ['ledger-accounts', fn () => ChartOfAccount::factory()->create()],
+    'work-orders' => ['work-orders', fn () => WorkOrder::factory()->create()],
 ]);
 
 it('requires authentication to approve', function () {

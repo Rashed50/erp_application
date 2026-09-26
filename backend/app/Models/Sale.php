@@ -38,6 +38,11 @@ class Sale extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function workOrder(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrder::class)->withTrashed();
+    }
+
     public function ledgerTransaction(): BelongsTo
     {
         return $this->belongsTo(CustomerTransaction::class, 'customer_transaction_id');
