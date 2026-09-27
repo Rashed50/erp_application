@@ -56,7 +56,7 @@ class FundTransfer extends Model
     }
 
     /**
-     * Bank charge plus VAT, posted together to the Bank Charges expense account.
+     * Bank charge plus VAT, posted together to the bank charge account.
      */
     public function charges(): float
     {
