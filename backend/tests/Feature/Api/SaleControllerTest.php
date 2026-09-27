@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\AccountTransaction;
 use App\Models\ChartOfAccount;
 use App\Models\Customer;
+use App\Models\CustomerTransaction;
 use App\Models\Product;
 use App\Models\Sale;
 use Database\Seeders\ChartOfAccountSeeder;
@@ -309,12 +311,43 @@ describe('chart of account posting', function () {
             ->assertStatus(201)
             ->json('data.id');
 
+        $sale = Sale::find($saleId);
+        $entry = $sale->journalEntry;
+
         expect((float) $this->receivable->fresh()->balance)->toBe(88.0)
             ->and((float) $this->revenue->fresh()->balance)->toBe(88.0)
-            ->and(Sale::find($saleId)->is_ledger_posted)->toBeTrue();
+            ->and($entry->sale_id)->toBe($sale->id)
+            ->and($entry->tr_no)->toBe($sale->invoice_number)
+            ->and((float) $entry->total_amount)->toBe(88.0)
+            ->and($entry->details)->toHaveCount(2)
+            ->and($sale->ledgerTransaction->account_transaction_id)->toBe($entry->id);
     });
 
-    it('posts only the difference when the items change and reverses on delete', function () {
+    it('posts to the debit and credit accounts chosen on the sale', function () {
+        $serviceIncome = ChartOfAccount::query()->where('account_number', '4020')->first();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/sales', salePayload(Customer::factory()->create()->id, [
+                'debit_account_id' => $this->cash->id,
+                'credit_account_id' => $serviceIncome->id,
+            ]))
+            ->assertStatus(201);
+
+        expect((float) $this->cash->fresh()->balance)->toBe(88.0)
+            ->and((float) $serviceIncome->fresh()->balance)->toBe(88.0)
+            ->and((float) $this->receivable->fresh()->balance)->toBe(0.0);
+    });
+
+    it('rejects a group account as the sale debit account', function () {
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/sales', salePayload(Customer::factory()->create()->id, [
+                'debit_account_id' => ChartOfAccount::query()->where('account_number', '1000')->value('id'),
+            ]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['debit_account_id']]);
+    });
+
+    it('rewrites its journal entry in place when the items change and removes it on delete', function () {
         $actor = adminUser();
         $saleId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload(Customer::factory()->create()->id))
@@ -327,16 +360,18 @@ describe('chart of account posting', function () {
             ->assertOk();
 
         expect((float) $this->receivable->fresh()->balance)->toBe(100.0)
-            ->and((float) $this->revenue->fresh()->balance)->toBe(100.0);
+            ->and((float) $this->revenue->fresh()->balance)->toBe(100.0)
+            ->and(AccountTransaction::count())->toBe(1);
 
         $this->actingAs($actor, 'sanctum')->deleteJson("/api/sales/{$saleId}")->assertOk();
 
         expect((float) $this->receivable->fresh()->balance)->toBe(0.0)
-            ->and((float) $this->revenue->fresh()->balance)->toBe(0.0);
+            ->and((float) $this->revenue->fresh()->balance)->toBe(0.0)
+            ->and(AccountTransaction::count())->toBe(0);
     });
 
-    it('never reverses a sale that was created before posting existed', function () {
-        $sale = Sale::factory()->create(['is_ledger_posted' => false]);
+    it('deletes a sale that never posted a journal entry', function () {
+        $sale = Sale::factory()->create();
 
         $this->actingAs(adminUser(), 'sanctum')->deleteJson("/api/sales/{$sale->id}")->assertOk();
 
@@ -353,8 +388,11 @@ describe('chart of account posting', function () {
             ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 88, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
 
+        $payment = CustomerTransaction::query()->where('transaction_type', 'Payment Received')->sole();
+
         expect((float) $this->cash->fresh()->balance)->toBe(88.0)
-            ->and((float) $this->receivable->fresh()->balance)->toBe(0.0);
+            ->and((float) $this->receivable->fresh()->balance)->toBe(0.0)
+            ->and($payment->accountTransaction->sale_id)->toBe($saleId);
 
         $this->assertDatabaseHas('customer_transactions', [
             'transaction_type' => 'Payment Received',

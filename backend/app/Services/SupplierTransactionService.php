@@ -25,7 +25,10 @@ class SupplierTransactionService
      * payment) and internally by PurchaseService to post the "Purchase" entry
      * a new purchase invoice generates.
      *
-     * @param  array{transaction_type: string, invoice_no?: ?string, debit?: ?float, credit?: ?float, transaction_date: string, notes?: ?string}  $data
+     * `account_transaction_id` links the entry to the journal entry that
+     * posted it to the general ledger, if any.
+     *
+     * @param  array{transaction_type: string, invoice_no?: ?string, debit?: ?float, credit?: ?float, account_transaction_id?: ?int, transaction_date: string, notes?: ?string}  $data
      */
     public function create(Supplier $supplier, array $data): SupplierTransaction
     {
@@ -35,6 +38,7 @@ class SupplierTransactionService
                 'invoice_no' => $data['invoice_no'] ?? null,
                 'debit' => $data['debit'] ?? 0,
                 'credit' => $data['credit'] ?? 0,
+                'account_transaction_id' => $data['account_transaction_id'] ?? null,
                 'transaction_date' => $data['transaction_date'],
                 'notes' => $data['notes'] ?? null,
                 // Set explicitly rather than relying on the DB column default,

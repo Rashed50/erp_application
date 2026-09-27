@@ -64,7 +64,6 @@ class ChartOfAccountSeeder extends Seeder
                 '5060' => 'Repairs & Maintenance',
                 '5070' => 'Transportation/Logistics',
                 '5080' => 'Miscellaneous Expenses',
-                '5090' => 'Bank Charges',
             ],
         ],
     ];

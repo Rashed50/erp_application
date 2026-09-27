@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AccountTransaction;
 use App\Models\ChartOfAccount;
 use App\Models\IncomeExpenseTransaction;
 
@@ -135,7 +136,7 @@ describe('account balances', function () {
     it('posts an expense by raising the expense account and lowering the asset account', function () {
         $actor = adminUser();
         $rent = ChartOfAccount::factory()->expense()->create();
-        $cash = ChartOfAccount::factory()->asset()->create(['balance' => 10000]);
+        $cash = ChartOfAccount::factory()->asset()->create();
 
         $this->actingAs($actor, 'sanctum')->postJson('/api/income-expenses', [
             'type' => 'expense',
@@ -146,7 +147,7 @@ describe('account balances', function () {
         ])->assertStatus(201);
 
         expect((float) $rent->fresh()->balance)->toBe(2500.0)
-            ->and((float) $cash->fresh()->balance)->toBe(7500.0);
+            ->and((float) $cash->fresh()->balance)->toBe(-2500.0);
     });
 
     it('posts an income by raising both the revenue and the asset account', function () {
@@ -169,7 +170,7 @@ describe('account balances', function () {
     it('re-posts balances when an entry amount is edited and reverses them on delete', function () {
         $actor = adminUser();
         $rent = ChartOfAccount::factory()->expense()->create();
-        $cash = ChartOfAccount::factory()->asset()->create(['balance' => 10000]);
+        $cash = ChartOfAccount::factory()->asset()->create();
 
         $id = $this->actingAs($actor, 'sanctum')->postJson('/api/income-expenses', [
             'type' => 'expense',
@@ -182,12 +183,14 @@ describe('account balances', function () {
         $this->actingAs($actor, 'sanctum')->putJson("/api/income-expenses/{$id}", ['amount' => 1000])->assertOk();
 
         expect((float) $rent->fresh()->balance)->toBe(1000.0)
-            ->and((float) $cash->fresh()->balance)->toBe(9000.0);
+            ->and((float) $cash->fresh()->balance)->toBe(-1000.0)
+            ->and(AccountTransaction::query()->whereMorphedTo('source', IncomeExpenseTransaction::find($id))->count())->toBe(1);
 
         $this->actingAs($actor, 'sanctum')->deleteJson("/api/income-expenses/{$id}")->assertOk();
 
         expect((float) $rent->fresh()->balance)->toBe(0.0)
-            ->and((float) $cash->fresh()->balance)->toBe(10000.0);
+            ->and((float) $cash->fresh()->balance)->toBe(0.0)
+            ->and(AccountTransaction::count())->toBe(0);
     });
 
     it('rejects posting to a group account', function () {

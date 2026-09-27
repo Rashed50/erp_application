@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AccountReportController;
 use App\Http\Controllers\Api\AccountTypeController;
 use App\Http\Controllers\Api\ApprovalController;
 use App\Http\Controllers\Api\AuthController;
@@ -191,6 +192,15 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('store', 'permission:ledger-accounts.create')
         ->middlewareFor('update', 'permission:ledger-accounts.update')
         ->middlewareFor('destroy', 'permission:ledger-accounts.delete');
+
+    // Ledger reports, computed from the journal as in the payroll_software
+    // Account module's admin/accounting/reports/* pages.
+    Route::prefix('/accounting/reports')->name('account-reports.')->middleware('permission:account-reports.view')->group(function () {
+        Route::get('/general-ledger', [AccountReportController::class, 'generalLedger'])->name('general-ledger');
+        Route::get('/trial-balance', [AccountReportController::class, 'trialBalance'])->name('trial-balance');
+        Route::get('/profit-loss', [AccountReportController::class, 'profitAndLoss'])->name('profit-loss');
+        Route::get('/balance-sheet', [AccountReportController::class, 'balanceSheet'])->name('balance-sheet');
+    });
 
     Route::apiResource('income-expenses', IncomeExpenseTransactionController::class)
         ->middlewareFor(['index', 'show'], 'permission:income-expenses.view')
