@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\ChartOfAccount;
 use App\Models\IncomeExpenseTransaction;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -10,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class IncomeExpenseTransactionService
 {
+    public function __construct(private readonly LedgerPostingService $ledgerPostingService) {}
+
     public function paginate(int $perPage = 15, ?string $type = null, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
     {
         return IncomeExpenseTransaction::query()
@@ -37,7 +38,7 @@ class IncomeExpenseTransactionService
                 'updated_by' => Auth::id(),
             ]);
 
-            $this->post($transaction, 1);
+            $this->post($transaction);
 
             return $transaction->load(['account', 'paymentAccount']);
         });
@@ -49,14 +50,15 @@ class IncomeExpenseTransactionService
     public function update(IncomeExpenseTransaction $transaction, array $data): IncomeExpenseTransaction
     {
         return DB::transaction(function () use ($transaction, $data) {
-            // Reverse what the old entry posted, then post the edited one, so
-            // account balances stay correct however the entry changes.
-            $this->post($transaction, -1);
-
             $transaction->fill([...$data, 'updated_by' => Auth::id()]);
             $transaction->save();
 
-            $this->post($transaction, 1);
+            // Rewrite the journal entry in place so it always matches the entry.
+            if ($entry = $this->ledgerPostingService->entryFor($transaction)) {
+                $this->ledgerPostingService->repost($entry, $this->journalHeader($transaction), $this->journalLines($transaction));
+            } else {
+                $this->post($transaction);
+            }
 
             return $transaction->load(['account', 'paymentAccount']);
         });
@@ -65,39 +67,48 @@ class IncomeExpenseTransactionService
     public function delete(IncomeExpenseTransaction $transaction): void
     {
         DB::transaction(function () use ($transaction) {
-            $this->post($transaction, -1);
+            $this->ledgerPostingService->reverse($transaction);
             $transaction->delete();
         });
     }
 
-    /**
-     * Applies (direction 1) or reverses (direction -1) the entry's double
-     * entry on the account balances. Income debits the payment (asset)
-     * account and credits the revenue account; expense debits the expense
-     * account and credits the payment account.
-     */
-    private function post(IncomeExpenseTransaction $transaction, int $direction): void
+    private function post(IncomeExpenseTransaction $transaction): void
     {
-        $amount = (float) $transaction->amount * $direction;
+        $this->ledgerPostingService->post($transaction, $this->journalHeader($transaction), $this->journalLines($transaction));
+    }
+
+    /**
+     * @return array{tr_no: ?string, date: string, general_particular: ?string}
+     */
+    private function journalHeader(IncomeExpenseTransaction $transaction): array
+    {
+        return [
+            'tr_no' => $transaction->reference_no,
+            'date' => $transaction->transaction_date->toDateString(),
+            'general_particular' => $transaction->description,
+        ];
+    }
+
+    /**
+     * Income debits the payment (asset) account and credits the revenue
+     * account; expense debits the expense account and credits the payment
+     * account, as the payroll module's daily expense and cash receive do.
+     *
+     * @return array<int, array{account_id: int, debit?: float, credit?: float, particular: string}>
+     */
+    private function journalLines(IncomeExpenseTransaction $transaction): array
+    {
+        $amount = (float) $transaction->amount;
 
         [$debitAccountId, $creditAccountId] = $transaction->type === 'income'
             ? [$transaction->payment_account_id, $transaction->income_expense_account_id]
             : [$transaction->income_expense_account_id, $transaction->payment_account_id];
 
-        $this->move($debitAccountId, debit: true, amount: $amount);
-        $this->move($creditAccountId, debit: false, amount: $amount);
-    }
+        $particular = $transaction->type === 'income' ? 'daily income' : 'daily expense';
 
-    /**
-     * A debit raises a debit-normal account (asset, expense) and lowers a
-     * credit-normal one; a credit does the opposite.
-     */
-    private function move(int $accountId, bool $debit, float $amount): void
-    {
-        $account = ChartOfAccount::with('accountType')->findOrFail($accountId);
-
-        $raises = $debit === $account->accountType->increasesOnDebit();
-
-        $account->increment('balance', $raises ? $amount : -$amount);
+        return [
+            ['account_id' => $debitAccountId, 'debit' => $amount, 'particular' => $particular],
+            ['account_id' => $creditAccountId, 'credit' => $amount, 'particular' => $particular],
+        ];
     }
 }

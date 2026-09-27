@@ -67,10 +67,10 @@
 
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="balance">Opening Balance: <span class="text-danger">*</span></label>
-                                <input type="number" id="balance" class="form-control" min="0" step="0.01"
-                                    placeholder="Opening Balance..." v-model="form.balance" required />
-                                <div v-if="errors.balance" class="error-msg">{{ errors.balance }}</div>
+                                <label for="opening_balance">Opening Balance: <span class="text-danger">*</span></label>
+                                <input type="number" id="opening_balance" class="form-control" min="0" step="0.01"
+                                    placeholder="Opening Balance..." v-model="form.opening_balance" required />
+                                <div v-if="errors.opening_balance" class="error-msg">{{ errors.opening_balance }}</div>
                             </div>
                         </div>
 
@@ -126,7 +126,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     parent_id: '',
     account_number: '',
     opening_date: new Date().toISOString().slice(0, 10),
-    balance: 0,
+    opening_balance: 0,
     is_transaction: true,
     active_status: true,
 })

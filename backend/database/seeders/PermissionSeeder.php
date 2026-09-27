@@ -95,6 +95,7 @@ class PermissionSeeder extends Seeder
         'payroll.pay',
         'payroll.cancel',
         'hr-reports.view',
+        'account-reports.view',
     ];
 
     /**

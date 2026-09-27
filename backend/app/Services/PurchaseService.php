@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AccountTransaction;
 use App\Models\Purchase;
 use App\Models\Supplier;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -32,11 +33,15 @@ class PurchaseService
     }
 
     /**
-     * Create a purchase invoice, its line items, and the "Purchase" ledger
-     * entry it posts to the supplier's subsidiary ledger — all totals are
-     * computed here from `items` rather than trusted from the request.
+     * Create a purchase invoice, its line items, its journal entry, and the
+     * "Purchase" ledger entry it posts to the supplier's subsidiary ledger —
+     * all totals are computed here from `items` rather than trusted from the
+     * request. As on the payroll module's bill form, the debit and credit
+     * accounts can be chosen; the debit defaults to Inventory/Stock for a
+     * product purchase and Purchase for a service one, the credit to
+     * Accounts Payable.
      *
-     * @param  array{supplier_id: int, purchase_type: string, invoice_number: string, description?: ?string, issue_date: string, purchase_date: string, notes?: ?string, items: array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
+     * @param  array{supplier_id: int, purchase_type: string, invoice_number: string, description?: ?string, issue_date: string, purchase_date: string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, items: array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
      */
     public function create(array $data): Purchase
     {
@@ -51,6 +56,8 @@ class PurchaseService
                 'issue_date' => $data['issue_date'],
                 'purchase_date' => $data['purchase_date'],
                 'notes' => $data['notes'] ?? null,
+                'debit_account_id' => $data['debit_account_id'] ?? $this->defaultDebitAccountId($data['purchase_type']),
+                'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)?->id,
                 'total_amount' => $totals['total_amount'],
                 'discount_amount' => $totals['discount_amount'],
                 'vat_amount' => $totals['vat_amount'],
@@ -62,19 +69,18 @@ class PurchaseService
             $purchase->items()->createMany($totals['items']);
 
             $supplier = Supplier::findOrFail($data['supplier_id']);
+            $entry = $this->postToLedger($purchase);
 
             $transaction = $this->supplierTransactionService->create($supplier, [
                 'transaction_type' => 'Purchase',
                 'invoice_no' => $data['invoice_number'],
                 'credit' => $totals['net_total'],
+                'account_transaction_id' => $entry?->id,
                 'transaction_date' => $data['purchase_date'],
                 'notes' => $data['description'] ?? null,
             ]);
 
-            $purchase->update([
-                'supplier_transaction_id' => $transaction->id,
-                'is_ledger_posted' => $this->postToLedger((float) $purchase->net_total),
-            ]);
+            $purchase->update(['supplier_transaction_id' => $transaction->id]);
 
             return $purchase->load(['items', 'supplier']);
         });
@@ -92,7 +98,6 @@ class PurchaseService
     {
         return DB::transaction(function () use ($purchase, $data) {
             $totals = isset($data['items']) ? LineItemTotalCalculator::calculate($data['items']) : null;
-            $previousNetTotal = (float) $purchase->net_total;
 
             if ($totals && $totals['net_total'] < $purchase->paid_amount) {
                 throw ValidationException::withMessages([
@@ -104,6 +109,9 @@ class PurchaseService
                 ...collect($data)->except('items')->all(),
                 'updated_by' => Auth::id(),
             ]);
+
+            $purchase->debit_account_id ??= $this->defaultDebitAccountId($purchase->purchase_type);
+            $purchase->credit_account_id ??= $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)?->id;
 
             if ($totals) {
                 $purchase->total_amount = $totals['total_amount'];
@@ -119,14 +127,19 @@ class PurchaseService
                 $purchase->items()->createMany($totals['items']);
             }
 
-            if ($purchase->is_ledger_posted && (float) $purchase->net_total !== $previousNetTotal) {
-                $this->postToLedger((float) $purchase->net_total - $previousNetTotal);
+            // Rewrite the journal entry in place, or post it now if the purchase was
+            // created before the predefined accounts were seeded.
+            if ($entry = $this->ledgerPostingService->entryFor($purchase)) {
+                $this->ledgerPostingService->repost($entry, $this->journalHeader($purchase), $this->journalLines($purchase));
+            } else {
+                $entry = $this->postToLedger($purchase);
             }
 
             if ($purchase->ledgerTransaction) {
                 $this->supplierTransactionService->updateAmounts($purchase->ledgerTransaction, [
                     'invoice_no' => $purchase->invoice_number,
                     'credit' => $purchase->net_total,
+                    'account_transaction_id' => $entry?->id,
                     'transaction_date' => $purchase->purchase_date,
                     'notes' => $purchase->description,
                 ]);
@@ -147,34 +160,64 @@ class PurchaseService
                 $this->supplierTransactionService->reverse($purchase->ledgerTransaction);
             }
 
-            if ($purchase->is_ledger_posted) {
-                $this->postToLedger(-(float) $purchase->net_total);
-            }
+            $this->ledgerPostingService->reverse($purchase);
 
             $purchase->delete();
         });
     }
 
     /**
-     * Post a purchase amount (negative to reverse) as a double entry: debit
-     * the Purchase expense account and credit Accounts Payable, mirroring the
-     * credit the purchase adds to the supplier ledger.
-     *
-     * Returns false without posting when the predefined accounts have not
-     * been seeded, so purchases still work before the chart is set up.
+     * The payroll bill form preselects Inventory/Stock for a product purchase
+     * and the first expense account (Purchase) for a service purchase.
      */
-    private function postToLedger(float $amount): bool
+    private function defaultDebitAccountId(string $purchaseType): ?int
     {
-        $purchaseAccount = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::PURCHASE_NUMBER);
-        $payableAccount = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER);
+        $accountNumber = $purchaseType === 'product' ? LedgerPostingService::INVENTORY_NUMBER : LedgerPostingService::PURCHASE_NUMBER;
 
-        if (! $purchaseAccount || ! $payableAccount) {
-            return false;
+        return $this->ledgerPostingService->predefinedAccount($accountNumber)?->id;
+    }
+
+    /**
+     * Post the purchase's journal entry: debit its debit account and credit
+     * its credit account (Accounts Payable by default) with the net total,
+     * mirroring the credit the purchase adds to the supplier ledger.
+     *
+     * Returns null without posting when either account is unknown (the
+     * predefined accounts have not been seeded), so purchases still work
+     * before the chart is set up, as they do in the payroll module.
+     */
+    private function postToLedger(Purchase $purchase): ?AccountTransaction
+    {
+        if (! $purchase->debit_account_id || ! $purchase->credit_account_id) {
+            return null;
         }
 
-        $this->ledgerPostingService->debit($purchaseAccount, $amount);
-        $this->ledgerPostingService->credit($payableAccount, $amount);
+        return $this->ledgerPostingService->post($purchase, $this->journalHeader($purchase), $this->journalLines($purchase));
+    }
 
-        return true;
+    /**
+     * @return array{tr_no: string, date: string, general_particular: ?string, purchase_id: int}
+     */
+    private function journalHeader(Purchase $purchase): array
+    {
+        return [
+            'tr_no' => $purchase->invoice_number,
+            'date' => $purchase->purchase_date->toDateString(),
+            'general_particular' => $purchase->notes,
+            'purchase_id' => $purchase->id,
+        ];
+    }
+
+    /**
+     * @return array<int, array{account_id: int, debit?: float, credit?: float, particular: string}>
+     */
+    private function journalLines(Purchase $purchase): array
+    {
+        $amount = (float) $purchase->net_total;
+
+        return [
+            ['account_id' => $purchase->debit_account_id, 'debit' => $amount, 'particular' => "{$amount} amount debit from {$purchase->debit_account_id}"],
+            ['account_id' => $purchase->credit_account_id, 'credit' => $amount, 'particular' => "{$amount} cr from {$purchase->credit_account_id}"],
+        ];
     }
 }
