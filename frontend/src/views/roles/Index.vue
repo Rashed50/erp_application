@@ -17,10 +17,10 @@
                                             #
                                         </th>
                                         <th class="text-left">
-                                            Name
+                                            {{ $t('Name') }}
                                         </th>
                                         <th class="text-center">
-                                            Action
+                                            {{ $t('Action') }}
                                         </th>
                                     </tr>
                                 </thead>
@@ -31,14 +31,14 @@
                                         <td colspan="6" class="text-center py-4">
                                             <v-progress-linear indeterminate color="primary"
                                                 size="30"></v-progress-linear>
-                                            Loading...
+                                            {{ $t('Loading...') }}
                                         </td>
                                     </tr>
 
                                     <!-- No Data -->
                                     <tr v-else-if="!items.length">
                                         <td colspan="6" class="text-center py-4">
-                                            No records found.
+                                            {{ $t('No records found.') }}
                                         </td>
                                     </tr>
 
@@ -61,7 +61,7 @@
                                                         <router-link
                                                             :to="{ name: 'admin_role_edit', params: { id: item.id } }"
                                                             class="menu-link">
-                                                            👁️ Edit
+                                                            👁️ {{ $t('Edit') }}
                                                         </router-link>
                                                     </li>
                                                 </ul>

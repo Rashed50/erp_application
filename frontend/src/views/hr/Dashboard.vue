@@ -7,28 +7,28 @@
             <v-progress-linear v-if="loading" indeterminate color="primary"></v-progress-linear>
 
             <template v-else-if="stats">
-                <h6 class="text-muted mt-3 mb-2">Employees</h6>
+                <h6 class="text-muted mt-3 mb-2">{{ $t('Employees') }}</h6>
                 <div class="row g-3">
                     <div class="col-md-4" v-for="card in employeeCards" :key="card.label">
                         <v-card class="stat-card">
                             <div class="stat-icon" :class="card.color"><i :class="card.icon"></i></div>
                             <div>
-                                <div class="stat-label">{{ card.label }}</div>
+                                <div class="stat-label">{{ $t(card.label) }}</div>
                                 <div class="stat-value">{{ card.value }}</div>
                             </div>
                         </v-card>
                     </div>
                 </div>
 
-                <h6 class="text-muted mt-4 mb-2">Payroll - {{ monthLabel(stats.month) }}</h6>
+                <h6 class="text-muted mt-4 mb-2">{{ $t('Payroll - {month}', { month: monthLabel(stats.month) }) }}</h6>
                 <div class="row g-3">
                     <div class="col-md-3" v-for="card in payrollCards" :key="card.label">
                         <v-card class="stat-card">
                             <div class="stat-icon" :class="card.color"><i :class="card.icon"></i></div>
                             <div>
-                                <div class="stat-label">{{ card.label }}</div>
+                                <div class="stat-label">{{ $t(card.label) }}</div>
                                 <div class="stat-value">{{ card.value }}</div>
-                                <div class="stat-hint" v-if="card.hint">{{ card.hint }}</div>
+                                <div class="stat-hint" v-if="card.hint">{{ $t(card.hint, card.hintParams) }}</div>
                             </div>
                         </v-card>
                     </div>
@@ -37,24 +37,24 @@
                 <div class="row g-3 mt-1">
                     <div class="col-md-6">
                         <v-card style="padding: 15px;">
-                            <h6 class="mb-3">Current month salary status</h6>
+                            <h6 class="mb-3">{{ $t('Current month salary status') }}</h6>
                             <div v-if="!Object.keys(stats.status_counts || {}).length" class="text-muted">
-                                No salary generated for this month yet.
+                                {{ $t('No salary generated for this month yet.') }}
                             </div>
                             <div v-for="(count, status) in stats.status_counts" :key="status"
                                 class="d-flex justify-content-between border-bottom py-2">
-                                <span :class="salaryStatusClass(status)">{{ status }}</span>
+                                <span :class="salaryStatusClass(status)">{{ $t(status) }}</span>
                                 <strong>{{ count }}</strong>
                             </div>
                         </v-card>
                     </div>
                     <div class="col-md-6">
                         <v-card style="padding: 15px;">
-                            <h6 class="mb-3">Quick links</h6>
+                            <h6 class="mb-3">{{ $t('Quick links') }}</h6>
                             <div class="d-flex flex-wrap gap-2">
                                 <router-link v-for="link in quickLinks" :key="link.text" :to="link.to"
                                     class="primary-button" v-show="can(link.permissions)">
-                                    <i :class="link.icon"></i> {{ link.text }}
+                                    <i :class="link.icon"></i> {{ $t(link.text) }}
                                 </router-link>
                             </div>
                         </v-card>
@@ -84,9 +84,9 @@ const employeeCards = computed(() => [
 
 const payrollCards = computed(() => [
     { label: 'Current Month Salary', value: money(stats.value.current_month_salary), icon: 'fa-solid fa-money-bill-wave', color: 'bg-info', hint: 'Net of generated salaries' },
-    { label: 'Generated Salary', value: stats.value.generated_salaries, icon: 'fa-solid fa-file-invoice-dollar', color: 'bg-primary', hint: `of ${stats.value.payroll_employees} on payroll` },
+    { label: 'Generated Salary', value: stats.value.generated_salaries, icon: 'fa-solid fa-file-invoice-dollar', color: 'bg-primary', hint: 'of {count} on payroll', hintParams: { count: stats.value.payroll_employees } },
     { label: 'Pending Salary', value: stats.value.pending_salaries, icon: 'fa-solid fa-hourglass-half', color: 'bg-warning', hint: 'Not generated yet' },
-    { label: 'Total Payroll Amount', value: money(stats.value.total_payroll_amount), icon: 'fa-solid fa-sack-dollar', color: 'bg-success', hint: `Net salary in ${stats.value.year}` },
+    { label: 'Total Payroll Amount', value: money(stats.value.total_payroll_amount), icon: 'fa-solid fa-sack-dollar', color: 'bg-success', hint: 'Net salary in {year}', hintParams: { year: stats.value.year } },
 ])
 
 const quickLinks = [

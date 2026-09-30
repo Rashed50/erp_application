@@ -2,6 +2,8 @@ import AppLayout from '@/layout/AuthenticatedLayout.vue';
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from '@/stores/auth'
 import { setToast } from "@/helpers/toast";
+import { locale, t } from "@/i18n";
+import { watch } from "vue";
 
 import { toast } from "vue3-toastify";
 
@@ -460,6 +462,16 @@ const routes = [
             },
             /* ====================== Ledger Account Route END ====================== */
 
+            {
+                path: 'accounting/reports',
+                name: 'admin_account_reports',
+                component: () => import('@/views/account-reports/Index.vue'),
+                meta: {
+                    title: 'Account Reports',
+                    permissions: ['account-reports.view']
+                }
+            },
+
             /* ====================== Internal Fund Transfer Route START ====================== */
             {
                 path: 'accounting/internal-fund-transfer',
@@ -550,10 +562,13 @@ const router = createRouter({
 });
 
 
-// title
-router.afterEach((to) => {
-    document.title = to.meta.title || 'Admin Dashboard'
-})
+// title (route meta titles are English phrases, translated for the active locale)
+const updateDocumentTitle = (route) => {
+    document.title = route.meta.title ? t(route.meta.title) : t('common.adminDashboard')
+}
+
+router.afterEach((to) => updateDocumentTitle(to))
+watch(locale, () => updateDocumentTitle(router.currentRoute.value))
 
 
 router.beforeEach(async (to) => {
@@ -584,7 +599,7 @@ router.beforeEach(async (to) => {
         const hasPermission = to.meta.permissions.some(p => userPermissions.includes(p));
 
         if (!hasPermission) {
-            setToast('error', "You don't have permission to access this page.");
+            setToast('error', t('common.noPermission'));
             return { name: 'access_block' };
         }
     }

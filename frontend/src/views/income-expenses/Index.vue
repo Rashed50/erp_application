@@ -13,16 +13,16 @@
                             <div class="col-md-4"></div>
                             <div class="col-md-2">
                                 <select class="form-select" v-model="filters.type">
-                                    <option value="">All Types</option>
-                                    <option value="income">Income</option>
-                                    <option value="expense">Expense</option>
+                                    <option value="">{{ $t('All Types') }}</option>
+                                    <option value="income">{{ $t('Income') }}</option>
+                                    <option value="expense">{{ $t('Expense') }}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <input type="date" class="form-control" v-model="filters.from_date" placeholder="From" />
+                                <input type="date" class="form-control" v-model="filters.from_date" :placeholder="$t('From')" />
                             </div>
                             <div class="col-md-3">
-                                <input type="date" class="form-control" v-model="filters.to_date" placeholder="To" />
+                                <input type="date" class="form-control" v-model="filters.to_date" :placeholder="$t('To')" />
                             </div>
                         </div>
                     </div>
@@ -32,32 +32,32 @@
                         <thead>
                             <tr>
                                 <th class="text-left">#</th>
-                                <th class="text-left">Date</th>
-                                <th class="text-center">Type</th>
-                                <th class="text-left">Category Account</th>
-                                <th class="text-left">Payment Account</th>
-                                <th class="text-right">Amount</th>
-                                <th class="text-left">Reference No</th>
-                                <th class="text-center">Approval</th>
-                                <th class="text-center">Action</th>
+                                <th class="text-left">{{ $t('Date') }}</th>
+                                <th class="text-center">{{ $t('Type') }}</th>
+                                <th class="text-left">{{ $t('Category Account') }}</th>
+                                <th class="text-left">{{ $t('Payment Account') }}</th>
+                                <th class="text-right">{{ $t('Amount') }}</th>
+                                <th class="text-left">{{ $t('Reference No') }}</th>
+                                <th class="text-center">{{ $t('Approval') }}</th>
+                                <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
                                 <td colspan="9" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
-                                    Loading...
+                                    {{ $t('Loading...') }}
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="9" class="text-center py-4">No records found.</td>
+                                <td colspan="9" class="text-center py-4">{{ $t('No records found.') }}</td>
                             </tr>
                             <tr v-else v-for="(item, index) in items" :key="item.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
                                 <td>{{ item.transaction_date }}</td>
                                 <td class="text-center">
                                     <span :class="item.type === 'income' ? 'badge bg-success' : 'badge bg-danger'">
-                                        {{ item.type === 'income' ? 'Income' : 'Expense' }}
+                                        {{ $t(item.type === 'income' ? 'Income' : 'Expense') }}
                                     </span>
                                 </td>
                                 <td>{{ item.account_name }}</td>
@@ -77,19 +77,19 @@
                                         <ul class="table-action-menu">
                                             <li class="menu-item" v-if="!item.approved_by && can(['income-expenses.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'entry')">
-                                                    Approve
+                                                    {{ $t('Approve') }}
                                                 </button>
                                             </li>
                                             <li class="menu-item">
                                                 <router-link
                                                     :to="{ name: 'admin_income_expense_edit', params: { id: item.id } }"
                                                     class="menu-link">
-                                                    Edit
+                                                    {{ $t('Edit') }}
                                                 </router-link>
                                             </li>
                                             <li class="menu-item">
                                                 <button type="button" class="menu-link" @click="handleDelete(item)">
-                                                    Delete
+                                                    {{ $t('Delete') }}
                                                 </button>
                                             </li>
                                         </ul>
@@ -121,6 +121,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { useApproval } from '@/composables/useApproval';
 import { usePermission } from '@/composables/usePermission';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
+import { t } from '@/i18n';
 
 const {
     items,
@@ -143,12 +144,12 @@ const { approve } = useApproval('/api/income-expenses', () => fetchData())
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: 'Delete this entry? This cannot be undone.',
+        title: t('Are you sure?'),
+        text: t('Delete this entry? This cannot be undone.'),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('Yes, delete'),
+        cancelButtonText: t('Cancel'),
     })
 
     if (!result.isConfirmed) return
@@ -160,7 +161,7 @@ const handleDelete = async (item) => {
             fetchData()
         }
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete entry.')
+        toast.error(e.response?.data?.message || t('Failed to delete entry.'))
     }
 }
 

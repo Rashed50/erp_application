@@ -45,13 +45,13 @@ class FundTransferController extends Controller
     {
         $transfer = $this->transferService->create($request->validated());
 
-        return ApiResponse::success(new FundTransferResource($transfer), 'Fund transfer saved successfully.', 201);
+        return ApiResponse::success(new FundTransferResource($transfer), __('Fund transfer saved successfully.'), 201);
     }
 
     public function destroy(FundTransfer $fund_transfer): JsonResponse
     {
         $this->transferService->delete($fund_transfer);
 
-        return ApiResponse::success(message: 'Fund transfer deleted and reversed successfully.');
+        return ApiResponse::success(message: __('Fund transfer deleted and reversed successfully.'));
     }
 }

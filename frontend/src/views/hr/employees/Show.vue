@@ -9,22 +9,22 @@
             <v-card v-else style="padding: 10px; margin-top: 15px;">
                 <div class="d-flex justify-content-between align-items-center px-2 pb-2">
                     <div>
-                        <span :class="employeeStatusClass(employee.status)">{{ employee.status }}</span>
+                        <span :class="employeeStatusClass(employee.status)">{{ $t(employee.status) }}</span>
                         <span class="ms-2 text-muted">{{ employee.designation }} · {{ employee.department }}</span>
                     </div>
                     <router-link v-if="can(['employees.update'])"
                         :to="{ name: 'admin_hr_employee_edit', params: { id: employee.id } }" class="primary-button">
-                        <i class="fa-solid fa-pen"></i> Edit Employee
+                        <i class="fa-solid fa-pen"></i> {{ $t('Edit Employee') }}
                     </router-link>
                 </div>
 
                 <v-tabs v-model="tab" color="blue-darken-4" show-arrows>
-                    <v-tab value="basic">Basic Information</v-tab>
-                    <v-tab value="employment">Employment Information</v-tab>
-                    <v-tab value="salary" v-if="can(['salary-configs.view'])">Salary Information</v-tab>
-                    <v-tab value="work" v-if="can(['employee-works.view'])">Work History</v-tab>
-                    <v-tab value="salary-history" v-if="can(['payroll.view'])">Salary History</v-tab>
-                    <v-tab value="documents">Documents / Files</v-tab>
+                    <v-tab value="basic">{{ $t('Basic Information') }}</v-tab>
+                    <v-tab value="employment">{{ $t('Employment Information') }}</v-tab>
+                    <v-tab value="salary" v-if="can(['salary-configs.view'])">{{ $t('Salary Information') }}</v-tab>
+                    <v-tab value="work" v-if="can(['employee-works.view'])">{{ $t('Work History') }}</v-tab>
+                    <v-tab value="salary-history" v-if="can(['payroll.view'])">{{ $t('Salary History') }}</v-tab>
+                    <v-tab value="documents">{{ $t('Documents / Files') }}</v-tab>
                 </v-tabs>
 
                 <v-window v-model="tab" class="pt-3">
@@ -33,8 +33,8 @@
                         <table class="table table-bordered info-table">
                             <tbody>
                                 <tr v-for="row in basicRows" :key="row[0]">
-                                    <th>{{ row[0] }}</th>
-                                    <td>{{ row[1] || '-' }}</td>
+                                    <th>{{ $t(row[0]) }}</th>
+                                    <td>{{ row[2] && row[1] ? $t(row[1]) : row[1] || '-' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -45,8 +45,8 @@
                         <table class="table table-bordered info-table">
                             <tbody>
                                 <tr v-for="row in employmentRows" :key="row[0]">
-                                    <th>{{ row[0] }}</th>
-                                    <td>{{ row[1] || '-' }}</td>
+                                    <th>{{ $t(row[0]) }}</th>
+                                    <td>{{ row[2] && row[1] ? $t(row[1]) : row[1] || '-' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -56,35 +56,35 @@
                     <v-window-item value="salary">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div v-if="currentSalary">
-                                Current monthly gross: <strong>{{ money(currentSalary.monthly_gross) }}</strong>
-                                <span class="text-muted">(effective {{ currentSalary.effective_date }})</span>
+                                {{ $t('Current monthly gross:') }} <strong>{{ money(currentSalary.monthly_gross) }}</strong>
+                                <span class="text-muted">{{ $t('(effective {date})', { date: currentSalary.effective_date }) }}</span>
                             </div>
-                            <div v-else class="text-muted">No salary configuration yet.</div>
+                            <div v-else class="text-muted">{{ $t('No salary configuration yet.') }}</div>
                             <v-btn v-if="can(['salary-configs.create'])" class="text-none text-white" color="blue-darken-4"
                                 rounded="0" variant="flat" @click="openSalaryDialog(null)">
-                                <i class="fa-solid fa-plus me-1"></i> {{ currentSalary ? 'Change Salary' : 'Add Salary' }}
+                                <i class="fa-solid fa-plus me-1"></i> {{ $t(currentSalary ? 'Change Salary' : 'Add Salary') }}
                             </v-btn>
                         </div>
                         <v-table class="custom-bordered">
                             <thead>
                                 <tr>
-                                    <th>Effective Date</th>
-                                    <th class="text-right">Basic</th>
-                                    <th class="text-right">House Rent</th>
-                                    <th class="text-right">Medical</th>
-                                    <th class="text-right">Transport</th>
-                                    <th class="text-right">Food</th>
-                                    <th class="text-right">Other</th>
-                                    <th class="text-right">Gross</th>
-                                    <th class="text-right">OT Rate</th>
-                                    <th class="text-right">Fixed Deduction</th>
-                                    <th class="text-center">Status</th>
-                                    <th class="text-center">Action</th>
+                                    <th>{{ $t('Effective Date') }}</th>
+                                    <th class="text-right">{{ $t('Basic') }}</th>
+                                    <th class="text-right">{{ $t('House Rent') }}</th>
+                                    <th class="text-right">{{ $t('Medical') }}</th>
+                                    <th class="text-right">{{ $t('Transport') }}</th>
+                                    <th class="text-right">{{ $t('Food') }}</th>
+                                    <th class="text-right">{{ $t('Other') }}</th>
+                                    <th class="text-right">{{ $t('Gross') }}</th>
+                                    <th class="text-right">{{ $t('OT Rate') }}</th>
+                                    <th class="text-right">{{ $t('Fixed Deduction') }}</th>
+                                    <th class="text-center">{{ $t('Status') }}</th>
+                                    <th class="text-center">{{ $t('Action') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="!employee.salary_details.length">
-                                    <td colspan="12" class="text-center py-3">No salary configuration.</td>
+                                    <td colspan="12" class="text-center py-3">{{ $t('No salary configuration.') }}</td>
                                 </tr>
                                 <tr v-for="revision in employee.salary_details" :key="revision.id">
                                     <td>
@@ -102,18 +102,18 @@
                                     <td class="text-right">{{ money(revision.other_deduction) }}</td>
                                     <td class="text-center">
                                         <span :class="revision.status ? 'badge bg-success' : 'badge bg-secondary'">
-                                            {{ revision.status ? 'Active' : 'Inactive' }}
+                                            {{ $t(revision.status ? 'Active' : 'Inactive') }}
                                         </span>
                                     </td>
                                     <td class="text-center">
                                         <template v-if="!revision.is_used_by_payroll">
                                             <v-btn v-if="can(['salary-configs.update'])" size="small" variant="text"
-                                                color="blue-darken-3" @click="openSalaryDialog(revision)">Edit</v-btn>
+                                                color="blue-darken-3" @click="openSalaryDialog(revision)">{{ $t('Edit') }}</v-btn>
                                             <v-btn v-if="can(['salary-configs.delete'])" size="small" variant="text"
-                                                color="red-darken-2" @click="deleteRevision(revision)">Delete</v-btn>
+                                                color="red-darken-2" @click="deleteRevision(revision)">{{ $t('Delete') }}</v-btn>
                                         </template>
-                                        <small v-else class="text-muted" title="Used by generated salaries">
-                                            <i class="fa-solid fa-lock"></i> Used in payroll
+                                        <small v-else class="text-muted" :title="$t('Used by generated salaries')">
+                                            <i class="fa-solid fa-lock"></i> {{ $t('Used in payroll') }}
                                         </small>
                                     </td>
                                 </tr>
@@ -126,28 +126,28 @@
                         <div class="d-flex justify-content-end mb-2" v-if="can(['employee-works.create'])">
                             <router-link class="primary-button"
                                 :to="{ name: 'admin_hr_works_entry', query: { employee_id: employee.id } }">
-                                <i class="fa-solid fa-calendar-plus"></i> Enter Monthly Work
+                                <i class="fa-solid fa-calendar-plus"></i> {{ $t('Enter Monthly Work') }}
                             </router-link>
                         </div>
                         <v-table class="custom-bordered">
                             <thead>
                                 <tr>
-                                    <th>Month</th>
-                                    <th class="text-right">Working</th>
-                                    <th class="text-right">Present</th>
-                                    <th class="text-right">Absent</th>
-                                    <th class="text-right">Paid Leave</th>
-                                    <th class="text-right">Unpaid Leave</th>
-                                    <th class="text-right">OT Hours</th>
-                                    <th class="text-right">Bonus</th>
-                                    <th class="text-right">Other +</th>
-                                    <th class="text-right">Other -</th>
-                                    <th>Remarks</th>
+                                    <th>{{ $t('Month') }}</th>
+                                    <th class="text-right">{{ $t('Working') }}</th>
+                                    <th class="text-right">{{ $t('Present') }}</th>
+                                    <th class="text-right">{{ $t('Absent') }}</th>
+                                    <th class="text-right">{{ $t('Paid Leave') }}</th>
+                                    <th class="text-right">{{ $t('Unpaid Leave') }}</th>
+                                    <th class="text-right">{{ $t('OT Hours') }}</th>
+                                    <th class="text-right">{{ $t('Bonus') }}</th>
+                                    <th class="text-right">{{ $t('Other +') }}</th>
+                                    <th class="text-right">{{ $t('Other -') }}</th>
+                                    <th>{{ $t('Remarks') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="!works.length">
-                                    <td colspan="11" class="text-center py-3">No work records.</td>
+                                    <td colspan="11" class="text-center py-3">{{ $t('No work records.') }}</td>
                                 </tr>
                                 <tr v-for="work in works" :key="work.id">
                                     <td>
@@ -176,20 +176,20 @@
                         <v-table class="custom-bordered">
                             <thead>
                                 <tr>
-                                    <th>Month</th>
-                                    <th class="text-right">Basic</th>
-                                    <th class="text-right">Allowances</th>
-                                    <th class="text-right">Overtime</th>
-                                    <th class="text-right">Bonus</th>
-                                    <th class="text-right">Gross</th>
-                                    <th class="text-right">Deduction</th>
-                                    <th class="text-right">Net</th>
-                                    <th class="text-center">Status</th>
+                                    <th>{{ $t('Month') }}</th>
+                                    <th class="text-right">{{ $t('Basic') }}</th>
+                                    <th class="text-right">{{ $t('Allowances') }}</th>
+                                    <th class="text-right">{{ $t('Overtime') }}</th>
+                                    <th class="text-right">{{ $t('Bonus') }}</th>
+                                    <th class="text-right">{{ $t('Gross') }}</th>
+                                    <th class="text-right">{{ $t('Deduction') }}</th>
+                                    <th class="text-right">{{ $t('Net') }}</th>
+                                    <th class="text-center">{{ $t('Status') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="!salaries.length">
-                                    <td colspan="9" class="text-center py-3">No salary generated yet.</td>
+                                    <td colspan="9" class="text-center py-3">{{ $t('No salary generated yet.') }}</td>
                                 </tr>
                                 <tr v-for="salary in salaries" :key="salary.id"
                                     :class="{ 'text-muted text-decoration-line-through': salary.status === 'Cancelled' }">
@@ -203,7 +203,7 @@
                                     <td class="text-right"><strong>{{ money(salary.net_salary) }}</strong></td>
                                     <td class="text-center">
                                         <span :class="salaryStatusClass(salary.status)"
-                                            :title="salary.cancel_reason || ''">{{ salary.status }}</span>
+                                            :title="salary.cancel_reason || ''">{{ $t(salary.status) }}</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -215,17 +215,17 @@
                         <form v-if="can(['employees.update'])" class="row align-items-end mb-3"
                             @submit.prevent="uploadDocument">
                             <div class="col-md-3">
-                                <label>Document Type:</label>
+                                <label>{{ $t('Document Type:') }}</label>
                                 <select class="form-control" v-model="upload.document_type" required>
-                                    <option v-for="type in documentTypes" :key="type" :value="type">{{ type }}</option>
+                                    <option v-for="type in documentTypes" :key="type" :value="type">{{ $t(type) }}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label>Title:</label>
+                                <label>{{ $t('Title:') }}</label>
                                 <input type="text" class="form-control" v-model="upload.title" />
                             </div>
                             <div class="col-md-4">
-                                <label>File (PDF, image, Word; max 5 MB):</label>
+                                <label>{{ $t('File (PDF, image, Word; max 5 MB):') }}</label>
                                 <input type="file" class="form-control" ref="fileInput"
                                     accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
                                     @change="upload.file = $event.target.files[0]" required />
@@ -234,36 +234,36 @@
                             <div class="col-md-2">
                                 <v-btn type="submit" class="text-none text-white w-100" color="blue-darken-4" rounded="0"
                                     variant="flat" :loading="uploading">
-                                    Upload
+                                    {{ $t('Upload') }}
                                 </v-btn>
                             </div>
                         </form>
                         <v-table class="custom-bordered">
                             <thead>
                                 <tr>
-                                    <th>Type</th>
-                                    <th>Title</th>
-                                    <th>File</th>
-                                    <th class="text-right">Size</th>
-                                    <th>Uploaded</th>
-                                    <th class="text-center">Action</th>
+                                    <th>{{ $t('Type') }}</th>
+                                    <th>{{ $t('Title') }}</th>
+                                    <th>{{ $t('File') }}</th>
+                                    <th class="text-right">{{ $t('Size') }}</th>
+                                    <th>{{ $t('Uploaded') }}</th>
+                                    <th class="text-center">{{ $t('Action') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="!employee.files.length">
-                                    <td colspan="6" class="text-center py-3">No documents uploaded.</td>
+                                    <td colspan="6" class="text-center py-3">{{ $t('No documents uploaded.') }}</td>
                                 </tr>
                                 <tr v-for="file in employee.files" :key="file.id">
-                                    <td>{{ file.document_type }}</td>
+                                    <td>{{ $t(file.document_type) }}</td>
                                     <td>{{ file.title }}</td>
                                     <td>{{ file.file_name }}</td>
                                     <td class="text-right">{{ (file.file_size / 1024).toFixed(1) }} KB</td>
                                     <td>{{ file.created_at?.slice(0, 10) }}</td>
                                     <td class="text-center">
                                         <v-btn size="small" variant="text" color="blue-darken-3"
-                                            @click="downloadDocument(file)">Download</v-btn>
+                                            @click="downloadDocument(file)">{{ $t('Download') }}</v-btn>
                                         <v-btn v-if="can(['employees.update'])" size="small" variant="text"
-                                            color="red-darken-2" @click="deleteDocument(file)">Delete</v-btn>
+                                            color="red-darken-2" @click="deleteDocument(file)">{{ $t('Delete') }}</v-btn>
                                     </td>
                                 </tr>
                             </tbody>
@@ -287,6 +287,7 @@ import { usePermission } from '@/composables/usePermission';
 import { useRoute } from 'vue-router';
 import { employeeStatusClass, money, monthLabel, salaryStatusClass } from '../helpers';
 import SalaryDetailDialog from './SalaryDetailDialog.vue';
+import { t } from '@/i18n';
 
 const route = useRoute();
 const { can } = usePermission()
@@ -314,14 +315,14 @@ const basicRows = computed(() => {
         ["Father's Name", e.father_name],
         ["Mother's Name", e.mother_name],
         ['Date of Birth', e.date_of_birth],
-        ['Gender', e.gender],
+        ['Gender', e.gender, true],
         ['Phone', e.phone],
         ['Email', e.email],
         ['Present Address', e.address],
         ['Permanent Address', e.detail?.permanent_address],
         ['National ID', e.detail?.national_id],
         ['Passport No', e.detail?.passport_no],
-        ['Marital Status', e.detail?.marital_status],
+        ['Marital Status', e.detail?.marital_status, true],
         ['Blood Group', e.detail?.blood_group],
         ['Emergency Contact', [e.detail?.emergency_contact_name, e.detail?.emergency_contact_relation, e.detail?.emergency_contact_phone].filter(Boolean).join(' · ')],
     ]
@@ -333,11 +334,11 @@ const employmentRows = computed(() => {
     return [
         ['Department', e.department],
         ['Designation', e.designation],
-        ['Employment Type', e.employment_type],
-        ['Status', e.status],
+        ['Employment Type', e.employment_type, true],
+        ['Status', e.status, true],
         ['Joining Date', e.joining_date],
         ['Last Working Date', e.last_working_date],
-        ['Salary Payment Method', detail.payment_method],
+        ['Salary Payment Method', detail.payment_method, true],
         ['Bank', [detail.bank_name, detail.bank_branch].filter(Boolean).join(', ')],
         ['Account', [detail.bank_account_name, detail.bank_account_no].filter(Boolean).join(' - ')],
         ['Notes', detail.notes],
@@ -357,7 +358,7 @@ const loadEmployee = async () => {
         const { data } = await axios.get(`/api/hr/employees/${route.params.id}`)
         if (data.success) employee.value = data.data
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to load employee.')
+        toast.error(e.response?.data?.message || t('Failed to load employee.'))
     }
 }
 
@@ -382,11 +383,11 @@ const openSalaryDialog = (revision) => {
 
 const deleteRevision = async (revision) => {
     const result = await Swal.fire({
-        title: 'Delete this salary configuration?',
-        text: `Effective ${revision.effective_date}`,
+        title: t('Delete this salary configuration?'),
+        text: t('Effective {date}', { date: revision.effective_date }),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
+        confirmButtonText: t('Yes, delete'),
     })
     if (!result.isConfirmed) return
 
@@ -395,7 +396,7 @@ const deleteRevision = async (revision) => {
         toast.success(data.message)
         loadEmployee()
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete.')
+        toast.error(e.response?.data?.message || t('Failed to delete.'))
     }
 }
 
@@ -419,7 +420,7 @@ const uploadDocument = async () => {
     } catch (e) {
         uploadError.value = e.response?.status === 422
             ? Object.values(e.response.data.data).flat().join(' ')
-            : (e.response?.data?.message || 'Upload failed.')
+            : (e.response?.data?.message || t('Upload failed.'))
     } finally {
         uploading.value = false
     }
@@ -436,17 +437,17 @@ const downloadDocument = async (file) => {
         link.click()
         URL.revokeObjectURL(url)
     } catch (e) {
-        toast.error('Failed to download the file.')
+        toast.error(t('Failed to download the file.'))
     }
 }
 
 const deleteDocument = async (file) => {
     const result = await Swal.fire({
-        title: 'Delete this document?',
+        title: t('Delete this document?'),
         text: file.file_name,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
+        confirmButtonText: t('Yes, delete'),
     })
     if (!result.isConfirmed) return
 
@@ -455,7 +456,7 @@ const deleteDocument = async (file) => {
         toast.success(data.message)
         loadEmployee()
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete.')
+        toast.error(e.response?.data?.message || t('Failed to delete.'))
     }
 }
 

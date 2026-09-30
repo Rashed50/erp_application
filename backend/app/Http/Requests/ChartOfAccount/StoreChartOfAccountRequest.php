@@ -54,15 +54,15 @@ class StoreChartOfAccountRequest extends FormRequest
             $parent = ChartOfAccount::find($this->input('parent_id'));
 
             if ($parent->is_transaction) {
-                $validator->errors()->add('parent_id', 'A transaction account cannot have child accounts.');
+                $validator->errors()->add('parent_id', __('A transaction account cannot have child accounts.'));
             }
 
             if ($parent->is_closed) {
-                $validator->errors()->add('parent_id', 'A closed account cannot have child accounts.');
+                $validator->errors()->add('parent_id', __('A closed account cannot have child accounts.'));
             }
 
             if ($this->filled('account_type_id') && (int) $this->input('account_type_id') !== $parent->account_type_id) {
-                $validator->errors()->add('account_type_id', 'A child account must have the same type as its parent.');
+                $validator->errors()->add('account_type_id', __('A child account must have the same type as its parent.'));
             }
         });
     }

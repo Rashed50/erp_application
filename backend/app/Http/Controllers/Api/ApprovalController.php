@@ -82,9 +82,9 @@ class ApprovalController extends Controller
     private function approve(Model $model, string $resource): JsonResponse
     {
         if ($model->isApproved()) {
-            return ApiResponse::error('This record has already been approved.', 422);
+            return ApiResponse::error(__('This record has already been approved.'), 422);
         }
 
-        return ApiResponse::success(new $resource($this->approvalService->approve($model)), 'Record approved successfully.');
+        return ApiResponse::success(new $resource($this->approvalService->approve($model)), __('Record approved successfully.'));
     }
 }

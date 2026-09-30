@@ -1,9 +1,9 @@
 <template>
     <div class="d-flex align-items-center gap-3">
-        রেকর্ড দেখাও :
+        {{ $t('pagination.perPage') }}
         <select class="form-select form-select-sm w-auto" :value="perPage" @change="changePerPage($event.target.value)">
             <option v-for="size in perPageOptions" :key="size" :value="size">
-                {{ size }}
+                {{ size === 'All' ? $t('pagination.all') : size }}
             </option>
         </select>
     </div>

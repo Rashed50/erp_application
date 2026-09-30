@@ -1,8 +1,8 @@
 <template>
     <div class="not-found-wrapper">
         <h1>404</h1>
-        <p>Page Not Found</p>
-        <button class="btn-back" @click="goBack">Go Back</button>
+        <p>{{ $t('Page Not Found') }}</p>
+        <button class="btn-back" @click="goBack">{{ $t('Go Back') }}</button>
     </div>
 </template>
 

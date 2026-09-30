@@ -44,20 +44,20 @@ class SaleController extends Controller
     {
         $sale = $this->saleService->create($request->validated());
 
-        return ApiResponse::success(new SaleResource($sale), 'Sale created successfully.', 201);
+        return ApiResponse::success(new SaleResource($sale), __('Sale created successfully.'), 201);
     }
 
     public function update(UpdateSaleRequest $request, Sale $sale): JsonResponse
     {
         $sale = $this->saleService->update($sale, $request->validated());
 
-        return ApiResponse::success(new SaleResource($sale), 'Sale updated successfully.');
+        return ApiResponse::success(new SaleResource($sale), __('Sale updated successfully.'));
     }
 
     public function destroy(Sale $sale): JsonResponse
     {
         $this->saleService->delete($sale);
 
-        return ApiResponse::success(message: 'Sale deleted successfully.');
+        return ApiResponse::success(message: __('Sale deleted successfully.'));
     }
 }

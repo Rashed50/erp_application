@@ -72,7 +72,7 @@ class EmployeeWorkService
 
         if ($this->hasLiveSalary($work)) {
             throw ValidationException::withMessages([
-                'salary_month' => 'A salary has been generated from this work record. Cancel that salary first.',
+                'salary_month' => __('A salary has been generated from this work record. Cancel that salary first.'),
             ]);
         }
 
@@ -96,7 +96,7 @@ class EmployeeWorkService
     {
         if ($work->isLocked()) {
             throw ValidationException::withMessages([
-                'salary_month' => 'The salary for this month is already approved or paid, so its work record can no longer change.',
+                'salary_month' => __('The salary for this month is already approved or paid, so its work record can no longer change.'),
             ]);
         }
     }

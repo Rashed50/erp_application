@@ -51,24 +51,24 @@ class WorkOrderController extends Controller
     {
         $workOrder = $this->workOrderService->create($request->validated());
 
-        return ApiResponse::success(new WorkOrderResource($workOrder), 'Work order created successfully.', 201);
+        return ApiResponse::success(new WorkOrderResource($workOrder), __('Work order created successfully.'), 201);
     }
 
     public function update(UpdateWorkOrderRequest $request, WorkOrder $workOrder): JsonResponse
     {
         $workOrder = $this->workOrderService->update($workOrder, $request->validated());
 
-        return ApiResponse::success(new WorkOrderResource($workOrder), 'Work order updated successfully.');
+        return ApiResponse::success(new WorkOrderResource($workOrder), __('Work order updated successfully.'));
     }
 
     public function destroy(WorkOrder $workOrder): JsonResponse
     {
         if ($workOrder->sales()->exists() || $workOrder->transactions()->exists()) {
-            return ApiResponse::error('This work order has sales or payments and cannot be deleted.', 422);
+            return ApiResponse::error(__('This work order has sales or payments and cannot be deleted.'), 422);
         }
 
         $this->workOrderService->delete($workOrder);
 
-        return ApiResponse::success(message: 'Work order deleted successfully.');
+        return ApiResponse::success(message: __('Work order deleted successfully.'));
     }
 }

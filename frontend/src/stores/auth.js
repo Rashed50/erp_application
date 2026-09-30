@@ -1,6 +1,7 @@
 // stores/auth.js
 import axios from "axios";
 import { defineStore } from "pinia";
+import { t } from "@/i18n";
 
 // The backend already returns flat `roles` and `permissions` arrays of
 // name strings on the user object (see UserResource) — nothing to compute here.
@@ -35,7 +36,7 @@ export const useAuthStore = defineStore('auth', {
                 setAuthToken(null)
                 this.user = null
                 this.isAuthenticated = false
-                return err.response?.data ?? { success: false, message: 'Network error. Please try again.' }
+                return err.response?.data ?? { success: false, message: t('common.networkError') }
             }
         },
         async logout() {

@@ -27,7 +27,7 @@ class AuthController extends Controller
                 'user' => new UserResource($result['user']),
                 'token' => $result['token'],
             ],
-            message: 'Logged in successfully.',
+            message: __('Logged in successfully.'),
         );
     }
 
@@ -35,6 +35,6 @@ class AuthController extends Controller
     {
         $this->authService->logout($request->user());
 
-        return ApiResponse::success(message: 'Logged out successfully.');
+        return ApiResponse::success(message: __('Logged out successfully.'));
     }
 }

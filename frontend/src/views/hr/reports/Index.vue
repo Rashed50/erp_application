@@ -6,61 +6,61 @@
             <v-card style="padding: 15px; margin-top: 15px;">
                 <div class="row align-items-end g-2">
                     <div class="col-md-3">
-                        <label>Report:</label>
+                        <label>{{ $t('Report:') }}</label>
                         <select class="form-select" v-model="reportKey">
-                            <option v-for="(report, key) in reports" :key="key" :value="key">{{ report.title }}</option>
+                            <option v-for="(report, key) in reports" :key="key" :value="key">{{ $t(report.title) }}</option>
                         </select>
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('month')">
-                        <label>Month:</label>
+                        <label>{{ $t('Month:') }}</label>
                         <input type="month" class="form-control" v-model="filters.month" />
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('year')">
-                        <label>Year:</label>
+                        <label>{{ $t('Year:') }}</label>
                         <input type="number" min="2000" max="2100" class="form-control" v-model.number="filters.year" />
                     </div>
                     <div class="col-md-3" v-if="report.filters.includes('employee')">
-                        <label>Employee:</label>
+                        <label>{{ $t('Employee:') }}</label>
                         <select class="form-select" v-model="filters.employee_id">
-                            <option value="">{{ report.requiresEmployee ? 'Select an employee' : 'All Employees' }}</option>
+                            <option value="">{{ $t(report.requiresEmployee ? 'Select an employee' : 'All Employees') }}</option>
                             <option v-for="employee in employees" :key="employee.id" :value="employee.id">
                                 {{ employee.employee_code }} - {{ employee.name }}
                             </option>
                         </select>
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('department')">
-                        <label>Department:</label>
+                        <label>{{ $t('Department:') }}</label>
                         <select class="form-select" v-model="filters.department">
-                            <option value="">All</option>
+                            <option value="">{{ $t('All') }}</option>
                             <option v-for="department in options.departments" :key="department" :value="department">
                                 {{ department }}
                             </option>
                         </select>
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('designation')">
-                        <label>Designation:</label>
+                        <label>{{ $t('Designation:') }}</label>
                         <select class="form-select" v-model="filters.designation">
-                            <option value="">All</option>
+                            <option value="">{{ $t('All') }}</option>
                             <option v-for="designation in options.designations" :key="designation" :value="designation">
                                 {{ designation }}
                             </option>
                         </select>
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('status')">
-                        <label>Status:</label>
+                        <label>{{ $t('Status:') }}</label>
                         <select class="form-select" v-model="filters.status">
-                            <option value="">All</option>
-                            <option v-for="status in report.statuses" :key="status" :value="status">{{ status }}</option>
+                            <option value="">{{ $t('All') }}</option>
+                            <option v-for="status in report.statuses" :key="status" :value="status">{{ $t(status) }}</option>
                         </select>
                     </div>
                     <div class="col-md-auto d-flex gap-2">
                         <v-btn class="text-none text-white" color="blue-darken-3" rounded="0" variant="flat"
                             :loading="loading" @click="run">
-                            Show
+                            {{ $t('Show') }}
                         </v-btn>
                         <v-btn class="text-none" color="grey-lighten-3" rounded="0" variant="flat"
                             :disabled="!rows.length" @click="print">
-                            <i class="fa-solid fa-print me-1"></i> Print
+                            <i class="fa-solid fa-print me-1"></i> {{ $t('Print') }}
                         </v-btn>
                     </div>
                 </div>
@@ -73,7 +73,7 @@
                             <tr>
                                 <th v-for="column in report.columns" :key="column.key"
                                     :class="column.align === 'right' ? 'text-right' : 'text-left'">
-                                    {{ column.label }}
+                                    {{ $t(column.label) }}
                                 </th>
                             </tr>
                         </thead>
@@ -85,7 +85,7 @@
                             </tr>
                             <tr v-else-if="!rows.length">
                                 <td :colspan="report.columns.length" class="text-center py-4">
-                                    {{ message || 'No records found.' }}
+                                    {{ message || $t('No records found.') }}
                                 </td>
                             </tr>
                             <tr v-else v-for="(row, index) in rows" :key="index">
@@ -114,11 +114,10 @@
 import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { usePrintable } from '@/composables/usePrintable';
-import { useSettingStore } from '@/stores/settings';
 import { SALARY_STATUSES, currentMonth, money, monthLabel } from '../helpers';
+import { t } from '@/i18n';
 
 const { printTable } = usePrintable()
-const settings = useSettingStore()
 
 const ALL = 100000
 
@@ -265,7 +264,7 @@ const cell = (column, row, index) => {
 const totalRow = computed(() => {
     const summed = report.value.columns.filter((c) => c.sum)
     if (!summed.length) return null
-    const total = { [report.value.columns[0].key]: 'Total' }
+    const total = { [report.value.columns[0].key]: t('Total') }
     for (const column of summed) {
         const sum = rows.value.reduce((acc, row) => acc + (Number(row[column.key]) || 0), 0)
         total[column.key] = column.format ? column.format(sum) : sum
@@ -289,7 +288,7 @@ const run = async () => {
     rows.value = []
     message.value = ''
     if (report.value.requiresEmployee && !filters.employee_id) {
-        message.value = 'Select an employee to see their salary history.'
+        message.value = t('Select an employee to see their salary history.')
         return
     }
 
@@ -298,7 +297,7 @@ const run = async () => {
         const { data } = await axios.get(report.value.endpoint, { params: params() })
         rows.value = report.value.rows(data.data ?? {})
     } catch (e) {
-        message.value = e.response?.data?.message || 'Failed to load the report.'
+        message.value = e.response?.data?.message || t('Failed to load the report.')
     } finally {
         loading.value = false
     }
@@ -312,11 +311,11 @@ const print = () => {
     ].filter(Boolean).join(' · ')
 
     printTable({
-        title: `${report.value.title}${subtitle ? ` - ${subtitle}` : ''}`,
-        logo: settings.company?.logo_url,
+        title: `${t(report.value.title)}${subtitle ? ` - ${subtitle}` : ''}`,
         items: totalRow.value ? [...rows.value, { ...totalRow.value, __total: true }] : rows.value,
         columns: report.value.columns.map((column) => ({
             ...column,
+            label: t(column.label),
             key: column.key === 'index' ? '__index' : column.key,
             format: (value, row) => {
                 if (row.__total) return value ?? ''

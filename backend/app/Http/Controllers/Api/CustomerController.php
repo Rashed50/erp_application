@@ -46,28 +46,28 @@ class CustomerController extends Controller
     {
         $customer = $this->customerService->create($request->validated());
 
-        return ApiResponse::success(new CustomerResource($customer), 'Customer created successfully.', 201);
+        return ApiResponse::success(new CustomerResource($customer), __('Customer created successfully.'), 201);
     }
 
     public function update(UpdateCustomerRequest $request, Customer $customer): JsonResponse
     {
         $customer = $this->customerService->update($customer, $request->validated());
 
-        return ApiResponse::success(new CustomerResource($customer), 'Customer updated successfully.');
+        return ApiResponse::success(new CustomerResource($customer), __('Customer updated successfully.'));
     }
 
     public function destroy(Customer $customer): JsonResponse
     {
         if (! $customer->canBeDeleted()) {
-            return ApiResponse::error('This customer has ledger transactions and cannot be deleted.', 422);
+            return ApiResponse::error(__('This customer has ledger transactions and cannot be deleted.'), 422);
         }
 
         if ($customer->hasWorkOrders()) {
-            return ApiResponse::error('This customer has work orders and cannot be deleted.', 422);
+            return ApiResponse::error(__('This customer has work orders and cannot be deleted.'), 422);
         }
 
         $this->customerService->delete($customer);
 
-        return ApiResponse::success(message: 'Customer deleted successfully.');
+        return ApiResponse::success(message: __('Customer deleted successfully.'));
     }
 }

@@ -8,7 +8,7 @@
                 <div class="row align-items-center mb-2">
                     <div class="col-md-2">
                         <select class="form-select" v-model="filters.department">
-                            <option value="">All Departments</option>
+                            <option value="">{{ $t('All Departments') }}</option>
                             <option v-for="department in options.departments" :key="department" :value="department">
                                 {{ department }}
                             </option>
@@ -16,7 +16,7 @@
                     </div>
                     <div class="col-md-2">
                         <select class="form-select" v-model="filters.designation">
-                            <option value="">All Designations</option>
+                            <option value="">{{ $t('All Designations') }}</option>
                             <option v-for="designation in options.designations" :key="designation" :value="designation">
                                 {{ designation }}
                             </option>
@@ -24,21 +24,21 @@
                     </div>
                     <div class="col-md-2">
                         <select class="form-select" v-model="filters.status">
-                            <option value="">All Status</option>
-                            <option v-for="status in options.statuses" :key="status" :value="status">{{ status }}</option>
+                            <option value="">{{ $t('All Status') }}</option>
+                            <option v-for="status in options.statuses" :key="status" :value="status">{{ $t(status) }}</option>
                         </select>
                     </div>
                     <div class="col-md-6">
                         <div class="search-wrapper d-flex align-center gap-2">
-                            <v-text-field variant="outlined" density="compact" placeholder="ID, name, phone, email..."
+                            <v-text-field variant="outlined" density="compact" :placeholder="$t('ID, name, phone, email...')"
                                 v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
                             <v-btn type="button" @click="fetchData" class="text-none text-white" color="blue-darken-3"
                                 rounded="0" variant="flat" min-width="100">
-                                Search
+                                {{ $t('Search') }}
                             </v-btn>
                             <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3" rounded="0"
                                 variant="flat" min-width="100">
-                                Reload
+                                {{ $t('Reload') }}
                             </v-btn>
                         </div>
                     </div>
@@ -48,25 +48,25 @@
                     <thead>
                         <tr>
                             <th class="text-left">#</th>
-                            <th class="text-left">Employee ID</th>
-                            <th class="text-left">Name</th>
-                            <th class="text-left">Department</th>
-                            <th class="text-left">Designation</th>
-                            <th class="text-left">Phone</th>
-                            <th class="text-left">Joining Date</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-center">Action</th>
+                            <th class="text-left">{{ $t('Employee ID') }}</th>
+                            <th class="text-left">{{ $t('Name') }}</th>
+                            <th class="text-left">{{ $t('Department') }}</th>
+                            <th class="text-left">{{ $t('Designation') }}</th>
+                            <th class="text-left">{{ $t('Phone') }}</th>
+                            <th class="text-left">{{ $t('Joining Date') }}</th>
+                            <th class="text-center">{{ $t('Status') }}</th>
+                            <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="loading">
                             <td colspan="9" class="text-center py-4">
                                 <v-progress-linear indeterminate color="primary"></v-progress-linear>
-                                Loading...
+                                {{ $t('Loading...') }}
                             </td>
                         </tr>
                         <tr v-else-if="!items.length">
-                            <td colspan="9" class="text-center py-4">No employees found.</td>
+                            <td colspan="9" class="text-center py-4">{{ $t('No employees found.') }}</td>
                         </tr>
                         <tr v-else v-for="(item, index) in items" :key="item.id">
                             <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
@@ -81,7 +81,7 @@
                             <td>{{ item.phone }}</td>
                             <td>{{ item.joining_date }}</td>
                             <td class="text-center">
-                                <span :class="employeeStatusClass(item.status)">{{ item.status }}</span>
+                                <span :class="employeeStatusClass(item.status)">{{ $t(item.status) }}</span>
                             </td>
                             <td class="text-center">
                                 <v-menu>
@@ -94,18 +94,18 @@
                                         <li class="menu-item">
                                             <router-link :to="{ name: 'admin_hr_employee_show', params: { id: item.id } }"
                                                 class="menu-link">
-                                                Details
+                                                {{ $t('Details') }}
                                             </router-link>
                                         </li>
                                         <li class="menu-item" v-if="can(['employees.update'])">
                                             <router-link :to="{ name: 'admin_hr_employee_edit', params: { id: item.id } }"
                                                 class="menu-link">
-                                                Edit
+                                                {{ $t('Edit') }}
                                             </router-link>
                                         </li>
                                         <li class="menu-item" v-if="can(['employees.delete'])">
                                             <button type="button" class="menu-link" @click="handleDelete(item)">
-                                                Delete
+                                                {{ $t('Delete') }}
                                             </button>
                                         </li>
                                     </ul>
@@ -131,6 +131,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
 import { employeeStatusClass } from '../helpers';
+import { t } from '@/i18n';
 
 const { can } = usePermission()
 
@@ -154,12 +155,12 @@ const options = ref({ departments: [], designations: [], statuses: [] })
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: `Delete employee "${item.name}"?`,
+        title: t('Are you sure?'),
+        text: t('Delete employee "{name}"?', { name: item.name }),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('Yes, delete'),
+        cancelButtonText: t('Cancel'),
     })
 
     if (!result.isConfirmed) return
@@ -172,7 +173,7 @@ const handleDelete = async (item) => {
         }
     } catch (e) {
         // An employee with salary history cannot be deleted (422).
-        toast.error(e.response?.data?.message || 'Failed to delete employee.')
+        toast.error(e.response?.data?.message || t('Failed to delete employee.'))
     }
 }
 

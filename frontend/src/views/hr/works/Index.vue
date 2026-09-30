@@ -11,7 +11,7 @@
                     </div>
                     <div class="col-md-3">
                         <select class="form-select" v-model="filters.department">
-                            <option value="">All Departments</option>
+                            <option value="">{{ $t('All Departments') }}</option>
                             <option v-for="department in options.departments" :key="department" :value="department">
                                 {{ department }}
                             </option>
@@ -19,15 +19,15 @@
                     </div>
                     <div class="col-md-7">
                         <div class="search-wrapper d-flex align-center gap-2">
-                            <v-text-field variant="outlined" density="compact" placeholder="Employee ID or name..."
+                            <v-text-field variant="outlined" density="compact" :placeholder="$t('Employee ID or name...')"
                                 v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
                             <v-btn type="button" @click="fetchData" class="text-none text-white" color="blue-darken-3"
                                 rounded="0" variant="flat" min-width="100">
-                                Search
+                                {{ $t('Search') }}
                             </v-btn>
                             <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3" rounded="0"
                                 variant="flat" min-width="100">
-                                Reload
+                                {{ $t('Reload') }}
                             </v-btn>
                         </div>
                     </div>
@@ -36,28 +36,28 @@
                 <v-table class="custom-bordered">
                     <thead>
                         <tr>
-                            <th>Month</th>
-                            <th>Employee</th>
-                            <th>Department</th>
-                            <th class="text-right">Working</th>
-                            <th class="text-right">Present</th>
-                            <th class="text-right">Absent</th>
-                            <th class="text-right">Paid Leave</th>
-                            <th class="text-right">Unpaid Leave</th>
-                            <th class="text-right">OT Hours</th>
-                            <th class="text-right">Bonus</th>
-                            <th class="text-center">Action</th>
+                            <th>{{ $t('Month') }}</th>
+                            <th>{{ $t('Employee') }}</th>
+                            <th>{{ $t('Department') }}</th>
+                            <th class="text-right">{{ $t('Working') }}</th>
+                            <th class="text-right">{{ $t('Present') }}</th>
+                            <th class="text-right">{{ $t('Absent') }}</th>
+                            <th class="text-right">{{ $t('Paid Leave') }}</th>
+                            <th class="text-right">{{ $t('Unpaid Leave') }}</th>
+                            <th class="text-right">{{ $t('OT Hours') }}</th>
+                            <th class="text-right">{{ $t('Bonus') }}</th>
+                            <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="loading">
                             <td colspan="11" class="text-center py-4">
                                 <v-progress-linear indeterminate color="primary"></v-progress-linear>
-                                Loading...
+                                {{ $t('Loading...') }}
                             </td>
                         </tr>
                         <tr v-else-if="!items.length">
-                            <td colspan="11" class="text-center py-4">No work records found.</td>
+                            <td colspan="11" class="text-center py-4">{{ $t('No work records found.') }}</td>
                         </tr>
                         <tr v-else v-for="item in items" :key="item.id">
                             <td>{{ monthLabel(item.salary_month) }}</td>
@@ -73,7 +73,7 @@
                             <td class="text-center">
                                 <router-link v-if="can(['employee-works.update'])"
                                     :to="{ name: 'admin_hr_works_entry', query: { employee_id: item.employee_id, month: item.salary_month } }">
-                                    Open
+                                    {{ $t('Open') }}
                                 </router-link>
                             </td>
                         </tr>
