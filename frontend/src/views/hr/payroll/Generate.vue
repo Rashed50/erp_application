@@ -8,18 +8,17 @@
             <v-card style="padding: 15px; margin-top: 15px;">
                 <div class="row align-items-end">
                     <div class="col-md-3">
-                        <label>Salary Month:</label>
+                        <label>{{ $t('Salary Month:') }}</label>
                         <input type="month" class="form-control" v-model="month" />
                     </div>
                     <div class="col-md-3">
                         <v-btn class="text-none text-white" color="blue-darken-3" rounded="0" variant="flat"
                             :loading="loading" @click="loadPreview">
-                            <i class="fa-solid fa-eye me-1"></i> Preview Salary
+                            <i class="fa-solid fa-eye me-1"></i> {{ $t('Preview Salary') }}
                         </v-btn>
                     </div>
                     <div class="col-md-6 text-muted small">
-                        Loads active employees on the month's payroll, their salary configuration for the month and
-                        their work record, and calculates the salary. Nothing is saved until you confirm.
+                        {{ $t('Loads active employees on the month\'s payroll, their salary configuration for the month and their work record, and calculates the salary. Nothing is saved until you confirm.') }}
                     </div>
                 </div>
             </v-card>
@@ -27,10 +26,10 @@
             <!-- Step 2: preview & review -->
             <v-card v-if="preview" style="padding: 10px; margin-top: 15px;">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">Salary preview - {{ monthLabel(preview.month) }}</h6>
+                    <h6 class="mb-0">{{ $t('Salary preview - {month}', { month: monthLabel(preview.month) }) }}</h6>
                     <div class="text-muted small">
-                        {{ preview.totals.generatable }} of {{ preview.totals.employees }} employees ready ·
-                        Net total <strong>{{ money(selectedNetTotal) }}</strong> for {{ selected.length }} selected
+                        {{ $t('{ready} of {total} employees ready', { ready: preview.totals.generatable, total: preview.totals.employees }) }} ·
+                        {{ $t('Net total') }} <strong>{{ money(selectedNetTotal) }}</strong> {{ $t('for {count} selected', { count: selected.length }) }}
                     </div>
                 </div>
 
@@ -42,22 +41,22 @@
                                     <input type="checkbox" class="form-check-input" :checked="allSelected"
                                         @change="toggleAll($event.target.checked)" />
                                 </th>
-                                <th>Employee</th>
-                                <th class="text-right">Days</th>
-                                <th class="text-right">Basic</th>
-                                <th class="text-right">Allowances</th>
-                                <th class="text-right">Overtime</th>
-                                <th class="text-right">Bonus / Other</th>
-                                <th class="text-right">Gross</th>
-                                <th class="text-right">Absence / Unpaid</th>
-                                <th class="text-right">Other Ded.</th>
-                                <th class="text-right">Net</th>
-                                <th>Status</th>
+                                <th>{{ $t('Employee') }}</th>
+                                <th class="text-right">{{ $t('Days') }}</th>
+                                <th class="text-right">{{ $t('Basic') }}</th>
+                                <th class="text-right">{{ $t('Allowances') }}</th>
+                                <th class="text-right">{{ $t('Overtime') }}</th>
+                                <th class="text-right">{{ $t('Bonus / Other') }}</th>
+                                <th class="text-right">{{ $t('Gross') }}</th>
+                                <th class="text-right">{{ $t('Absence / Unpaid') }}</th>
+                                <th class="text-right">{{ $t('Other Ded.') }}</th>
+                                <th class="text-right">{{ $t('Net') }}</th>
+                                <th>{{ $t('Status') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="!preview.rows.length">
-                                <td colspan="12" class="text-center py-3">No employees on payroll for this month.</td>
+                                <td colspan="12" class="text-center py-3">{{ $t('No employees on payroll for this month.') }}</td>
                             </tr>
                             <tr v-for="row in preview.rows" :key="row.employee_id"
                                 :class="{ 'table-warning': !row.can_generate }">
@@ -72,8 +71,8 @@
                                 <template v-if="row.calculation">
                                     <td class="text-right">
                                         {{ row.calculation.employed_days }}/{{ row.calculation.days_in_month }}
-                                        <div class="small text-muted" title="present / working">
-                                            {{ row.calculation.present_days }}/{{ row.calculation.working_days }} present
+                                        <div class="small text-muted" :title="$t('present / working')">
+                                            {{ row.calculation.present_days }}/{{ row.calculation.working_days }} {{ $t('present') }}
                                         </div>
                                     </td>
                                     <td class="text-right">{{ money(row.calculation.basic_salary) }}</td>
@@ -90,19 +89,19 @@
                                 <td v-else colspan="9" class="text-muted">-</td>
                                 <td>
                                     <span v-if="row.existing_salary" :class="salaryStatusClass(row.existing_salary.status)">
-                                        {{ row.existing_salary.status }}
+                                        {{ $t(row.existing_salary.status) }}
                                     </span>
-                                    <span v-else-if="row.can_generate" class="badge bg-light text-dark">New</span>
+                                    <span v-else-if="row.can_generate" class="badge bg-light text-dark">{{ $t('New') }}</span>
                                     <div v-for="issue in row.issues" :key="issue" class="small text-danger">{{ issue }}</div>
                                     <div v-if="row.can_generate && row.existing_salary" class="small text-muted">
-                                        Will be recalculated
+                                        {{ $t('Will be recalculated') }}
                                     </div>
                                 </td>
                             </tr>
                         </tbody>
                         <tfoot v-if="preview.rows.length">
                             <tr class="fw-bold">
-                                <td colspan="7" class="text-right">Total (all ready employees)</td>
+                                <td colspan="7" class="text-right">{{ $t('Total (all ready employees)') }}</td>
                                 <td class="text-right">{{ money(preview.totals.gross_salary) }}</td>
                                 <td colspan="2" class="text-right">{{ money(preview.totals.total_deduction) }}</td>
                                 <td class="text-right">{{ money(preview.totals.net_salary) }}</td>
@@ -115,21 +114,21 @@
                 <!-- Step 3: confirm -->
                 <div class="d-flex justify-content-end gap-2 mt-3">
                     <v-btn class="text-none" color="grey-lighten-3" rounded="0" variant="flat" @click="loadPreview">
-                        Refresh
+                        {{ $t('Refresh') }}
                     </v-btn>
                     <v-btn class="text-none text-white" color="blue-darken-4" rounded="0" variant="flat"
                         :disabled="!selected.length" :loading="generating" @click="generate">
-                        <i class="fa-solid fa-check me-1"></i> Confirm & Generate ({{ selected.length }})
+                        <i class="fa-solid fa-check me-1"></i> {{ $t('Confirm & Generate') }} ({{ selected.length }})
                     </v-btn>
                 </div>
             </v-card>
 
             <v-card v-if="result" style="padding: 15px; margin-top: 15px;">
-                <h6>Generation result</h6>
+                <h6>{{ $t('Generation result') }}</h6>
                 <p class="mb-2">
-                    <span class="badge bg-success me-1">{{ result.created }} created</span>
-                    <span class="badge bg-info text-dark me-1">{{ result.regenerated }} recalculated</span>
-                    <span class="badge bg-warning text-dark">{{ result.skipped.length }} skipped</span>
+                    <span class="badge bg-success me-1">{{ $t('{count} created', { count: result.created }) }}</span>
+                    <span class="badge bg-info text-dark me-1">{{ $t('{count} recalculated', { count: result.regenerated }) }}</span>
+                    <span class="badge bg-warning text-dark">{{ $t('{count} skipped', { count: result.skipped.length }) }}</span>
                 </p>
                 <ul class="small mb-2" v-if="result.skipped.length">
                     <li v-for="skip in result.skipped" :key="skip.employee_code">
@@ -137,7 +136,7 @@
                     </li>
                 </ul>
                 <router-link :to="{ name: 'admin_hr_salary_sheet', query: { month } }" class="primary-button">
-                    <i class="fa-solid fa-table-list"></i> Review in Salary Sheet
+                    <i class="fa-solid fa-table-list"></i> {{ $t('Review in Salary Sheet') }}
                 </router-link>
             </v-card>
         </div>
@@ -150,6 +149,7 @@ import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { currentMonth, money, monthLabel, salaryStatusClass } from '../helpers';
+import { t } from '@/i18n';
 
 const month = ref(currentMonth())
 const preview = ref(null)
@@ -177,7 +177,7 @@ const loadPreview = async () => {
         preview.value = data.data
         selected.value = [...generatableIds.value]
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to load the salary preview.')
+        toast.error(e.response?.data?.message || t('Failed to load the salary preview.'))
     } finally {
         loading.value = false
     }
@@ -185,11 +185,11 @@ const loadPreview = async () => {
 
 const generate = async () => {
     const confirm = await Swal.fire({
-        title: `Generate salary for ${monthLabel(month.value)}?`,
-        text: `${selected.value.length} employees · net ${money(selectedNetTotal.value)}`,
+        title: t('Generate salary for {month}?', { month: monthLabel(month.value) }),
+        text: t('{count} employees · net {amount}', { count: selected.value.length, amount: money(selectedNetTotal.value) }),
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Yes, generate',
+        confirmButtonText: t('Yes, generate'),
     })
     if (!confirm.isConfirmed) return
 
@@ -201,7 +201,7 @@ const generate = async () => {
         result.value = data.data
     } catch (e) {
         const errors = e.response?.data?.data
-        toast.error(errors ? Object.values(errors).flat().join(' ') : (e.response?.data?.message || 'Failed to generate salary.'))
+        toast.error(errors ? Object.values(errors).flat().join(' ') : (e.response?.data?.message || t('Failed to generate salary.')))
     } finally {
         generating.value = false
     }

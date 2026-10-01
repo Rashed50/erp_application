@@ -12,9 +12,9 @@
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="customer_id">Customer:</label>
+                                        <label for="customer_id">{{ $t('Customer:') }}</label>
                                         <select id="customer_id" class="form-control" v-model="form.customer_id" required>
-                                            <option value="" disabled>Select a Customer</option>
+                                            <option value="" disabled>{{ $t('Select a Customer') }}</option>
                                             <option v-for="customer in customers" :key="customer.id" :value="customer.id">
                                                 {{ customer.name }}
                                             </option>
@@ -30,7 +30,7 @@
 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="invoice_number">Invoice Number:</label>
+                                        <label for="invoice_number">{{ $t('Invoice Number:') }}</label>
                                         <input type="text" id="invoice_number" class="form-control"
                                             v-model="form.invoice_number" required />
                                         <div v-if="errors.invoice_number" class="error-msg">{{ errors.invoice_number }}</div>
@@ -39,7 +39,7 @@
 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="issue_date">Issue Date:</label>
+                                        <label for="issue_date">{{ $t('Issue Date:') }}</label>
                                         <input type="date" id="issue_date" class="form-control"
                                             v-model="form.issue_date" required />
                                         <div v-if="errors.issue_date" class="error-msg">{{ errors.issue_date }}</div>
@@ -48,7 +48,7 @@
 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="due_date">Due Date:</label>
+                                        <label for="due_date">{{ $t('Due Date:') }}</label>
                                         <input type="date" id="due_date" class="form-control"
                                             v-model="form.due_date" />
                                         <div v-if="errors.due_date" class="error-msg">{{ errors.due_date }}</div>
@@ -57,7 +57,7 @@
 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="description">Description:</label>
+                                        <label for="description">{{ $t('Description:') }}</label>
                                         <input type="text" id="description" class="form-control"
                                             v-model="form.description" />
                                     </div>
@@ -65,7 +65,7 @@
 
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
-                                        <label for="notes">Notes:</label>
+                                        <label for="notes">{{ $t('Notes:') }}</label>
                                         <textarea id="notes" class="form-control" rows="2" v-model="form.notes"></textarea>
                                     </div>
                                 </div>
@@ -73,21 +73,21 @@
 
                             <hr>
 
-                            <h5 class="mb-3">Items</h5>
+                            <h5 class="mb-3">{{ $t('Items') }}</h5>
                             <div v-if="errors.items" class="error-msg mb-2">{{ errors.items }}</div>
 
                             <div class="table-responsive">
                                 <table class="table table-bordered align-middle">
                                     <thead>
                                         <tr>
-                                            <th style="width: 200px;">Product</th>
-                                            <th>Item Name</th>
-                                            <th>Description</th>
-                                            <th style="width: 90px;">Qty</th>
-                                            <th style="width: 120px;">Unit Price</th>
-                                            <th style="width: 110px;">Discount</th>
-                                            <th style="width: 110px;">VAT</th>
-                                            <th style="width: 120px;">Line Total</th>
+                                            <th style="width: 200px;">{{ $t('Product') }}</th>
+                                            <th>{{ $t('Item Name') }}</th>
+                                            <th>{{ $t('Description') }}</th>
+                                            <th style="width: 90px;">{{ $t('Qty') }}</th>
+                                            <th style="width: 120px;">{{ $t('Unit Price') }}</th>
+                                            <th style="width: 110px;">{{ $t('Discount') }}</th>
+                                            <th style="width: 110px;">{{ $t('VAT') }}</th>
+                                            <th style="width: 120px;">{{ $t('Line Total') }}</th>
                                             <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
@@ -95,7 +95,7 @@
                                         <tr v-for="(item, index) in form.items" :key="index">
                                             <td>
                                                 <select class="form-control" v-model="item.product_id" @change="onProductChange(item)">
-                                                    <option value="">Custom item</option>
+                                                    <option value="">{{ $t('Custom item') }}</option>
                                                     <option v-for="product in products" :key="product.id" :value="product.id">
                                                         {{ product.code }} - {{ product.name }}
                                                     </option>
@@ -121,7 +121,7 @@
 
                             <v-btn type="button" class="text-none mb-3" color="grey-lighten-3" rounded="0"
                                 variant="flat" @click="addItem">
-                                + Add Item
+                                {{ $t('+ Add Item') }}
                             </v-btn>
 
                             <div class="row justify-content-end">
@@ -129,24 +129,24 @@
                                     <table class="table table-sm">
                                         <tbody>
                                             <tr>
-                                                <td>Total Amount</td>
+                                                <td>{{ $t('Total Amount') }}</td>
                                                 <td class="text-end">{{ totals.totalAmount.toFixed(2) }}</td>
                                             </tr>
                                             <tr>
-                                                <td>Discount</td>
+                                                <td>{{ $t('Discount') }}</td>
                                                 <td class="text-end">{{ totals.discountAmount.toFixed(2) }}</td>
                                             </tr>
                                             <tr>
-                                                <td>VAT</td>
+                                                <td>{{ $t('VAT') }}</td>
                                                 <td class="text-end">{{ totals.vatAmount.toFixed(2) }}</td>
                                             </tr>
                                             <tr class="fw-bold">
-                                                <td>Net Total</td>
+                                                <td>{{ $t('Net Total') }}</td>
                                                 <td class="text-end">{{ totals.netTotal.toFixed(2) }}</td>
                                             </tr>
                                         </tbody>
                                     </table>
-                                    <small class="text-muted">Totals are recalculated by the server on save.</small>
+                                    <small class="text-muted">{{ $t('Totals are recalculated by the server on save.') }}</small>
                                 </div>
                             </div>
 
@@ -154,7 +154,7 @@
                                 <div class="col-md-12">
                                     <v-btn type="submit" class="text-none text-white mr-2" color="blue-darken-4"
                                         rounded="0" variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
-                                        Submit
+                                        {{ $t('Submit') }}
                                     </v-btn>
                                 </div>
                             </div>

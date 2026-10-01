@@ -12,49 +12,47 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label>Employee: <span class="text-danger">*</span></label>
+                                    <label>{{ $t('Employee:') }} <span class="text-danger">*</span></label>
                                     <select class="form-control" v-model="selection.employee_id">
-                                        <option value="">Select an employee</option>
+                                        <option value="">{{ $t('Select an employee') }}</option>
                                         <option v-for="employee in employees" :key="employee.id" :value="employee.id">
                                             {{ employee.employee_code }} - {{ employee.name }}
-                                            ({{ employee.designation || 'No designation' }})
+                                            ({{ employee.designation || $t('No designation') }})
                                         </option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group mb-3">
-                                    <label>Salary Month: <span class="text-danger">*</span></label>
+                                    <label>{{ $t('Salary Month:') }} <span class="text-danger">*</span></label>
                                     <input type="month" class="form-control" v-model="selection.month" />
                                 </div>
                             </div>
                             <div class="col-md-3 d-flex align-items-center">
-                                <span v-if="lookingUp" class="text-muted">Loading...</span>
-                                <span v-else-if="existingId" class="badge bg-info text-dark">Editing existing record</span>
+                                <span v-if="lookingUp" class="text-muted">{{ $t('Loading...') }}</span>
+                                <span v-else-if="existingId" class="badge bg-info text-dark">{{ $t('Editing existing record') }}</span>
                                 <span v-else-if="selection.employee_id && selection.month" class="badge bg-success">
-                                    New record
+                                    {{ $t('New record') }}
                                 </span>
                             </div>
                         </div>
 
                         <div v-if="isLocked" class="alert alert-warning">
                             <i class="fa-solid fa-lock me-1"></i>
-                            The salary for this month is already approved or paid, so this record can no longer be changed.
-                            Record any correction as an adjustment in a later month.
+                            {{ $t('The salary for this month is already approved or paid, so this record can no longer be changed. Record any correction as an adjustment in a later month.') }}
                         </div>
                         <div v-else-if="hasSalary" class="alert alert-info">
-                            A salary has already been generated for this month. After saving, generate the salary
-                            again to apply the change.
+                            {{ $t('A salary has already been generated for this month. After saving, generate the salary again to apply the change.') }}
                         </div>
 
                         <!-- Step 2: figures -->
                         <form v-if="selection.employee_id && selection.month && !lookingUp" @submit.prevent="handleSubmit">
                             <fieldset :disabled="isLocked">
-                                <h6 class="section-title">Attendance (days)</h6>
+                                <h6 class="section-title">{{ $t('Attendance (days)') }}</h6>
                                 <div class="row">
                                     <div class="col-md-4" v-for="field in dayFields" :key="field.key">
                                         <div class="form-group mb-3">
-                                            <label>{{ field.label }}:</label>
+                                            <label>{{ $t(field.label) }}:</label>
                                             <input type="number" step="0.5" min="0" max="31" class="form-control"
                                                 v-model.number="form[field.key]" required />
                                             <div v-if="errors[field.key]" class="error-msg">{{ errors[field.key] }}</div>
@@ -63,16 +61,16 @@
                                     <div class="col-md-4 d-flex align-items-center">
                                         <div :class="dayCheck.ok ? 'text-success' : 'text-danger'">
                                             <i :class="dayCheck.ok ? 'fa-solid fa-circle-check' : 'fa-solid fa-triangle-exclamation'"></i>
-                                            Recorded {{ dayCheck.recorded }} of {{ form.working_days || 0 }} working days
+                                            {{ $t('Recorded {recorded} of {total} working days', { recorded: dayCheck.recorded, total: form.working_days || 0 }) }}
                                         </div>
                                     </div>
                                 </div>
 
-                                <h6 class="section-title">Overtime, Bonus & Adjustments</h6>
+                                <h6 class="section-title">{{ $t('Overtime, Bonus & Adjustments') }}</h6>
                                 <div class="row">
                                     <div class="col-md-3" v-for="field in amountFields" :key="field.key">
                                         <div class="form-group mb-3">
-                                            <label>{{ field.label }}:</label>
+                                            <label>{{ $t(field.label) }}:</label>
                                             <input type="number" step="0.01" min="0" class="form-control"
                                                 v-model.number="form[field.key]" required />
                                             <div v-if="errors[field.key]" class="error-msg">{{ errors[field.key] }}</div>
@@ -80,7 +78,7 @@
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group mb-3">
-                                            <label>Remarks:</label>
+                                            <label>{{ $t('Remarks:') }}</label>
                                             <input type="text" class="form-control" v-model="form.remarks" />
                                         </div>
                                     </div>
@@ -91,11 +89,11 @@
 
                                 <v-btn type="submit" class="text-none text-white mr-2" color="blue-darken-4" rounded="0"
                                     variant="flat" :disabled="isSubmitting || !dayCheck.ok" :loading="isSubmitting">
-                                    {{ existingId ? 'Update Work Record' : 'Save Work Record' }}
+                                    {{ $t(existingId ? 'Update Work Record' : 'Save Work Record') }}
                                 </v-btn>
                                 <v-btn v-if="existingId && can(['employee-works.delete'])" class="text-none" color="red-darken-2"
                                     rounded="0" variant="outlined" @click="handleDelete">
-                                    Delete
+                                    {{ $t('Delete') }}
                                 </v-btn>
                             </fieldset>
                         </form>
@@ -114,23 +112,24 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { usePermission } from '@/composables/usePermission';
 import { useRoute } from 'vue-router';
 import { currentMonth } from '../helpers';
+import { t } from '@/i18n';
 
 const route = useRoute();
 const { can } = usePermission()
 
 const dayFields = [
-    { key: 'working_days', label: 'Working Days' },
-    { key: 'present_days', label: 'Present Days' },
-    { key: 'absent_days', label: 'Absent Days' },
-    { key: 'paid_leave_days', label: 'Paid Leave' },
-    { key: 'unpaid_leave_days', label: 'Unpaid Leave' },
+    { key: 'working_days', label: t('Working Days') },
+    { key: 'present_days', label: t('Present Days') },
+    { key: 'absent_days', label: t('Absent Days') },
+    { key: 'paid_leave_days', label: t('Paid Leave') },
+    { key: 'unpaid_leave_days', label: t('Unpaid Leave') },
 ]
 
 const amountFields = [
-    { key: 'overtime_hours', label: 'Overtime Hours' },
-    { key: 'bonus', label: 'Bonus' },
-    { key: 'other_addition', label: 'Other Addition' },
-    { key: 'other_deduction', label: 'Other Deduction' },
+    { key: 'overtime_hours', label: t('Overtime Hours') },
+    { key: 'bonus', label: t('Bonus') },
+    { key: 'other_addition', label: t('Other Addition') },
+    { key: 'other_deduction', label: t('Other Deduction') },
 ]
 
 const blank = () => ({
@@ -194,7 +193,7 @@ const lookup = async () => {
             for (const key of Object.keys(form)) form[key] = work[key] ?? form[key]
         }
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to load the work record.')
+        toast.error(e.response?.data?.message || t('Failed to load the work record.'))
     } finally {
         lookingUp.value = false
     }
@@ -224,7 +223,7 @@ const handleSubmit = async () => {
             const respErrors = e.response.data.data
             for (const key in respErrors) errors[key] = respErrors[key].join(' ')
         } else {
-            toast.error(e.response?.data?.message || 'Failed to save the work record.')
+            toast.error(e.response?.data?.message || t('Failed to save the work record.'))
         }
     } finally {
         isSubmitting.value = false
@@ -233,10 +232,10 @@ const handleSubmit = async () => {
 
 const handleDelete = async () => {
     const result = await Swal.fire({
-        title: 'Delete this work record?',
+        title: t('Delete this work record?'),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
+        confirmButtonText: t('Yes, delete'),
     })
     if (!result.isConfirmed) return
 
@@ -245,7 +244,7 @@ const handleDelete = async () => {
         toast.success(data.message)
         lookup()
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete.')
+        toast.error(e.response?.data?.message || t('Failed to delete.'))
     }
 }
 

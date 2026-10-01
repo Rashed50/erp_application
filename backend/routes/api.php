@@ -35,6 +35,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::get('/branding', [CompanySettingController::class, 'branding'])->name('branding');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -200,6 +201,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/trial-balance', [AccountReportController::class, 'trialBalance'])->name('trial-balance');
         Route::get('/profit-loss', [AccountReportController::class, 'profitAndLoss'])->name('profit-loss');
         Route::get('/balance-sheet', [AccountReportController::class, 'balanceSheet'])->name('balance-sheet');
+        Route::get('/cash-transactions', [AccountReportController::class, 'cashTransactions'])->name('cash-transactions');
+        Route::get('/supplier-statement', [AccountReportController::class, 'supplierStatement'])->name('supplier-statement');
+        Route::get('/supplier-balances', [AccountReportController::class, 'supplierBalances'])->name('supplier-balances');
+        Route::get('/customer-statement', [AccountReportController::class, 'customerStatement'])->name('customer-statement');
+        Route::get('/expense-details', [AccountReportController::class, 'expenseDetails'])->name('expense-details');
+        Route::get('/sales-purchase-summary', [AccountReportController::class, 'salesPurchaseSummary'])->name('sales-purchase-summary');
+        Route::get('/sales', [AccountReportController::class, 'salesRegister'])->name('sales');
     });
 
     Route::apiResource('income-expenses', IncomeExpenseTransactionController::class)

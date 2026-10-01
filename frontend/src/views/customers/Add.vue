@@ -13,7 +13,7 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="name">Name:</label>
+                                        <label for="name">{{ $t('Name:') }}</label>
                                         <input type="text" id="name" class="form-control" v-model="form.name"
                                             required />
                                         <div v-if="errors.name" class="error-msg">{{ errors.name }}</div>
@@ -22,7 +22,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="email">Email:</label>
+                                        <label for="email">{{ $t('Email:') }}</label>
                                         <input type="email" id="email" class="form-control" v-model="form.email" />
                                         <div v-if="errors.email" class="error-msg">{{ errors.email }}</div>
                                     </div>
@@ -30,7 +30,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="phone">Phone:</label>
+                                        <label for="phone">{{ $t('Phone:') }}</label>
                                         <input type="text" id="phone" class="form-control" v-model="form.phone" />
                                         <div v-if="errors.phone" class="error-msg">{{ errors.phone }}</div>
                                     </div>
@@ -38,7 +38,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="vat_no">VAT No:</label>
+                                        <label for="vat_no">{{ $t('VAT No:') }}</label>
                                         <input type="text" id="vat_no" class="form-control" v-model="form.vat_no" />
                                         <div v-if="errors.vat_no" class="error-msg">{{ errors.vat_no }}</div>
                                     </div>
@@ -46,7 +46,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="contact_person">Contact Person:</label>
+                                        <label for="contact_person">{{ $t('Contact Person:') }}</label>
                                         <input type="text" id="contact_person" class="form-control"
                                             v-model="form.contact_person" />
                                         <div v-if="errors.contact_person" class="error-msg">{{ errors.contact_person }}</div>
@@ -55,7 +55,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="contact_person_phone">Contact Person Phone:</label>
+                                        <label for="contact_person_phone">{{ $t('Contact Person Phone:') }}</label>
                                         <input type="text" id="contact_person_phone" class="form-control"
                                             v-model="form.contact_person_phone" />
                                         <div v-if="errors.contact_person_phone" class="error-msg">{{ errors.contact_person_phone }}</div>
@@ -64,7 +64,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="contact_person_email">Contact Person Email:</label>
+                                        <label for="contact_person_email">{{ $t('Contact Person Email:') }}</label>
                                         <input type="email" id="contact_person_email" class="form-control"
                                             v-model="form.contact_person_email" />
                                         <div v-if="errors.contact_person_email" class="error-msg">{{ errors.contact_person_email }}</div>
@@ -73,7 +73,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="country">Country:</label>
+                                        <label for="country">{{ $t('Country:') }}</label>
                                         <input type="text" id="country" class="form-control" v-model="form.country" />
                                         <div v-if="errors.country" class="error-msg">{{ errors.country }}</div>
                                     </div>
@@ -81,7 +81,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="payment_term">Payment Term (days):</label>
+                                        <label for="payment_term">{{ $t('Payment Term (days):') }}</label>
                                         <input type="number" min="0" id="payment_term" class="form-control"
                                             v-model.number="form.payment_term" />
                                         <div v-if="errors.payment_term" class="error-msg">{{ errors.payment_term }}</div>
@@ -90,7 +90,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="opening_date">Opening Date:</label>
+                                        <label for="opening_date">{{ $t('Opening Date:') }}</label>
                                         <input type="date" id="opening_date" class="form-control"
                                             v-model="form.opening_date" />
                                         <div v-if="errors.opening_date" class="error-msg">{{ errors.opening_date }}</div>
@@ -99,11 +99,11 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="opening_balance">Opening Balance:</label>
+                                        <label for="opening_balance">{{ $t('Opening Balance:') }}</label>
                                         <input type="number" step="0.01" min="0" id="opening_balance"
                                             class="form-control" v-model.number="form.opening_balance" />
                                         <div v-if="errors.opening_balance" class="error-msg">{{ errors.opening_balance }}</div>
-                                        <small class="text-muted">This becomes the customer's starting balance and cannot be changed later.</small>
+                                        <small class="text-muted">{{ $t('This becomes the customer\'s starting balance and cannot be changed later.') }}</small>
                                     </div>
                                 </div>
 
@@ -112,14 +112,14 @@
                                         <div class="form-check">
                                             <input type="checkbox" class="form-check-input" id="active_status"
                                                 v-model="form.active_status" />
-                                            <label class="form-check-label" for="active_status">Active</label>
+                                            <label class="form-check-label" for="active_status">{{ $t('Active') }}</label>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
-                                        <label for="address">Address:</label>
+                                        <label for="address">{{ $t('Address:') }}</label>
                                         <textarea id="address" class="form-control" rows="2"
                                             v-model="form.address"></textarea>
                                         <div v-if="errors.address" class="error-msg">{{ errors.address }}</div>
@@ -130,7 +130,7 @@
                                 <div class="col-md-12">
                                     <v-btn type="submit" class="text-none text-white mr-2" color="blue-darken-4"
                                         rounded="0" variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
-                                        Submit
+                                        {{ $t('Submit') }}
                                     </v-btn>
                                 </div>
                             </div>

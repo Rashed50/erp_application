@@ -40,21 +40,21 @@ class CustomerTransactionController extends Controller
     {
         $transaction = $this->transactionService->create($customer, $request->validated());
 
-        return ApiResponse::success(new CustomerTransactionResource($transaction), 'Transaction recorded successfully.', 201);
+        return ApiResponse::success(new CustomerTransactionResource($transaction), __('Transaction recorded successfully.'), 201);
     }
 
     public function destroy(Customer $customer, CustomerTransaction $transaction): JsonResponse
     {
         if ($transaction->customer_id !== $customer->id) {
-            return ApiResponse::error('Transaction not found for this customer.', 404);
+            return ApiResponse::error(__('Transaction not found for this customer.'), 404);
         }
 
         if (! $transaction->status) {
-            return ApiResponse::error('This transaction has already been reversed.', 422);
+            return ApiResponse::error(__('This transaction has already been reversed.'), 422);
         }
 
         $transaction = $this->transactionService->reverse($transaction);
 
-        return ApiResponse::success(new CustomerTransactionResource($transaction), 'Transaction reversed successfully.');
+        return ApiResponse::success(new CustomerTransactionResource($transaction), __('Transaction reversed successfully.'));
     }
 }

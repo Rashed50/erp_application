@@ -12,13 +12,13 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="payment_account_id" class="form-label text-end d-block">
-                                        Credit Account <span class="text-danger">*</span>
+                                        {{ $t('Credit Account') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
                                     <select id="payment_account_id" class="form-control input-height"
                                         v-model="form.payment_account_id" required>
-                                        <option value="" disabled>Select item</option>
+                                        <option value="" disabled>{{ $t('Select item') }}</option>
                                         <option v-for="account in creditAccounts" :key="account.id" :value="account.id">
                                             {{ account.account_number }} - {{ account.name }}
                                         </option>
@@ -31,7 +31,7 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="payment_date" class="form-label text-end d-block">
-                                        Payment Date <span class="text-danger">*</span>
+                                        {{ $t('Payment Date') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
@@ -45,13 +45,13 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="bill_amount" class="form-label text-end d-block">
-                                        Bill Amount <span class="text-danger">*</span>
+                                        {{ $t('Bill Amount') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="number" id="bill_amount" class="form-control input-height" step="0.01"
                                         min="0.01" :max="selectedPurchase ? selectedPurchase.due_amount : null"
-                                        placeholder="Bill Amount..." v-model="form.bill_amount" required />
+                                        :placeholder="$t('Bill Amount...')" v-model="form.bill_amount" required />
                                     <div v-if="errors.bill_amount" class="error-msg">{{ errors.bill_amount }}</div>
                                 </div>
                             </div>
@@ -59,7 +59,7 @@
                             <!-- Total -->
                             <div class="row mt-2">
                                 <div class="col-md-3">
-                                    <label class="form-label text-end d-block">Total</label>
+                                    <label class="form-label text-end d-block">{{ $t('Total') }}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="text" class="form-control input-height" :value="total.toFixed(2)" disabled />
@@ -69,11 +69,11 @@
                             <!-- Remarks -->
                             <div class="row mt-2">
                                 <div class="col-md-3">
-                                    <label for="remarks" class="form-label text-end d-block">Remarks</label>
+                                    <label for="remarks" class="form-label text-end d-block">{{ $t('Remarks') }}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="text" id="remarks" class="form-control input-height"
-                                        placeholder="Remarks..." v-model="form.remarks" />
+                                        :placeholder="$t('Remarks...')" v-model="form.remarks" />
                                     <div v-if="errors.remarks" class="error-msg">{{ errors.remarks }}</div>
                                 </div>
                             </div>
@@ -84,15 +84,15 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="supplier_id" class="form-label text-end d-block">
-                                        Supplier <span class="text-danger">*</span>
+                                        {{ $t('Supplier') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
                                     <select id="supplier_id" class="form-control input-height" v-model="form.supplier_id"
                                         required>
-                                        <option value="" disabled>Select item</option>
+                                        <option value="" disabled>{{ $t('Select item') }}</option>
                                         <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">
-                                            {{ supplier.name }} (Due: {{ Number(supplier.current_balance).toFixed(2) }})
+                                            {{ supplier.name }} ({{ $t('Due:') }} {{ Number(supplier.current_balance).toFixed(2) }})
                                         </option>
                                     </select>
                                     <div v-if="errors.supplier_id" class="error-msg">{{ errors.supplier_id }}</div>
@@ -102,14 +102,14 @@
                             <!-- Purchase Invoice (optional) -->
                             <div class="row mt-2">
                                 <div class="col-md-3">
-                                    <label for="purchase_id" class="form-label text-end d-block">Purchase Invoice</label>
+                                    <label for="purchase_id" class="form-label text-end d-block">{{ $t('Purchase Invoice') }}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <select id="purchase_id" class="form-control input-height" v-model="form.purchase_id"
                                         :disabled="!form.supplier_id">
-                                        <option value="">None (general bill payment)</option>
+                                        <option value="">{{ $t('None (general bill payment)') }}</option>
                                         <option v-for="purchase in duePurchases" :key="purchase.id" :value="purchase.id">
-                                            {{ purchase.invoice_number }} (Due: {{ Number(purchase.due_amount).toFixed(2) }})
+                                            {{ purchase.invoice_number }} ({{ $t('Due:') }} {{ Number(purchase.due_amount).toFixed(2) }})
                                         </option>
                                     </select>
                                     <div v-if="errors.purchase_id" class="error-msg">{{ errors.purchase_id }}</div>
@@ -119,11 +119,11 @@
                             <!-- Invoice Number -->
                             <div class="row mt-2" v-if="!form.purchase_id">
                                 <div class="col-md-3">
-                                    <label for="invoice_no" class="form-label text-end d-block">Invoice No</label>
+                                    <label for="invoice_no" class="form-label text-end d-block">{{ $t('Invoice No') }}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="text" id="invoice_no" class="form-control input-height"
-                                        placeholder="Invoice Number..." v-model="form.invoice_no" />
+                                        :placeholder="$t('Invoice Number...')" v-model="form.invoice_no" />
                                     <div v-if="errors.invoice_no" class="error-msg">{{ errors.invoice_no }}</div>
                                 </div>
                             </div>
@@ -132,12 +132,12 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="bank_charge" class="form-label text-end d-block">
-                                        Bank Charge <span class="text-danger">*</span>
+                                        {{ $t('Bank Charge') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="number" id="bank_charge" class="form-control input-height" step="0.01"
-                                        min="0" placeholder="Bank Charge..." v-model="form.bank_charge" required />
+                                        min="0" :placeholder="$t('Bank Charge...')" v-model="form.bank_charge" required />
                                     <div v-if="errors.bank_charge" class="error-msg">{{ errors.bank_charge }}</div>
                                 </div>
                             </div>
@@ -145,7 +145,7 @@
                             <!-- Attachment -->
                             <div class="row mt-2">
                                 <div class="col-md-3">
-                                    <label for="attachment" class="form-label text-end d-block">Attachment</label>
+                                    <label for="attachment" class="form-label text-end d-block">{{ $t('Attachment') }}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="file" id="attachment" ref="attachmentInput" class="form-control"
@@ -159,7 +159,7 @@
                     <div class="d-flex justify-content-end" v-if="can(['supplier-payments.create'])">
                         <v-btn type="submit" class="text-none text-white" color="success" rounded="0" variant="flat"
                             :disabled="isSubmitting" :loading="isSubmitting">
-                            <i class="fa-solid fa-check me-2"></i> Save
+                            <i class="fa-solid fa-check me-2"></i> {{ $t('Save') }}
                         </v-btn>
                     </div>
                 </form>
@@ -175,6 +175,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';
 import { objectToFormData } from '@/helpers/objectToFormData';
+import { t } from '@/i18n';
 
 const { can } = usePermission()
 
@@ -231,7 +232,7 @@ watch(() => form.supplier_id, async (supplierId) => {
         const { data } = await axios.get('/api/purchases', { params: { supplier_id: supplierId, per_page: 500 } })
         purchases.value = data.data?.purchases ?? []
     } catch (e) {
-        toast.error('Failed to load the supplier purchases.')
+        toast.error(t('Failed to load the supplier purchases.'))
     }
 })
 
@@ -284,7 +285,7 @@ const handleSubmit = async () => {
                 errors[key] = respErrors[key].join(' ')
             }
         } else {
-            toast.error(err.response?.data?.message || 'An error occurred while saving.')
+            toast.error(err.response?.data?.message || t('An error occurred while saving.'))
         }
     } finally {
         isSubmitting.value = false

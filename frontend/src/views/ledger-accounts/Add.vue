@@ -9,11 +9,11 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="account_type_id">Account Type: <span class="text-danger">*</span></label>
+                                <label for="account_type_id">{{ $t('Account Type:') }} <span class="text-danger">*</span></label>
                                 <select id="account_type_id" class="form-control" v-model="form.account_type_id" required>
-                                    <option value="" disabled>Select item</option>
+                                    <option value="" disabled>{{ $t('Select item') }}</option>
                                     <option v-for="type in accountTypes" :key="type.id" :value="type.id">
-                                        {{ type.name }}
+                                        {{ $t(type.name) }}
                                     </option>
                                 </select>
                                 <div v-if="errors.account_type_id" class="error-msg">{{ errors.account_type_id }}</div>
@@ -22,8 +22,8 @@
 
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="name">Account Name: <span class="text-danger">*</span></label>
-                                <input type="text" id="name" class="form-control" placeholder="Account Name..."
+                                <label for="name">{{ $t('Account Name:') }} <span class="text-danger">*</span></label>
+                                <input type="text" id="name" class="form-control" :placeholder="$t('Account Name...')"
                                     v-model="form.name" required />
                                 <div v-if="errors.name" class="error-msg">{{ errors.name }}</div>
                             </div>
@@ -31,34 +31,34 @@
 
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="parent_id">Sub Account Of:</label>
+                                <label for="parent_id">{{ $t('Sub Account Of:') }}</label>
                                 <select id="parent_id" class="form-control" v-model="form.parent_id"
                                     :disabled="!form.account_type_id">
-                                    <option value="">None (top-level account)</option>
+                                    <option value="">{{ $t('None (top-level account)') }}</option>
                                     <option v-for="group in parentOptions" :key="group.id" :value="group.id">
                                         {{ group.account_number }} {{ group.name }}
                                     </option>
                                 </select>
                                 <div v-if="errors.parent_id" class="error-msg">{{ errors.parent_id }}</div>
                                 <small class="text-muted">
-                                    {{ form.account_type_id ? 'Open group accounts of the selected type.' : 'Select an account type first.' }}
+                                    {{ $t(form.account_type_id ? 'Open group accounts of the selected type.' : 'Select an account type first.') }}
                                 </small>
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="account_number">Account Number:</label>
+                                <label for="account_number">{{ $t('Account Number:') }}</label>
                                 <input type="text" id="account_number" class="form-control"
-                                    placeholder="Account Number..." v-model="form.account_number" />
+                                    :placeholder="$t('Account Number...')" v-model="form.account_number" />
                                 <div v-if="errors.account_number" class="error-msg">{{ errors.account_number }}</div>
-                                <small class="text-muted" v-if="form.parent_id">Suggested from the parent account.</small>
+                                <small class="text-muted" v-if="form.parent_id">{{ $t('Suggested from the parent account.') }}</small>
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="opening_date">Opening Date: <span class="text-danger">*</span></label>
+                                <label for="opening_date">{{ $t('Opening Date:') }} <span class="text-danger">*</span></label>
                                 <input type="date" id="opening_date" class="form-control" v-model="form.opening_date"
                                     required />
                                 <div v-if="errors.opening_date" class="error-msg">{{ errors.opening_date }}</div>
@@ -67,9 +67,9 @@
 
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="opening_balance">Opening Balance: <span class="text-danger">*</span></label>
+                                <label for="opening_balance">{{ $t('Opening Balance:') }} <span class="text-danger">*</span></label>
                                 <input type="number" id="opening_balance" class="form-control" min="0" step="0.01"
-                                    placeholder="Opening Balance..." v-model="form.opening_balance" required />
+                                    :placeholder="$t('Opening Balance...')" v-model="form.opening_balance" required />
                                 <div v-if="errors.opening_balance" class="error-msg">{{ errors.opening_balance }}</div>
                             </div>
                         </div>
@@ -79,14 +79,14 @@
                                 <input type="checkbox" class="form-check-input" id="is_transaction"
                                     v-model="form.is_transaction" />
                                 <label class="form-check-label" for="is_transaction">
-                                    Transaction account (entries can be posted to it)
+                                    {{ $t('Transaction account (entries can be posted to it)') }}
                                 </label>
                                 <div v-if="errors.is_transaction" class="error-msg">{{ errors.is_transaction }}</div>
                             </div>
                             <div class="form-check mb-3">
                                 <input type="checkbox" class="form-check-input" id="active_status"
                                     v-model="form.active_status" />
-                                <label class="form-check-label" for="active_status">Active</label>
+                                <label class="form-check-label" for="active_status">{{ $t('Active') }}</label>
                             </div>
                         </div>
                     </div>
@@ -95,11 +95,11 @@
                         <div class="col-md-12">
                             <v-btn type="submit" class="text-none text-white mr-2" color="success" rounded="0"
                                 variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
-                                <i class="fa-solid fa-check me-2"></i> Save
+                                <i class="fa-solid fa-check me-2"></i> {{ $t('Save') }}
                             </v-btn>
                             <v-btn class="text-none text-white" color="error" rounded="0" variant="flat"
                                 :to="{ name: 'admin_ledger_accounts_list' }">
-                                <i class="fa-solid fa-xmark me-2"></i> Cancel
+                                <i class="fa-solid fa-xmark me-2"></i> {{ $t('Cancel') }}
                             </v-btn>
                         </div>
                     </div>
@@ -117,6 +117,7 @@ import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
 import { useRouter } from 'vue-router';
+import { t } from '@/i18n';
 
 const router = useRouter();
 
@@ -161,7 +162,7 @@ watch(() => form.parent_id, async (parentId) => {
         const { data } = await axios.get(`/api/ledger-accounts/${parentId}/next-account-number`)
         form.account_number = data.data.account_number
     } catch (e) {
-        toast.error('Failed to fetch the next account number, try again.')
+        toast.error(t('Failed to fetch the next account number, try again.'))
     }
 })
 

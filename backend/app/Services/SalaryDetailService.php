@@ -50,7 +50,7 @@ class SalaryDetailService
     {
         if ($salaryDetail->isUsedByPayroll()) {
             throw ValidationException::withMessages([
-                'effective_date' => 'This salary configuration was used to generate salaries. Add a new revision with a later effective date instead.',
+                'effective_date' => __('This salary configuration was used to generate salaries. Add a new revision with a later effective date instead.'),
             ]);
         }
     }

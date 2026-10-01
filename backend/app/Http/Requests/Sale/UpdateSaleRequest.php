@@ -69,7 +69,7 @@ class UpdateSaleRequest extends FormRequest
             }
 
             if ((int) $this->input('work_order_id') !== (int) $sale->work_order_id) {
-                $validator->errors()->add('work_order_id', 'The work order cannot be changed after a payment has been received.');
+                $validator->errors()->add('work_order_id', __('The work order cannot be changed after a payment has been received.'));
             }
         });
     }

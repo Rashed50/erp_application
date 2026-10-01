@@ -1,5 +1,7 @@
 // Shared formatting for the HR & Payroll screens.
 
+import { intlLocale } from '@/i18n'
+
 export const SALARY_STATUSES = ['Generated', 'Approved', 'Paid', 'Cancelled']
 
 export const money = (value) =>
@@ -12,7 +14,7 @@ export const currentMonth = () => new Date().toISOString().slice(0, 7)
 export const monthLabel = (month) => {
     if (!month) return ''
     const [year, monthNumber] = month.split('-').map(Number)
-    return new Date(year, monthNumber - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
+    return new Date(year, monthNumber - 1, 1).toLocaleString(intlLocale(), { month: 'long', year: 'numeric' })
 }
 
 export const salaryStatusClass = (status) => ({

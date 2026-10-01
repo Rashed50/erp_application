@@ -100,7 +100,7 @@ class SaleService
 
             if ($totals && $totals['net_total'] < $sale->paid_amount) {
                 throw ValidationException::withMessages([
-                    'items' => "The new total ({$totals['net_total']}) cannot be less than the amount already paid ({$sale->paid_amount}).",
+                    'items' => __('The new total (:total) cannot be less than the amount already paid (:paid).', ['total' => $totals['net_total'], 'paid' => $sale->paid_amount]),
                 ]);
             }
 

@@ -1,13 +1,15 @@
 import Swal from 'sweetalert2'
 import { toast } from 'vue3-toastify'
 import axios from 'axios'
+import { t } from '@/i18n'
 
+// Translation keys, resolved when the dialog opens so the current locale is used.
 const actionMessages = {
     reject: {
-        text: 'রিজেক্ট করলে ফিরিয়ে আনা যাবে না!',
+        text: 'confirm.rejectText',
     },
     delete: {
-        text: 'ডিলিট করলে ফিরিয়ে আনা যাবে না!',
+        text: 'confirm.deleteText',
     },
 }
 
@@ -17,8 +19,8 @@ export function useConfirmAction() {
         action = 'default',
         title,
         text,
-        confirmText = 'হ্যাঁ',
-        cancelText = 'না!',
+        confirmText = t('common.yes'),
+        cancelText = t('common.no'),
         url,
         method = 'get',
         data = {},
@@ -27,8 +29,8 @@ export function useConfirmAction() {
         const config = actionMessages[action] || {}
 
         const result = await Swal.fire({
-            title: 'Are you sure?',
-            text: text || config.text || 'You won’t be able to revert this!',
+            title: title || t('confirm.title'),
+            text: text || t(config.text || 'confirm.cannotRevert'),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: confirmText,
@@ -45,11 +47,11 @@ export function useConfirmAction() {
                 return true
             }
 
-            toast.error(resp.data?.message || 'Action failed')
+            toast.error(resp.data?.message || t('common.actionFailed'))
             return false
 
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Something went wrong')
+            toast.error(error.response?.data?.message || t('common.somethingWentWrong'))
             return false
         }
     }

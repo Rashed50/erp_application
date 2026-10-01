@@ -62,7 +62,11 @@ class PayrollController extends Controller
     {
         $result = $this->payrollService->generate($request->validated('month'), $request->validated('employee_ids'));
 
-        $message = "{$result['created']} salaries generated, {$result['regenerated']} regenerated, ".count($result['skipped']).' skipped.';
+        $message = __(':created salaries generated, :regenerated regenerated, :skipped skipped.', [
+            'created' => $result['created'],
+            'regenerated' => $result['regenerated'],
+            'skipped' => count($result['skipped']),
+        ]);
 
         return ApiResponse::success($result, $message);
     }
@@ -98,20 +102,20 @@ class PayrollController extends Controller
     {
         $count = $this->payrollService->approve($request->validated('ids'));
 
-        return ApiResponse::success(['updated' => $count], "{$count} salaries approved.");
+        return ApiResponse::success(['updated' => $count], __(':count salaries approved.', ['count' => $count]));
     }
 
     public function pay(SalaryStatusRequest $request): JsonResponse
     {
         $count = $this->payrollService->markPaid($request->validated('ids'));
 
-        return ApiResponse::success(['updated' => $count], "{$count} salaries marked as paid.");
+        return ApiResponse::success(['updated' => $count], __(':count salaries marked as paid.', ['count' => $count]));
     }
 
     public function cancel(CancelSalaryRequest $request, SalaryHistory $salaryHistory): JsonResponse
     {
         $salary = $this->payrollService->cancel($salaryHistory, $request->validated('reason'));
 
-        return ApiResponse::success(new SalaryHistoryResource($salary), 'Salary cancelled. The month can now be generated again for this employee.');
+        return ApiResponse::success(new SalaryHistoryResource($salary), __('Salary cancelled. The month can now be generated again for this employee.'));
     }
 }

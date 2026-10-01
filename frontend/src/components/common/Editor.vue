@@ -1,6 +1,6 @@
 <template>
     <ckeditor :editor="editor" :model-value="modelValue" @update:modelValue="updateValue" :config="editorConfig"
-        placeholder="Content..." />
+        :placeholder="$t('Content...')" />
 </template>
 
 <script>

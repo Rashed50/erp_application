@@ -13,7 +13,7 @@
                             <div class="col-md-4"></div>
                             <div class="col-md-3">
                                 <select class="form-select" v-model="filters.supplier_id">
-                                    <option value="">All Suppliers</option>
+                                    <option value="">{{ $t('All Suppliers') }}</option>
                                     <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">
                                         {{ supplier.name }}
                                     </option>
@@ -21,15 +21,15 @@
                             </div>
                             <div class="col-md-5">
                                 <div class="search-wrapper d-flex align-center gap-2">
-                                    <v-text-field variant="outlined" density="compact" placeholder="Search invoice no..."
+                                    <v-text-field variant="outlined" density="compact" :placeholder="$t('Search invoice no...')"
                                         v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
                                     <v-btn type="button" @click="fetchData" class="text-none text-white"
                                         color="blue-darken-3" rounded="0" variant="flat" min-width="100">
-                                        Search
+                                        {{ $t('Search') }}
                                     </v-btn>
                                     <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3"
                                         rounded="0" variant="flat" min-width="100">
-                                        Reload
+                                        {{ $t('Reload') }}
                                     </v-btn>
                                 </div>
                             </div>
@@ -41,14 +41,14 @@
                         <thead>
                             <tr>
                                 <th class="text-left">#</th>
-                                <th class="text-left">Invoice No</th>
-                                <th class="text-left">Supplier</th>
-                                <th class="text-left">Type</th>
-                                <th class="text-left">Purchase Date</th>
-                                <th class="text-right">Net Total</th>
-                                <th class="text-right">Due</th>
-                                <th class="text-center">Approval</th>
-                                <th class="text-center">Action</th>
+                                <th class="text-left">{{ $t('Invoice No') }}</th>
+                                <th class="text-left">{{ $t('Supplier') }}</th>
+                                <th class="text-left">{{ $t('Type') }}</th>
+                                <th class="text-left">{{ $t('Purchase Date') }}</th>
+                                <th class="text-right">{{ $t('Net Total') }}</th>
+                                <th class="text-right">{{ $t('Due') }}</th>
+                                <th class="text-center">{{ $t('Approval') }}</th>
+                                <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -57,14 +57,14 @@
                             <tr v-if="loading">
                                 <td colspan="9" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
-                                    Loading...
+                                    {{ $t('Loading...') }}
                                 </td>
                             </tr>
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
                                 <td colspan="9" class="text-center py-4">
-                                    No records found.
+                                    {{ $t('No records found.') }}
                                 </td>
                             </tr>
 
@@ -73,7 +73,7 @@
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
                                 <td>{{ item.invoice_number }}</td>
                                 <td>{{ item.supplier_name }}</td>
-                                <td class="text-capitalize">{{ item.purchase_type }}</td>
+                                <td class="text-capitalize">{{ $t(item.purchase_type) }}</td>
                                 <td>{{ item.purchase_date }}</td>
                                 <td class="text-right">{{ Number(item.net_total).toFixed(2) }}</td>
                                 <td class="text-right">
@@ -95,23 +95,23 @@
                                         <ul class="table-action-menu">
                                             <li class="menu-item" v-if="!item.approved_by && can(['purchases.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'purchase')">
-                                                    Approve
+                                                    {{ $t('Approve') }}
                                                 </button>
                                             </li>
                                             <li class="menu-item" v-if="item.due_amount > 0 && can(['purchase-payments.create'])">
                                                 <button type="button" class="menu-link" @click="openPaymentDialog(item)">
-                                                    Record Payment
+                                                    {{ $t('Record Payment') }}
                                                 </button>
                                             </li>
                                             <li class="menu-item">
                                                 <router-link :to="{ name: 'admin_purchase_edit', params: { id: item.id } }"
                                                     class="menu-link">
-                                                    Edit
+                                                    {{ $t('Edit') }}
                                                 </router-link>
                                             </li>
                                             <li class="menu-item">
                                                 <button type="button" class="menu-link" @click="handleDelete(item)">
-                                                    Delete
+                                                    {{ $t('Delete') }}
                                                 </button>
                                             </li>
                                         </ul>
@@ -130,7 +130,7 @@
             </v-card>
 
             <PaymentDialog v-model="paymentDialogOpen" :endpoint="`/api/purchases/${selectedPurchase?.id}/payments`"
-                :due-amount="selectedPurchase?.due_amount ?? 0" title="Record Bill Payment" with-payment-account
+                :due-amount="selectedPurchase?.due_amount ?? 0" :title="$t('Record Bill Payment')" with-payment-account
                 @recorded="fetchData" />
 
         </div>
@@ -149,6 +149,7 @@ import PaymentDialog from '@/components/common/PaymentDialog.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';
+import { t } from '@/i18n';
 
 const { can } = usePermission()
 
@@ -181,12 +182,12 @@ const { approve } = useApproval('/api/purchases', () => fetchData())
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: `Delete purchase "${item.invoice_number}"? This reverses its supplier ledger entry.`,
+        title: t('Are you sure?'),
+        text: t('Delete purchase "{invoice}"? This reverses its supplier ledger entry.', { invoice: item.invoice_number }),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('Yes, delete'),
+        cancelButtonText: t('Cancel'),
     })
 
     if (!result.isConfirmed) return
@@ -198,7 +199,7 @@ const handleDelete = async (item) => {
             fetchData()
         }
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete purchase.')
+        toast.error(e.response?.data?.message || t('Failed to delete purchase.'))
     }
 }
 

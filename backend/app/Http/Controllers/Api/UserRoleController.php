@@ -22,7 +22,7 @@ class UserRoleController extends Controller
     {
         $user = $this->userService->syncRoles($user, $request->validated('roles'));
 
-        return ApiResponse::success(new UserResource($user), 'Roles assigned successfully.');
+        return ApiResponse::success(new UserResource($user), __('Roles assigned successfully.'));
     }
 
     /**
@@ -32,6 +32,6 @@ class UserRoleController extends Controller
     {
         $user = $this->userService->revokeRole($user, $role);
 
-        return ApiResponse::success(new UserResource($user), 'Role revoked successfully.');
+        return ApiResponse::success(new UserResource($user), __('Role revoked successfully.'));
     }
 }
