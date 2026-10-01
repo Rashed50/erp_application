@@ -44,20 +44,20 @@ class PurchaseController extends Controller
     {
         $purchase = $this->purchaseService->create($request->validated());
 
-        return ApiResponse::success(new PurchaseResource($purchase), 'Purchase created successfully.', 201);
+        return ApiResponse::success(new PurchaseResource($purchase), __('Purchase created successfully.'), 201);
     }
 
     public function update(UpdatePurchaseRequest $request, Purchase $purchase): JsonResponse
     {
         $purchase = $this->purchaseService->update($purchase, $request->validated());
 
-        return ApiResponse::success(new PurchaseResource($purchase), 'Purchase updated successfully.');
+        return ApiResponse::success(new PurchaseResource($purchase), __('Purchase updated successfully.'));
     }
 
     public function destroy(Purchase $purchase): JsonResponse
     {
         $this->purchaseService->delete($purchase);
 
-        return ApiResponse::success(message: 'Purchase deleted successfully.');
+        return ApiResponse::success(message: __('Purchase deleted successfully.'));
     }
 }

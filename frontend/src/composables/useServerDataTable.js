@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { toast } from 'vue3-toastify'
+import { t } from '@/i18n'
 
 export function useServerDataTable({
   endpoint,
@@ -47,7 +48,7 @@ export function useServerDataTable({
       total.value = data.total
     } catch (e) {
       console.error(e)
-      toast.error('Failed to load data')
+      toast.error(t('common.failedToLoad'))
     } finally {
       loading.value = false
     }

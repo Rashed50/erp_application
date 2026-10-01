@@ -13,7 +13,7 @@
                             <div class="col-md-2"></div>
                             <div class="col-md-3">
                                 <select class="form-select" v-model="filters.customer_id">
-                                    <option value="">All Customers</option>
+                                    <option value="">{{ $t('All Customers') }}</option>
                                     <option v-for="customer in customers" :key="customer.id" :value="customer.id">
                                         {{ customer.name }}
                                     </option>
@@ -21,23 +21,23 @@
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select" v-model="filters.status">
-                                    <option value="">All Status</option>
+                                    <option value="">{{ $t('All Status') }}</option>
                                     <option v-for="status in WORK_ORDER_STATUSES" :key="status" :value="status">
-                                        {{ status }}
+                                        {{ $t(status) }}
                                     </option>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <div class="search-wrapper d-flex align-center gap-2">
-                                    <v-text-field variant="outlined" density="compact" placeholder="Search..."
+                                    <v-text-field variant="outlined" density="compact" :placeholder="$t('Search...')"
                                         v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
                                     <v-btn type="button" @click="fetchData" class="text-none text-white"
                                         color="blue-darken-3" rounded="0" variant="flat" min-width="100">
-                                        Search
+                                        {{ $t('Search') }}
                                     </v-btn>
                                     <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3"
                                         rounded="0" variant="flat" min-width="100">
-                                        Reload
+                                        {{ $t('Reload') }}
                                     </v-btn>
                                 </div>
                             </div>
@@ -49,18 +49,18 @@
                         <thead>
                             <tr>
                                 <th class="text-left">#</th>
-                                <th class="text-left">Work Order No</th>
-                                <th class="text-left">Work Title</th>
-                                <th class="text-left">Customer</th>
-                                <th class="text-left">Issue Date</th>
-                                <th class="text-left">Deliver Date</th>
-                                <th class="text-right">Total Amount</th>
-                                <th class="text-right">Retention</th>
-                                <th class="text-right">Paid</th>
-                                <th class="text-right">Outstanding</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center">Approval</th>
-                                <th class="text-center">Action</th>
+                                <th class="text-left">{{ $t('Work Order No') }}</th>
+                                <th class="text-left">{{ $t('Work Title') }}</th>
+                                <th class="text-left">{{ $t('Customer') }}</th>
+                                <th class="text-left">{{ $t('Issue Date') }}</th>
+                                <th class="text-left">{{ $t('Deliver Date') }}</th>
+                                <th class="text-right">{{ $t('Total Amount') }}</th>
+                                <th class="text-right">{{ $t('Retention') }}</th>
+                                <th class="text-right">{{ $t('Paid') }}</th>
+                                <th class="text-right">{{ $t('Outstanding') }}</th>
+                                <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-center">{{ $t('Approval') }}</th>
+                                <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -69,14 +69,14 @@
                             <tr v-if="loading">
                                 <td colspan="13" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
-                                    Loading...
+                                    {{ $t('Loading...') }}
                                 </td>
                             </tr>
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
                                 <td colspan="13" class="text-center py-4">
-                                    No records found.
+                                    {{ $t('No records found.') }}
                                 </td>
                             </tr>
 
@@ -95,11 +95,11 @@
                                 </td>
                                 <td class="text-right">
                                     {{ Number(item.paid_amount).toFixed(2) }}
-                                    <small class="text-muted d-block">{{ item.payments_count }} payment{{ item.payments_count === 1 ? '' : 's' }}</small>
+                                    <small class="text-muted d-block">{{ $t(item.payments_count === 1 ? '{count} payment' : '{count} payments', { count: item.payments_count }) }}</small>
                                 </td>
                                 <td class="text-right">{{ Number(item.outstanding_amount).toFixed(2) }}</td>
                                 <td class="text-center">
-                                    <span :class="statusBadgeClass(item.status)">{{ item.status }}</span>
+                                    <span :class="statusBadgeClass(item.status)">{{ $t(item.status) }}</span>
                                 </td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
@@ -115,18 +115,18 @@
                                         <ul class="table-action-menu">
                                             <li class="menu-item" v-if="!item.approved_by && can(['work-orders.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'work order')">
-                                                    Approve
+                                                    {{ $t('Approve') }}
                                                 </button>
                                             </li>
                                             <li class="menu-item" v-if="can(['work-orders.update'])">
                                                 <router-link :to="{ name: 'admin_work_order_edit', params: { id: item.id } }"
                                                     class="menu-link">
-                                                    Edit
+                                                    {{ $t('Edit') }}
                                                 </router-link>
                                             </li>
                                             <li class="menu-item" v-if="can(['work-orders.delete'])">
                                                 <button type="button" class="menu-link" @click="handleDelete(item)">
-                                                    Delete
+                                                    {{ $t('Delete') }}
                                                 </button>
                                             </li>
                                         </ul>
@@ -160,6 +160,7 @@ import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';
 import { WORK_ORDER_STATUSES } from './statuses';
+import { t } from '@/i18n';
 
 const { can } = usePermission()
 
@@ -192,12 +193,12 @@ const statusBadgeClass = (status) => ({
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: `Delete work order "${item.work_order_no}"? This cannot be undone.`,
+        title: t('Are you sure?'),
+        text: t('Delete work order "{number}"? This cannot be undone.', { number: item.work_order_no }),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('Yes, delete'),
+        cancelButtonText: t('Cancel'),
     })
 
     if (!result.isConfirmed) return
@@ -209,7 +210,7 @@ const handleDelete = async (item) => {
             fetchData()
         }
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete work order.')
+        toast.error(e.response?.data?.message || t('Failed to delete work order.'))
     }
 }
 

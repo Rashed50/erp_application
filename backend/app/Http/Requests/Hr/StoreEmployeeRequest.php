@@ -91,7 +91,7 @@ class StoreEmployeeRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'last_working_date.required_if' => 'The last working date is required for a resigned or terminated employee.',
+            'last_working_date.required_if' => __('The last working date is required for a resigned or terminated employee.'),
         ];
     }
 }

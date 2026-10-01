@@ -12,14 +12,14 @@
                                 <div class="col-md-12">
                                     <!-- Role Name -->
                                     <div class="form-group">
-                                        <label for="">Role Name:</label>
+                                        <label for="">{{ $t('Role Name:') }}</label>
                                         <input type="text" class="form-control" v-model="form.name" required>
                                         <div v-if="errors.name" class="error-msg">{{ errors.name }}</div>
                                     </div>
 
                                     <!-- Permissions -->
                                     <div class="form-group mt-4">
-                                        <label>Assign Permissions:</label>
+                                        <label>{{ $t('Assign Permissions:') }}</label>
                                         <div class="row">
                                             <div v-for="(groupPermissions, groupName) in groupedPermissions"
                                                 :key="groupName" class="mb-3 col-md-4">
@@ -56,7 +56,7 @@
                                 <div class="col-md-12">
                                     <v-btn type="submit" class="text-none text-white mr-2" color="blue-darken-4"
                                         rounded="0" variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
-                                        Update
+                                        {{ $t('Update') }}
                                     </v-btn>
                                 </div>
                             </div>
@@ -73,6 +73,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { setToast } from "@/helpers/toast";
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
+import { t } from '@/i18n';
 
 const router = useRouter();
 const route = useRoute();
@@ -166,7 +167,7 @@ const handleSubmit = async () => {
                 }
             }
         } else {
-            setToast('error', e.response?.data?.message || 'An unexpected error occurred.');
+            setToast('error', e.response?.data?.message || t('An unexpected error occurred.'));
             console.error(e);
         }
     } finally {

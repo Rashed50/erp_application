@@ -2,6 +2,11 @@
 
 use App\Models\ChartOfAccount;
 use App\Models\Customer;
+use App\Models\CustomerTransaction;
+use App\Models\Purchase;
+use App\Models\Sale;
+use App\Models\Supplier;
+use App\Models\SupplierTransaction;
 use App\Models\User;
 use Database\Seeders\ChartOfAccountSeeder;
 
@@ -135,5 +140,145 @@ describe('balance sheet', function () {
 
         expect(ChartOfAccount::query()->where('account_number', '1030')->first()->balance)->toBe(500.0)
             ->and(Customer::query()->where('name', 'Opening Customer')->value('current_balance'))->toEqual('500.00');
+    });
+});
+
+describe('cash transactions', function () {
+    it("lists the selected accounts' journal lines in the date range with totals", function () {
+        postIncomeExpense($this->actor, 'income', $this->revenue, $this->cash, 1000, '2026-01-10');
+        postIncomeExpense($this->actor, 'expense', $this->rent, $this->cash, 300, '2026-02-05');
+        postIncomeExpense($this->actor, 'expense', $this->rent, $this->bank, 50, '2026-02-06');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/accounting/reports/cash-transactions?account_ids[]={$this->cash->id}&from_date=2026-01-01&to_date=2026-02-28")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.rows')
+            ->assertJsonPath('data.rows.0.date', '2026-01-10')
+            ->assertJsonPath('data.rows.0.ledger_name', $this->cash->name)
+            ->assertJsonPath('data.rows.0.debit', 1000)
+            ->assertJsonPath('data.rows.1.credit', 300)
+            ->assertJsonPath('data.total_debit', 1000)
+            ->assertJsonPath('data.total_credit', 300);
+    });
+});
+
+describe('supplier reports', function () {
+    it('brings the balance forward and keeps a running due, skipping reversed entries', function () {
+        $supplier = Supplier::factory()->create(['opening_balance' => 100, 'current_balance' => 100]);
+        SupplierTransaction::factory()->for($supplier)->create(['credit' => 400, 'debit' => 0, 'transaction_date' => '2026-01-05']);
+        SupplierTransaction::factory()->for($supplier)->create(['credit' => 1000, 'debit' => 0, 'transaction_date' => '2026-02-01']);
+        SupplierTransaction::factory()->for($supplier)->create(['credit' => 0, 'debit' => 600, 'transaction_date' => '2026-02-10', 'transaction_type' => 'Bill Payment']);
+        SupplierTransaction::factory()->for($supplier)->create(['credit' => 999, 'debit' => 0, 'transaction_date' => '2026-02-11', 'status' => false]);
+        SupplierTransaction::factory()->create(['credit' => 50, 'transaction_date' => '2026-02-02']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/accounting/reports/supplier-statement?supplier_ids[]={$supplier->id}&from_date=2026-02-01&to_date=2026-02-28")
+            ->assertOk()
+            ->assertJsonPath('data.previous_balance', 500)
+            ->assertJsonCount(2, 'data.rows')
+            ->assertJsonPath('data.rows.0.party_name', $supplier->name)
+            ->assertJsonPath('data.rows.0.amount', 1000)
+            ->assertJsonPath('data.rows.0.due', 1500)
+            ->assertJsonPath('data.rows.1.paid', 600)
+            ->assertJsonPath('data.rows.1.due', 900)
+            ->assertJsonPath('data.total_amount', 1000)
+            ->assertJsonPath('data.total_paid', 600)
+            ->assertJsonPath('data.total_due', 900);
+    });
+
+    it("lists active suppliers' current balances", function () {
+        Supplier::factory()->create(['name' => 'A Supplier', 'opening_balance' => 100, 'current_balance' => 250]);
+        Supplier::factory()->create(['name' => 'B Supplier', 'opening_balance' => 0, 'current_balance' => 50]);
+        Supplier::factory()->create(['active_status' => false, 'current_balance' => 999]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/supplier-balances')
+            ->assertOk()
+            ->assertJsonCount(2, 'data.rows')
+            ->assertJsonPath('data.rows.0.name', 'A Supplier')
+            ->assertJsonPath('data.total_current_balance', 300);
+    });
+
+    it('validates the supplier ids', function () {
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/supplier-statement?supplier_ids[]=999999')
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['supplier_ids.0']]);
+    });
+});
+
+describe('customer statement', function () {
+    it('raises the due with invoices and lowers it with payments', function () {
+        $customer = Customer::factory()->create(['opening_balance' => 200, 'current_balance' => 200]);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 500, 'credit' => 0, 'transaction_date' => '2026-03-01']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 300, 'transaction_date' => '2026-03-05', 'transaction_type' => 'Payment Received']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/accounting/reports/customer-statement?customer_ids[]={$customer->id}")
+            ->assertOk()
+            ->assertJsonPath('data.previous_balance', 200)
+            ->assertJsonPath('data.rows.0.due', 700)
+            ->assertJsonPath('data.rows.1.paid', 300)
+            ->assertJsonPath('data.total_due', 400);
+    });
+});
+
+describe('purchase and sales reports', function () {
+    it('lists purchases by credit account with VAT and net totals', function () {
+        $payable = ChartOfAccount::query()->where('account_number', '2010')->first();
+        Purchase::factory()->create(['credit_account_id' => $payable->id, 'purchase_date' => '2026-04-02', 'vat_amount' => 10, 'net_total' => 110]);
+        Purchase::factory()->create(['credit_account_id' => $payable->id, 'purchase_date' => '2026-04-20', 'vat_amount' => 5, 'net_total' => 55]);
+        Purchase::factory()->create(['credit_account_id' => $this->cash->id, 'purchase_date' => '2026-04-03']);
+        Purchase::factory()->create(['credit_account_id' => $payable->id, 'purchase_date' => '2026-05-01']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/accounting/reports/expense-details?account_ids[]={$payable->id}&from_date=2026-04-01&to_date=2026-04-30")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.rows')
+            ->assertJsonPath('data.rows.0.ledger_name', $payable->name)
+            ->assertJsonPath('data.total_vat', 15)
+            ->assertJsonPath('data.total_net_amount', 165);
+    });
+
+    it('summarises sales against purchases with a running balance', function () {
+        Sale::factory()->create(['issue_date' => '2026-05-02', 'net_total' => 1000]);
+        Purchase::factory()->create(['purchase_date' => '2026-05-02', 'net_total' => 400]);
+        Sale::factory()->create(['issue_date' => '2026-05-10', 'net_total' => 250]);
+        Sale::factory()->create(['issue_date' => '2026-06-01', 'net_total' => 999]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/sales-purchase-summary?from_date=2026-05-01&to_date=2026-05-31')
+            ->assertOk()
+            ->assertJsonCount(3, 'data.rows')
+            ->assertJsonPath('data.rows.0.type', 'Purchase')
+            ->assertJsonPath('data.rows.0.balance', -400)
+            ->assertJsonPath('data.rows.1.balance', 600)
+            ->assertJsonPath('data.rows.2.balance', 850)
+            ->assertJsonPath('data.total_sales', 1250)
+            ->assertJsonPath('data.total_purchase', 400)
+            ->assertJsonPath('data.balance', 850);
+    });
+
+    it('requires the summary date range', function () {
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/sales-purchase-summary')
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['from_date', 'to_date']]);
+    });
+
+    it("lists a customer's sales with paid and due totals", function () {
+        $customer = Customer::factory()->create();
+        Sale::factory()->for($customer)->create(['issue_date' => '2026-06-01', 'total_amount' => 1000, 'discount_amount' => 0, 'vat_amount' => 0, 'net_total' => 1000, 'paid_amount' => 400]);
+        Sale::factory()->for($customer)->create(['issue_date' => '2026-06-15', 'total_amount' => 500, 'discount_amount' => 0, 'vat_amount' => 0, 'net_total' => 500, 'paid_amount' => 0]);
+        Sale::factory()->create(['issue_date' => '2026-06-10']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/accounting/reports/sales?customer_id={$customer->id}&from_date=2026-06-01&to_date=2026-06-30")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.rows')
+            ->assertJsonPath('data.rows.0.due_amount', 600)
+            ->assertJsonPath('data.totals.net_total', 1500)
+            ->assertJsonPath('data.totals.paid_amount', 400)
+            ->assertJsonPath('data.totals.due_amount', 1100);
     });
 });

@@ -11,7 +11,7 @@
                     </div>
                     <div class="col-md-2">
                         <select class="form-select" v-model="filters.department">
-                            <option value="">All Departments</option>
+                            <option value="">{{ $t('All Departments') }}</option>
                             <option v-for="department in options.departments" :key="department" :value="department">
                                 {{ department }}
                             </option>
@@ -19,23 +19,23 @@
                     </div>
                     <div class="col-md-2">
                         <select class="form-select" v-model="filters.status">
-                            <option value="">All (except cancelled)</option>
-                            <option v-for="status in SALARY_STATUSES" :key="status" :value="status">{{ status }}</option>
+                            <option value="">{{ $t('All (except cancelled)') }}</option>
+                            <option v-for="status in SALARY_STATUSES" :key="status" :value="status">{{ $t(status) }}</option>
                         </select>
                     </div>
                     <div class="col-md-6 d-flex justify-content-end gap-2">
                         <v-btn v-if="can(['payroll.approve'])" class="text-none text-white" color="blue-darken-3"
                             rounded="0" variant="flat" :disabled="!selectedWith('Generated').length"
                             @click="changeStatus('approve', 'Generated')">
-                            Approve ({{ selectedWith('Generated').length }})
+                            {{ $t('Approve') }} ({{ selectedWith('Generated').length }})
                         </v-btn>
                         <v-btn v-if="can(['payroll.pay'])" class="text-none text-white" color="green-darken-2" rounded="0"
                             variant="flat" :disabled="!selectedWith('Approved').length"
                             @click="changeStatus('pay', 'Approved')">
-                            Mark Paid ({{ selectedWith('Approved').length }})
+                            {{ $t('Mark Paid') }} ({{ selectedWith('Approved').length }})
                         </v-btn>
                         <v-btn class="text-none" color="grey-lighten-3" rounded="0" variant="flat" @click="print">
-                            <i class="fa-solid fa-print me-1"></i> Print
+                            <i class="fa-solid fa-print me-1"></i> {{ $t('Print') }}
                         </v-btn>
                     </div>
                 </div>
@@ -48,16 +48,16 @@
                                     <input type="checkbox" class="form-check-input" :checked="allSelected"
                                         @change="toggleAll($event.target.checked)" />
                                 </th>
-                                <th>Month</th>
-                                <th>Employee</th>
-                                <th class="text-right">Basic</th>
-                                <th class="text-right">Allowances</th>
-                                <th class="text-right">OT + Bonus</th>
-                                <th class="text-right">Gross</th>
-                                <th class="text-right">Deduction</th>
-                                <th class="text-right">Net</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center">Action</th>
+                                <th>{{ $t('Month') }}</th>
+                                <th>{{ $t('Employee') }}</th>
+                                <th class="text-right">{{ $t('Basic') }}</th>
+                                <th class="text-right">{{ $t('Allowances') }}</th>
+                                <th class="text-right">{{ $t('OT + Bonus') }}</th>
+                                <th class="text-right">{{ $t('Gross') }}</th>
+                                <th class="text-right">{{ $t('Deduction') }}</th>
+                                <th class="text-right">{{ $t('Net') }}</th>
+                                <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -67,7 +67,7 @@
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="11" class="text-center py-4">No salaries found.</td>
+                                <td colspan="11" class="text-center py-4">{{ $t('No salaries found.') }}</td>
                             </tr>
                             <tr v-else v-for="item in items" :key="item.id">
                                 <td class="text-center">
@@ -87,23 +87,23 @@
                                 <td class="text-right"><strong>{{ money(item.net_salary) }}</strong></td>
                                 <td class="text-center">
                                     <span :class="salaryStatusClass(item.status)" :title="item.cancel_reason || ''">
-                                        {{ item.status }}
+                                        {{ $t(item.status) }}
                                     </span>
                                 </td>
                                 <td class="text-center">
                                     <v-btn size="small" variant="text" color="blue-darken-3" @click="showDetail(item)">
-                                        View
+                                        {{ $t('View') }}
                                     </v-btn>
                                     <v-btn v-if="can(['payroll.cancel']) && ['Generated', 'Approved'].includes(item.status)"
                                         size="small" variant="text" color="red-darken-2" @click="cancel(item)">
-                                        Cancel
+                                        {{ $t('Cancel') }}
                                     </v-btn>
                                 </td>
                             </tr>
                         </tbody>
                         <tfoot v-if="items.length">
                             <tr class="fw-bold">
-                                <td colspan="6" class="text-right">Total ({{ totals.count }} salaries, all pages)</td>
+                                <td colspan="6" class="text-right">{{ $t('Total ({count} salaries, all pages)', { count: totals.count }) }}</td>
                                 <td class="text-right">{{ money(totals.gross_salary) }}</td>
                                 <td class="text-right">{{ money(totals.total_deduction) }}</td>
                                 <td class="text-right">{{ money(totals.net_salary) }}</td>
@@ -128,59 +128,59 @@
             <v-card-text>
                 <div class="row">
                     <div class="col-6">
-                        <h6>Earnings</h6>
+                        <h6>{{ $t('Earnings') }}</h6>
                         <table class="table table-sm">
                             <tbody>
-                                <tr><td>Basic</td><td class="text-end">{{ money(detail.basic_salary) }}</td></tr>
-                                <tr><td>House Rent</td><td class="text-end">{{ money(detail.house_rent) }}</td></tr>
-                                <tr><td>Medical</td><td class="text-end">{{ money(detail.medical_allowance) }}</td></tr>
-                                <tr><td>Transport</td><td class="text-end">{{ money(detail.transport_allowance) }}</td></tr>
-                                <tr><td>Food</td><td class="text-end">{{ money(detail.food_allowance) }}</td></tr>
-                                <tr><td>Other Allowance</td><td class="text-end">{{ money(detail.other_allowance) }}</td></tr>
+                                <tr><td>{{ $t('Basic') }}</td><td class="text-end">{{ money(detail.basic_salary) }}</td></tr>
+                                <tr><td>{{ $t('House Rent') }}</td><td class="text-end">{{ money(detail.house_rent) }}</td></tr>
+                                <tr><td>{{ $t('Medical') }}</td><td class="text-end">{{ money(detail.medical_allowance) }}</td></tr>
+                                <tr><td>{{ $t('Transport') }}</td><td class="text-end">{{ money(detail.transport_allowance) }}</td></tr>
+                                <tr><td>{{ $t('Food') }}</td><td class="text-end">{{ money(detail.food_allowance) }}</td></tr>
+                                <tr><td>{{ $t('Other Allowance') }}</td><td class="text-end">{{ money(detail.other_allowance) }}</td></tr>
                                 <tr>
-                                    <td>Overtime ({{ detail.overtime_hours }}h × {{ money(detail.overtime_rate) }})</td>
+                                    <td>{{ $t('Overtime') }} ({{ detail.overtime_hours }}h × {{ money(detail.overtime_rate) }})</td>
                                     <td class="text-end">{{ money(detail.overtime_amount) }}</td>
                                 </tr>
-                                <tr><td>Bonus</td><td class="text-end">{{ money(detail.bonus) }}</td></tr>
-                                <tr><td>Other Addition</td><td class="text-end">{{ money(detail.other_addition) }}</td></tr>
-                                <tr class="fw-bold"><td>Gross</td><td class="text-end">{{ money(detail.gross_salary) }}</td></tr>
+                                <tr><td>{{ $t('Bonus') }}</td><td class="text-end">{{ money(detail.bonus) }}</td></tr>
+                                <tr><td>{{ $t('Other Addition') }}</td><td class="text-end">{{ money(detail.other_addition) }}</td></tr>
+                                <tr class="fw-bold"><td>{{ $t('Gross') }}</td><td class="text-end">{{ money(detail.gross_salary) }}</td></tr>
                             </tbody>
                         </table>
                     </div>
                     <div class="col-6">
-                        <h6>Deductions</h6>
+                        <h6>{{ $t('Deductions') }}</h6>
                         <table class="table table-sm">
                             <tbody>
                                 <tr>
-                                    <td>Absence ({{ detail.absent_days }} × {{ money(detail.per_day_rate) }})</td>
+                                    <td>{{ $t('Absence') }} ({{ detail.absent_days }} × {{ money(detail.per_day_rate) }})</td>
                                     <td class="text-end">{{ money(detail.absence_deduction) }}</td>
                                 </tr>
                                 <tr>
-                                    <td>Unpaid Leave ({{ detail.unpaid_leave_days }} × {{ money(detail.per_day_rate) }})</td>
+                                    <td>{{ $t('Unpaid Leave') }} ({{ detail.unpaid_leave_days }} × {{ money(detail.per_day_rate) }})</td>
                                     <td class="text-end">{{ money(detail.unpaid_leave_deduction) }}</td>
                                 </tr>
-                                <tr><td>Other Deductions</td><td class="text-end">{{ money(detail.other_deduction) }}</td></tr>
-                                <tr class="fw-bold"><td>Total</td><td class="text-end">{{ money(detail.total_deduction) }}</td></tr>
+                                <tr><td>{{ $t('Other Deductions') }}</td><td class="text-end">{{ money(detail.other_deduction) }}</td></tr>
+                                <tr class="fw-bold"><td>{{ $t('Total') }}</td><td class="text-end">{{ money(detail.total_deduction) }}</td></tr>
                             </tbody>
                         </table>
-                        <h6>Attendance</h6>
+                        <h6>{{ $t('Attendance') }}</h6>
                         <div class="small">
-                            Employed {{ detail.employed_days }}/{{ detail.days_in_month }} days ·
-                            Working {{ detail.working_days }} · Present {{ detail.present_days }} ·
-                            Paid leave {{ detail.paid_leave_days }}
+                            {{ $t('Employed {employed}/{total} days', { employed: detail.employed_days, total: detail.days_in_month }) }} ·
+                            {{ $t('Working') }} {{ detail.working_days }} · {{ $t('Present') }} {{ detail.present_days }} ·
+                            {{ $t('Paid leave') }} {{ detail.paid_leave_days }}
                         </div>
-                        <div class="small text-muted mt-1">Day rate based on {{ detail.deduction_basis === 'gross' ? 'basic + allowances' : 'basic' }}</div>
+                        <div class="small text-muted mt-1">{{ $t('Day rate based on') }} {{ $t(detail.deduction_basis === 'gross' ? 'basic + allowances' : 'basic') }}</div>
                     </div>
                 </div>
                 <div class="alert alert-success mb-0 d-flex justify-content-between">
-                    <strong>Net Salary</strong><strong>{{ money(detail.net_salary) }}</strong>
+                    <strong>{{ $t('Net Salary') }}</strong><strong>{{ money(detail.net_salary) }}</strong>
                 </div>
-                <div class="small text-muted mt-2" v-if="detail.cancel_reason">Cancelled: {{ detail.cancel_reason }}</div>
+                <div class="small text-muted mt-2" v-if="detail.cancel_reason">{{ $t('Cancelled:') }} {{ detail.cancel_reason }}</div>
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
                 <v-btn class="text-none" color="grey-lighten-3" rounded="0" variant="flat" @click="detailOpen = false">
-                    Close
+                    {{ $t('Close') }}
                 </v-btn>
             </v-card-actions>
         </v-card>
@@ -196,14 +196,13 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
 import { usePrintable } from '@/composables/usePrintable';
-import { useSettingStore } from '@/stores/settings';
 import { useRoute } from 'vue-router';
 import { SALARY_STATUSES, currentMonth, money, monthLabel, salaryStatusClass } from '../helpers';
+import { t } from '@/i18n';
 
 const route = useRoute();
 const { can } = usePermission()
 const { printTable } = usePrintable()
-const settings = useSettingStore()
 
 const {
     items,
@@ -249,15 +248,15 @@ const selectedWith = (status) => items.value.filter((i) => selected.value.includ
 
 const changeStatus = async (action, fromStatus) => {
     const ids = selectedWith(fromStatus)
-    const label = action === 'approve' ? 'Approve' : 'Mark as paid'
+    const confirmText = action === 'approve' ? t('Yes, approve') : t('Yes, mark as paid')
     const confirm = await Swal.fire({
-        title: `${label} ${ids.length} salaries?`,
+        title: t(action === 'approve' ? 'Approve {count} salaries?' : 'Mark {count} salaries as paid?', { count: ids.length }),
         text: action === 'approve'
-            ? 'Approved salaries can no longer be recalculated.'
-            : 'Paid salaries can no longer be changed or cancelled.',
+            ? t('Approved salaries can no longer be recalculated.')
+            : t('Paid salaries can no longer be changed or cancelled.'),
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: `Yes, ${label.toLowerCase()}`,
+        confirmButtonText: confirmText,
     })
     if (!confirm.isConfirmed) return
 
@@ -266,21 +265,21 @@ const changeStatus = async (action, fromStatus) => {
         toast.success(data.message)
         fetchData()
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to update salaries.')
+        toast.error(e.response?.data?.message || t('Failed to update salaries.'))
     }
 }
 
 const cancel = async (item) => {
     const { value: reason, isConfirmed } = await Swal.fire({
-        title: `Cancel salary of ${item.employee_name}?`,
-        text: 'The record is kept for audit and the month can be generated again for this employee.',
+        title: t('Cancel salary of {name}?', { name: item.employee_name }),
+        text: t('The record is kept for audit and the month can be generated again for this employee.'),
         input: 'text',
-        inputPlaceholder: 'Reason for cancelling',
-        inputValidator: (value) => (!value ? 'A reason is required.' : undefined),
+        inputPlaceholder: t('Reason for cancelling'),
+        inputValidator: (value) => (!value ? t('A reason is required.') : undefined),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Cancel salary',
-        cancelButtonText: 'Keep',
+        confirmButtonText: t('Cancel salary'),
+        cancelButtonText: t('Keep'),
     })
     if (!isConfirmed) return
 
@@ -290,7 +289,7 @@ const cancel = async (item) => {
         fetchData()
     } catch (e) {
         const errors = e.response?.data?.data
-        toast.error(errors ? Object.values(errors).flat().join(' ') : (e.response?.data?.message || 'Failed to cancel.'))
+        toast.error(errors ? Object.values(errors).flat().join(' ') : (e.response?.data?.message || t('Failed to cancel.')))
     }
 }
 
@@ -302,21 +301,20 @@ const showDetail = (item) => {
 const print = async () => {
     const { data } = await axios.get('/api/hr/salary-histories', { params: { ...filters, per_page: 100000 } })
     printTable({
-        title: `Salary Sheet - ${monthLabel(filters.month) || 'All months'}`,
-        logo: settings.company?.logo_url,
+        title: t('Salary Sheet - {month}', { month: monthLabel(filters.month) || t('All months') }),
         items: data.data?.salaries ?? [],
         columns: [
             { key: 'index', label: '#' },
-            { key: 'employee_code', label: 'ID' },
-            { key: 'employee_name', label: 'Name' },
-            { key: 'designation', label: 'Designation' },
-            { key: 'basic_salary', label: 'Basic', align: 'right', format: money },
-            { key: 'total_allowance', label: 'Allowances', align: 'right', format: money },
-            { key: 'overtime_amount', label: 'Overtime', align: 'right', format: money },
-            { key: 'gross_salary', label: 'Gross', align: 'right', format: money },
-            { key: 'total_deduction', label: 'Deduction', align: 'right', format: money },
-            { key: 'net_salary', label: 'Net', align: 'right', format: money },
-            { key: 'status', label: 'Status' },
+            { key: 'employee_code', label: t('ID') },
+            { key: 'employee_name', label: t('Name') },
+            { key: 'designation', label: t('Designation') },
+            { key: 'basic_salary', label: t('Basic'), align: 'right', format: money },
+            { key: 'total_allowance', label: t('Allowances'), align: 'right', format: money },
+            { key: 'overtime_amount', label: t('Overtime'), align: 'right', format: money },
+            { key: 'gross_salary', label: t('Gross'), align: 'right', format: money },
+            { key: 'total_deduction', label: t('Deduction'), align: 'right', format: money },
+            { key: 'net_salary', label: t('Net'), align: 'right', format: money },
+            { key: 'status', label: t('Status') },
         ],
     })
 }

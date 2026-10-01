@@ -61,15 +61,15 @@ class EmployeeWorkController extends Controller
     {
         $work = $this->workService->create($request->validated());
 
-        return ApiResponse::success(new EmployeeWorkResource($work), 'Work record saved successfully.', 201);
+        return ApiResponse::success(new EmployeeWorkResource($work), __('Work record saved successfully.'), 201);
     }
 
     public function update(UpdateEmployeeWorkRequest $request, EmployeeWork $employeeWork): JsonResponse
     {
         $work = $this->workService->update($employeeWork, $request->validated());
         $message = $this->workService->hasLiveSalary($work)
-            ? 'Work record updated. Generate the salary for this month again to apply the change.'
-            : 'Work record updated successfully.';
+            ? __('Work record updated. Generate the salary for this month again to apply the change.')
+            : __('Work record updated successfully.');
 
         return ApiResponse::success(new EmployeeWorkResource($work), $message);
     }
@@ -78,6 +78,6 @@ class EmployeeWorkController extends Controller
     {
         $this->workService->delete($employeeWork);
 
-        return ApiResponse::success(message: 'Work record deleted successfully.');
+        return ApiResponse::success(message: __('Work record deleted successfully.'));
     }
 }

@@ -1,19 +1,19 @@
 <template>
     <div class="form-group mb-3">
-        <label for="work_order_id">Work Order:</label>
+        <label for="work_order_id">{{ $t('Work Order:') }}</label>
         <select id="work_order_id" class="form-control" v-model="workOrderId" :disabled="disabled || !customerId">
             <option value="">{{ placeholder }}</option>
             <option v-for="workOrder in workOrders" :key="workOrder.id" :value="workOrder.id">
                 {{ workOrder.work_order_no }} - {{ workOrder.work_title }}
-                (Paid: {{ money(workOrder.paid_amount) }}, Outstanding: {{ money(workOrder.outstanding_amount) }})
+                ({{ $t('Paid:') }} {{ money(workOrder.paid_amount) }}, {{ $t('Outstanding:') }} {{ money(workOrder.outstanding_amount) }})
             </option>
         </select>
         <div v-if="error" class="error-msg">{{ error }}</div>
         <small v-if="selected" class="text-muted d-block">
-            Total: {{ money(selected.total_amount) }} |
-            Paid: {{ money(selected.paid_amount) }} ({{ selected.payments_count }} payment{{ selected.payments_count === 1 ? '' : 's' }}) |
-            Outstanding: {{ money(selected.outstanding_amount) }} |
-            Status: {{ selected.status }}
+            {{ $t('Total:') }} {{ money(selected.total_amount) }} |
+            {{ $t('Paid:') }} {{ money(selected.paid_amount) }} ({{ $t(selected.payments_count === 1 ? '{count} payment' : '{count} payments', { count: selected.payments_count }) }}) |
+            {{ $t('Outstanding:') }} {{ money(selected.outstanding_amount) }} |
+            {{ $t('Status:') }} {{ $t(selected.status) }}
         </small>
         <small v-if="hint" class="text-muted d-block">{{ hint }}</small>
     </div>
@@ -21,6 +21,7 @@
 
 <script setup>
 import axios from 'axios';
+import { t } from '@/i18n';
 
 // A customer's work orders, each with its paid and outstanding amounts.
 // Reloads whenever the customer changes and clears a selection that does
@@ -40,9 +41,9 @@ const loading = ref(false)
 const selected = computed(() => workOrders.value.find((w) => w.id === workOrderId.value))
 
 const placeholder = computed(() => {
-    if (!props.customerId) return 'Select a customer first'
-    if (loading.value) return 'Loading...'
-    return workOrders.value.length ? 'No Work Order' : 'No work orders for this customer'
+    if (!props.customerId) return t('Select a customer first')
+    if (loading.value) return t('Loading...')
+    return workOrders.value.length ? t('No Work Order') : t('No work orders for this customer')
 })
 
 const money = (value) => Number(value || 0).toFixed(2)

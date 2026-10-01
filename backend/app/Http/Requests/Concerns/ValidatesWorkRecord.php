@@ -50,15 +50,15 @@ trait ValidatesWorkRecord
             + (float) $this->input('paid_leave_days') + (float) $this->input('unpaid_leave_days');
 
         if ($workingDays > $month->daysInMonth) {
-            $validator->errors()->add('working_days', "Working days cannot exceed the {$month->daysInMonth} days in {$month->format('F Y')}.");
+            $validator->errors()->add('working_days', __('Working days cannot exceed the :days days in :month.', ['days' => $month->daysInMonth, 'month' => $month->format('F Y')]));
         }
 
         if ($recordedDays > $workingDays) {
-            $validator->errors()->add('present_days', "Present + absent + leave days ({$recordedDays}) cannot exceed the working days ({$workingDays}).");
+            $validator->errors()->add('present_days', __('Present + absent + leave days (:recorded) cannot exceed the working days (:working).', ['recorded' => $recordedDays, 'working' => $workingDays]));
         }
 
         if (! $employee->isEmployedDuring($month)) {
-            $validator->errors()->add('salary_month', "{$employee->name} was not employed during {$month->format('F Y')}.");
+            $validator->errors()->add('salary_month', __(':name was not employed during :month.', ['name' => $employee->name, 'month' => $month->format('F Y')]));
         }
     }
 }

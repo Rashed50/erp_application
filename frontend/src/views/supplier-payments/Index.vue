@@ -12,22 +12,22 @@
                         <div class="row align-items-center">
                             <div class="col-md-3">
                                 <input type="text" class="form-control" v-model="filters.search"
-                                    placeholder="Search supplier, invoice or remarks" />
+                                    :placeholder="$t('Search supplier, invoice or remarks')" />
                             </div>
                             <div class="col-md-1"></div>
                             <div class="col-md-2">
                                 <select class="form-select" v-model="filters.supplier_id">
-                                    <option value="">All Suppliers</option>
+                                    <option value="">{{ $t('All Suppliers') }}</option>
                                     <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">
                                         {{ supplier.name }}
                                     </option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <input type="date" class="form-control" v-model="filters.from_date" placeholder="From" />
+                                <input type="date" class="form-control" v-model="filters.from_date" :placeholder="$t('From')" />
                             </div>
                             <div class="col-md-3">
-                                <input type="date" class="form-control" v-model="filters.to_date" placeholder="To" />
+                                <input type="date" class="form-control" v-model="filters.to_date" :placeholder="$t('To')" />
                             </div>
                         </div>
                     </div>
@@ -36,41 +36,41 @@
                     <v-table class="custom-bordered">
                         <thead>
                             <tr>
-                                <th class="text-left">S.N</th>
-                                <th class="text-left">Date</th>
-                                <th class="text-left">Supplier</th>
-                                <th class="text-left">Invoice No</th>
-                                <th class="text-left">Credit Account</th>
-                                <th class="text-right">Bill Amount</th>
-                                <th class="text-right">Bank Charge</th>
-                                <th class="text-right">Total</th>
-                                <th class="text-left">Remarks</th>
-                                <th class="text-left">Created</th>
-                                <th class="text-center">Approval</th>
-                                <th class="text-center">Manage</th>
+                                <th class="text-left">{{ $t('S.N') }}</th>
+                                <th class="text-left">{{ $t('Date') }}</th>
+                                <th class="text-left">{{ $t('Supplier') }}</th>
+                                <th class="text-left">{{ $t('Invoice No') }}</th>
+                                <th class="text-left">{{ $t('Credit Account') }}</th>
+                                <th class="text-right">{{ $t('Bill Amount') }}</th>
+                                <th class="text-right">{{ $t('Bank Charge') }}</th>
+                                <th class="text-right">{{ $t('Total') }}</th>
+                                <th class="text-left">{{ $t('Remarks') }}</th>
+                                <th class="text-left">{{ $t('Created') }}</th>
+                                <th class="text-center">{{ $t('Approval') }}</th>
+                                <th class="text-center">{{ $t('Manage') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
                                 <td colspan="12" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
-                                    Loading...
+                                    {{ $t('Loading...') }}
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="12" class="text-center py-4">No data available in table</td>
+                                <td colspan="12" class="text-center py-4">{{ $t('No data available in table') }}</td>
                             </tr>
                             <tr v-else v-for="(item, index) in items" :key="item.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
                                 <td>{{ item.payment_date }}</td>
                                 <td>{{ item.supplier_name }}</td>
-                                <td>{{ item.invoice_no || 'N/A' }}</td>
+                                <td>{{ item.invoice_no || $t('N/A') }}</td>
                                 <td>{{ item.payment_account_number }} {{ item.payment_account_name }}</td>
                                 <td class="text-right">{{ Number(item.bill_amount).toFixed(2) }}</td>
                                 <td class="text-right">{{ Number(item.bank_charge).toFixed(2) }}</td>
                                 <td class="text-right fw-bold">{{ Number(item.total_amount).toFixed(2) }}</td>
                                 <td>{{ item.remarks }}</td>
-                                <td>{{ item.created_by_name || 'Unknown' }}</td>
+                                <td>{{ item.created_by_name || $t('Unknown') }}</td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
                                 </td>
@@ -85,17 +85,17 @@
                                             <li class="menu-item"
                                                 v-if="!item.approved_by && can(['supplier-payments.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'payment')">
-                                                    Approve
+                                                    {{ $t('Approve') }}
                                                 </button>
                                             </li>
                                             <li class="menu-item" v-if="item.attachment_url">
                                                 <a :href="item.attachment_url" target="_blank" class="menu-link">
-                                                    Attachment
+                                                    {{ $t('Attachment') }}
                                                 </a>
                                             </li>
                                             <li class="menu-item" v-if="can(['supplier-payments.delete'])">
                                                 <button type="button" class="menu-link" @click="handleDelete(item)">
-                                                    Delete
+                                                    {{ $t('Delete') }}
                                                 </button>
                                             </li>
                                         </ul>
@@ -127,6 +127,7 @@ import { useApproval } from '@/composables/useApproval';
 import { useFetch } from '@/composables/useFetch';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
+import { t } from '@/i18n';
 
 const { can } = usePermission()
 
@@ -153,12 +154,12 @@ const { approve } = useApproval('/api/accounting/purchase/payment', () => fetchD
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: `Delete this payment of ${Number(item.total_amount).toFixed(2)} to "${item.supplier_name}"? All its postings will be reversed.`,
+        title: t('Are you sure?'),
+        text: t('Delete this payment of {amount} to "{supplier}"? All its postings will be reversed.', { amount: Number(item.total_amount).toFixed(2), supplier: item.supplier_name }),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('Yes, delete'),
+        cancelButtonText: t('Cancel'),
     })
 
     if (!result.isConfirmed) return
@@ -170,7 +171,7 @@ const handleDelete = async (item) => {
             fetchData()
         }
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete payment.')
+        toast.error(e.response?.data?.message || t('Failed to delete payment.'))
     }
 }
 

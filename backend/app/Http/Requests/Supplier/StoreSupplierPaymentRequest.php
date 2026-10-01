@@ -70,9 +70,9 @@ class StoreSupplierPaymentRequest extends FormRequest
                 $purchase = Purchase::find($this->input('purchase_id'));
 
                 if ($purchase->supplier_id !== (int) $this->input('supplier_id')) {
-                    $validator->errors()->add('purchase_id', 'This purchase does not belong to the selected supplier.');
+                    $validator->errors()->add('purchase_id', __('This purchase does not belong to the selected supplier.'));
                 } elseif ((float) $this->input('bill_amount') > $purchase->due_amount) {
-                    $validator->errors()->add('bill_amount', "Bill amount cannot exceed the purchase due amount ({$purchase->due_amount}).");
+                    $validator->errors()->add('bill_amount', __('Bill amount cannot exceed the purchase due amount (:amount).', ['amount' => $purchase->due_amount]));
                 }
             }
         });

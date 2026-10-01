@@ -26,13 +26,13 @@ class EmployeeFileController extends Controller
             $request->validated('title'),
         );
 
-        return ApiResponse::success(new EmployeeFileResource($file), 'Document uploaded successfully.', 201);
+        return ApiResponse::success(new EmployeeFileResource($file), __('Document uploaded successfully.'), 201);
     }
 
     public function download(EmployeeFile $employeeFile): StreamedResponse|JsonResponse
     {
         if (! Storage::disk(EmployeeFile::DISK)->exists($employeeFile->file_path)) {
-            return ApiResponse::error('The file could not be found.', 404);
+            return ApiResponse::error(__('The file could not be found.'), 404);
         }
 
         return Storage::disk(EmployeeFile::DISK)->download($employeeFile->file_path, $employeeFile->file_name);
@@ -42,6 +42,6 @@ class EmployeeFileController extends Controller
     {
         $this->fileService->delete($employeeFile);
 
-        return ApiResponse::success(message: 'Document deleted successfully.');
+        return ApiResponse::success(message: __('Document deleted successfully.'));
     }
 }

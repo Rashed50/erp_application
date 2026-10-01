@@ -45,20 +45,20 @@ class IncomeExpenseTransactionController extends Controller
     {
         $transaction = $this->transactionService->create($request->validated());
 
-        return ApiResponse::success(new IncomeExpenseTransactionResource($transaction), 'Transaction recorded successfully.', 201);
+        return ApiResponse::success(new IncomeExpenseTransactionResource($transaction), __('Transaction recorded successfully.'), 201);
     }
 
     public function update(UpdateIncomeExpenseTransactionRequest $request, IncomeExpenseTransaction $income_expense): JsonResponse
     {
         $transaction = $this->transactionService->update($income_expense, $request->validated());
 
-        return ApiResponse::success(new IncomeExpenseTransactionResource($transaction), 'Transaction updated successfully.');
+        return ApiResponse::success(new IncomeExpenseTransactionResource($transaction), __('Transaction updated successfully.'));
     }
 
     public function destroy(IncomeExpenseTransaction $income_expense): JsonResponse
     {
         $this->transactionService->delete($income_expense);
 
-        return ApiResponse::success(message: 'Transaction deleted successfully.');
+        return ApiResponse::success(message: __('Transaction deleted successfully.'));
     }
 }

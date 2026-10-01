@@ -8,7 +8,7 @@
                     <v-card elevation="2" class="rounded-lg overflow-hidden">
                         <div class="bg-blue-darken-4 px-4 py-3 d-flex align-items-center">
                             <v-icon color="white" class="me-2">mdi-cog-outline</v-icon>
-                            <h5 class="mb-0 text-white font-weight-bold">Company Settings</h5>
+                            <h5 class="mb-0 text-white font-weight-bold">{{ $t('Company Settings') }}</h5>
                         </div>
 
                         <v-card-text class="p-4 p-md-5">
@@ -17,21 +17,21 @@
 
                                     <div class="col-12">
                                         <h6 class="text-blue-darken-4 fw-bold border-bottom pb-2 mb-3">
-                                            <i class="fas fa-building me-2"></i>Company Information
+                                            <i class="fas fa-building me-2"></i>{{ $t('Company Information') }}
                                         </h6>
                                     </div>
 
                                     <div class="col-md-12">
-                                        <label class="form-label custom-label">Company Name <span
+                                        <label class="form-label custom-label">{{ $t('Company Name') }} <span
                                                 class="text-danger">*</span></label>
                                         <input type="text" v-model="form.company_name" class="form-control custom-input"
-                                            placeholder="Enter company name">
+                                            :placeholder="$t('Enter company name')">
                                         <small v-if="errors.company_name" class="text-danger mt-1 d-block">{{
                                             errors.company_name }}</small>
                                     </div>
 
                                     <div class="col-md-6">
-                                        <label class="form-label custom-label">Email Address</label>
+                                        <label class="form-label custom-label">{{ $t('Email Address') }}</label>
                                         <input type="email" v-model="form.email" class="form-control custom-input"
                                             placeholder="info@company.com">
                                         <small v-if="errors.email" class="text-danger mt-1 d-block">{{ errors.email
@@ -39,7 +39,7 @@
                                     </div>
 
                                     <div class="col-md-6">
-                                        <label class="form-label custom-label">Phone</label>
+                                        <label class="form-label custom-label">{{ $t('Phone') }}</label>
                                         <input type="text" v-model="form.phone" class="form-control custom-input"
                                             placeholder="01XXXXXXXXX">
                                         <small v-if="errors.phone" class="text-danger mt-1 d-block">{{ errors.phone
@@ -47,25 +47,25 @@
                                     </div>
 
                                     <div class="col-md-12">
-                                        <label class="form-label custom-label">Address</label>
+                                        <label class="form-label custom-label">{{ $t('Address') }}</label>
                                         <textarea v-model="form.address" class="form-control custom-input" rows="2"
-                                            placeholder="Enter company address"></textarea>
+                                            :placeholder="$t('Enter company address')"></textarea>
                                         <small v-if="errors.address" class="text-danger mt-1 d-block">{{
                                             errors.address }}</small>
                                     </div>
 
                                     <div class="col-12 mt-4">
                                         <h6 class="text-blue-darken-4 fw-bold border-bottom pb-2 mb-3">
-                                            <i class="fas fa-image me-2"></i>Branding
+                                            <i class="fas fa-image me-2"></i>{{ $t('Branding') }}
                                         </h6>
                                     </div>
 
                                     <div class="col-md-6">
                                         <div class="upload-box p-3 border rounded bg-light">
-                                            <label class="form-label fw-bold">Company Logo</label>
+                                            <label class="form-label fw-bold">{{ $t('Company Logo') }}</label>
                                             <input type="file" ref="logoInput" class="form-control mb-2"
                                                 accept=".jpg,.jpeg,.png,.webp,.svg" @change="handleLogoChange">
-                                            <small class="text-muted">JPG, PNG, WEBP or SVG, max 2MB.</small>
+                                            <small class="text-muted">{{ $t('JPG, PNG, WEBP or SVG, max 2MB.') }}</small>
                                             <div class="preview-wrapper mt-2">
                                                 <img :src="logoPreview || logoPlaceholder" :data-placeholder="logoPlaceholder"
                                                     class="img-thumbnail shadow-sm" style="max-height: 80px;"
@@ -73,7 +73,7 @@
                                             </div>
                                             <v-btn v-if="logoPreview" size="small" variant="text" color="error"
                                                 class="text-none mt-1" @click="removeLogo">
-                                                Remove logo
+                                                {{ $t('Remove logo') }}
                                             </v-btn>
                                             <small v-if="errors.logo" class="text-danger d-block">{{ errors.logo
                                             }}</small>
@@ -85,7 +85,7 @@
                                         <v-btn type="submit" size="large" color="blue-darken-4"
                                             class="px-8 rounded-pill shadow-lg" :loading="isSubmitting">
                                             <v-icon start>mdi-check-circle</v-icon>
-                                            Save Settings
+                                            {{ $t('Save Settings') }}
                                         </v-btn>
                                     </div>
 
@@ -105,6 +105,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue'
 import { objectToFormData } from '@/helpers/objectToFormData'
 import { useSettingStore } from '@/stores/settings'
 import { logoPlaceholder } from '@/helpers/imagePlaceholder'
+import { t } from '@/i18n'
 
 const settings = useSettingStore()
 
@@ -154,7 +155,7 @@ const removeLogo = () => {
 
 const handleSubmit = async () => {
     if (!form.company_name) {
-        errors.company_name = 'The company name field is required.'
+        errors.company_name = t('The company name field is required.')
         return
     }
 
@@ -177,7 +178,7 @@ const handleSubmit = async () => {
                 errors[key] = respErrors[key].join(' ')
             }
         } else {
-            toast.error(err.response?.data?.message || 'An error occurred while saving.')
+            toast.error(err.response?.data?.message || t('An error occurred while saving.'))
         }
     } finally {
         isSubmitting.value = false

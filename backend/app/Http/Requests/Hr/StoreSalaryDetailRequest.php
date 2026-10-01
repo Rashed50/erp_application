@@ -57,7 +57,7 @@ class StoreSalaryDetailRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'effective_date.unique' => 'This employee already has a salary configuration with this effective date.',
+            'effective_date.unique' => __('This employee already has a salary configuration with this effective date.'),
         ];
     }
 
