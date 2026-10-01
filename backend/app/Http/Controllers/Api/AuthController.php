@@ -16,11 +16,14 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
+          //  return json_encode(['error' => 'Error', 'message' => $ex->getMessage(), 'success' => false, 'status' => 404]);
+
         $result = $this->authService->login(
             email: $request->string('email')->toString(),
             password: $request->string('password')->toString(),
             deviceName: $request->string('device_name', 'api')->toString(),
         );
+
 
         return ApiResponse::success(
             data: [
