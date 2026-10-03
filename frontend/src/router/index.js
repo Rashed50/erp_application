@@ -83,6 +83,16 @@ const routes = [
                     permissions: ['roles.update']
                 }
             },
+
+            {
+                path: 'permissions',
+                name: 'admin_permissions',
+                component: () => import('@/views/permissions/Index.vue'),
+                meta: {
+                    title: 'Permissions',
+                    permissions: ['permissions.view']
+                }
+            },
             /* ====================== User Route  ====================== */
             {
                 path: 'users',

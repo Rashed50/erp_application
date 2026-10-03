@@ -1,7 +1,8 @@
 <template lang="html">
     <Breadcrumb title="All User" :buttons="[
         { text: 'Add User', link: { name: 'admin_user_add' }, icon: 'fa-solid fa-user-plus' },
-        { text: 'Roles', link: { name: 'admin_roles' }, icon: 'fa-solid fa-user-shield' }
+        { text: 'Roles', link: { name: 'admin_roles' }, icon: 'fa-solid fa-user-shield' },
+        ...(can(['permissions.view']) ? [{ text: 'Permissions', link: { name: 'admin_permissions' }, icon: 'fa-solid fa-key' }] : []),
     ]" />
 
     <div class="main-content-wrapper mt-4">
@@ -118,6 +119,9 @@
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
+import { usePermission } from '@/composables/usePermission';
+
+const { can } = usePermission()
 
 const search = ref('');
 

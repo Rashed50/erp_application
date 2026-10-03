@@ -128,5 +128,9 @@
     "Item activated successfully.": "আইটেম সফলভাবে সক্রিয় করা হয়েছে।",
     "Item deactivated successfully.": "আইটেম সফলভাবে নিষ্ক্রিয় করা হয়েছে।",
     "The selected category is invalid or inactive.": "নির্বাচিত ক্যাটাগরি অবৈধ বা নিষ্ক্রিয়।",
-    "The selected sub category is invalid, inactive or not under the selected category.": "নির্বাচিত সাব ক্যাটাগরি অবৈধ, নিষ্ক্রিয় অথবা নির্বাচিত ক্যাটাগরির অধীনে নয়।"
+    "The selected sub category is invalid, inactive or not under the selected category.": "নির্বাচিত সাব ক্যাটাগরি অবৈধ, নিষ্ক্রিয় অথবা নির্বাচিত ক্যাটাগরির অধীনে নয়।",
+    "Permission category created successfully.": "পারমিশন ক্যাটাগরি সফলভাবে তৈরি হয়েছে।",
+    "Permission category updated successfully.": "পারমিশন ক্যাটাগরি সফলভাবে আপডেট হয়েছে।",
+    "Permission created successfully.": "পারমিশন সফলভাবে তৈরি হয়েছে।",
+    "The permission name must look like \"module.action\", e.g. \"users.view\".": "পারমিশনের নাম \"module.action\" আকারে হতে হবে, যেমন \"users.view\"।"
 }

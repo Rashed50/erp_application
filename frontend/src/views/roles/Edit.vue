@@ -20,32 +20,8 @@
                                     <!-- Permissions -->
                                     <div class="form-group mt-4">
                                         <label>{{ $t('Assign Permissions:') }}</label>
-                                        <div class="row">
-                                            <div v-for="(groupPermissions, groupName) in groupedPermissions"
-                                                :key="groupName" class="mb-3 col-md-4">
-                                                <div class="d-flex align-items-center mb-1">
-                                                    <input type="checkbox" :id="groupName + '-group'"
-                                                        :checked="isGroupSelected(groupName)"
-                                                        @change="toggleGroup(groupName, $event.target.checked)">
-                                                    <label :for="groupName + '-group'"
-                                                        class="ms-2 fw-bold text-primary">{{ groupName }}</label>
-                                                </div>
-
-                                                <div class="ms-4">
-                                                    <div v-for="perm in groupPermissions" :key="perm.id"
-                                                        class="form-check">
-                                                        <input type="checkbox" class="form-check-input"
-                                                            :id="'perm-' + perm.id" :value="perm.name"
-                                                            v-model="form.permissions">
-                                                        <label :for="'perm-' + perm.id" class="form-check-label">
-                                                            {{ perm.name }}
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div v-if="errors.permissions" class="error-msg">{{ errors.permissions }}
-                                            </div>
-                                        </div>
+                                        <PermissionChecklist v-model="form.permissions" />
+                                        <div v-if="errors.permissions" class="error-msg">{{ errors.permissions }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -70,6 +46,7 @@
 
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import PermissionChecklist from '@/views/roles/PermissionChecklist.vue';
 import { setToast } from "@/helpers/toast";
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
@@ -87,58 +64,17 @@ const errors = reactive({});
 const isSubmitting = ref(false);
 
 
-// State for permissions
-const allPermissions = ref([])
-
-// Load the role and the full permission catalog
-const loadRoleAndPermissions = async () => {
+// Load the role being edited; the permission catalog is loaded by PermissionChecklist.
+const loadRole = async () => {
     try {
-        const [roleResp, permsResp] = await Promise.all([
-            axios.get(`/api/roles/${route.params.id}`),
-            axios.get('/api/permissions'),
-        ])
+        const { data } = await axios.get(`/api/roles/${route.params.id}`)
 
-        if (roleResp.data.success) {
-            form.name = roleResp.data.data.name
-            form.permissions = [...(roleResp.data.data.permissions ?? [])]
+        if (data.success) {
+            form.name = data.data.name
+            form.permissions = [...(data.data.permissions ?? [])]
         }
-        allPermissions.value = permsResp.data.data ?? []
     } catch (e) {
         console.error(e)
-    }
-}
-
-
-const groupedPermissions = computed(() => {
-    const groups = {}
-
-    allPermissions.value.forEach(p => {
-        // permission names are "group.action" (e.g. "users.view")
-        const [group] = p.name.split('.')
-
-        if (!groups[group]) groups[group] = []
-        groups[group].push(p)
-    })
-
-    return groups
-})
-
-
-
-
-// Check if group selected
-const isGroupSelected = (groupName) => {
-    const names = groupedPermissions.value[groupName].map(p => p.name)
-    return names.every(name => form.permissions.includes(name))
-}
-
-// Toggle group
-const toggleGroup = (groupName, checked) => {
-    const names = groupedPermissions.value[groupName].map(p => p.name)
-    if (checked) {
-        names.forEach(name => { if (!form.permissions.includes(name)) form.permissions.push(name) })
-    } else {
-        form.permissions = form.permissions.filter(name => !names.includes(name))
     }
 }
 
@@ -176,24 +112,6 @@ const handleSubmit = async () => {
 }
 
 onMounted(() => {
-    loadRoleAndPermissions()
+    loadRole()
 })
 </script>
-
-<style scoped>
-.ms-2 {
-    margin-left: 8px;
-}
-
-.ms-4 {
-    margin-left: 16px;
-}
-
-.fw-bold {
-    font-weight: 600;
-}
-
-.text-primary {
-    color: #1976d2;
-}
-</style>

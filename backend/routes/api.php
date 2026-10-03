@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Hr\HrReportController;
 use App\Http\Controllers\Api\Hr\PayrollController;
 use App\Http\Controllers\Api\Hr\SalaryDetailController;
 use App\Http\Controllers\Api\IncomeExpenseTransactionController;
+use App\Http\Controllers\Api\PermissionCategoryController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\PurchaseController;
@@ -75,6 +76,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])
         ->name('permissions.index')
         ->middleware('permission:roles.view');
+
+    // Permissions grouped by category: read by the role screens, managed on the permissions screen.
+    Route::get('/permission-categories', [PermissionCategoryController::class, 'index'])
+        ->name('permission-categories.index')
+        ->middleware('permission:permissions.view|roles.view|roles.create|roles.update');
+    Route::post('/permission-categories', [PermissionCategoryController::class, 'store'])
+        ->name('permission-categories.store')
+        ->middleware('permission:permissions.create');
+    Route::put('/permission-categories/{permission_category}', [PermissionCategoryController::class, 'update'])
+        ->name('permission-categories.update')
+        ->middleware('permission:permissions.update');
+    Route::post('/permission-categories/{permission_category}/permissions', [PermissionCategoryController::class, 'storePermission'])
+        ->name('permission-categories.permissions.store')
+        ->middleware('permission:permissions.create');
 
     Route::apiResource('customers', CustomerController::class)
         ->middlewareFor(['index', 'show'], 'permission:customers.view')
