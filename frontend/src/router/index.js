@@ -290,6 +290,38 @@ const routes = [
             },
             /* ====================== HR Route END ====================== */
 
+            /* ====================== Asset Route START ====================== */
+            {
+                path: 'asset/item-categories',
+                name: 'admin_asset_item_categories',
+                component: () => import('@/views/asset/categories/Index.vue'),
+                meta: {
+                    title: 'Item Categories',
+                    permissions: ['item-categories.view']
+                }
+            },
+
+            {
+                path: 'asset/item-sub-categories',
+                name: 'admin_asset_item_sub_categories',
+                component: () => import('@/views/asset/sub-categories/Index.vue'),
+                meta: {
+                    title: 'Item Sub Categories',
+                    permissions: ['item-sub-categories.view']
+                }
+            },
+
+            {
+                path: 'asset/item-names',
+                name: 'admin_asset_item_names',
+                component: () => import('@/views/asset/items/Index.vue'),
+                meta: {
+                    title: 'Item Names',
+                    permissions: ['item-names.view']
+                }
+            },
+            /* ====================== Asset Route END ====================== */
+
             /* ====================== Supplier Route START ====================== */
             {
                 path: 'suppliers',

@@ -367,6 +367,44 @@
             </v-list-group>
             <!-- HR Menu END -->
 
+            <!-- Asset Menu START -->
+            <v-list-group value="asset" v-if="canAny(['item-categories.view', 'item-sub-categories.view', 'item-names.view'])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                            </span>
+                            {{ $t('nav.asset') }}
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
+                    <router-link :to="{ name: 'admin_asset_item_categories' }" class="custom_router_sub_link"
+                        v-if="can(['item-categories.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.itemCategory') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_asset_item_sub_categories' }" class="custom_router_sub_link"
+                        v-if="can(['item-sub-categories.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.itemSubCategory') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_asset_item_names' }" class="custom_router_sub_link"
+                        v-if="can(['item-names.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.itemName') }}
+                        </span>
+                    </router-link>
+                </div>
+            </v-list-group>
+            <!-- Asset Menu END -->
+
             <v-list-item class="" v-if="can(['settings.update'])">
                 <router-link :to="{ name: 'admin_settings' }" class="custom_router_link">
                     <span class="sidebar-menu-icon">

@@ -96,6 +96,15 @@ class PermissionSeeder extends Seeder
         'payroll.cancel',
         'hr-reports.view',
         'account-reports.view',
+        'item-categories.view',
+        'item-categories.create',
+        'item-categories.update',
+        'item-sub-categories.view',
+        'item-sub-categories.create',
+        'item-sub-categories.update',
+        'item-names.view',
+        'item-names.create',
+        'item-names.update',
     ];
 
     /**

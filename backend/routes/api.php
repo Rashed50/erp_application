@@ -3,6 +3,9 @@
 use App\Http\Controllers\Api\AccountReportController;
 use App\Http\Controllers\Api\AccountTypeController;
 use App\Http\Controllers\Api\ApprovalController;
+use App\Http\Controllers\Api\Asset\ItemCategoryController;
+use App\Http\Controllers\Api\Asset\ItemNameController;
+use App\Http\Controllers\Api\Asset\ItemSubCategoryController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChartOfAccountController;
 use App\Http\Controllers\Api\CompanySettingController;
@@ -337,5 +340,43 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/salary-summary', [HrReportController::class, 'salarySummary'])
             ->name('reports.salary-summary')
             ->middleware('permission:hr-reports.view');
+    });
+
+    /* ====================== Asset ====================== */
+    Route::prefix('/asset')->name('asset.')->group(function () {
+        // Dropdowns on the sub category and item forms.
+        Route::get('/item-categories/options', [ItemCategoryController::class, 'options'])
+            ->name('item-categories.options')
+            ->middleware('permission:item-categories.view|item-sub-categories.view|item-sub-categories.create|item-sub-categories.update|item-names.view|item-names.create|item-names.update');
+        Route::get('/item-sub-categories/options', [ItemSubCategoryController::class, 'options'])
+            ->name('item-sub-categories.options')
+            ->middleware('permission:item-sub-categories.view|item-names.view|item-names.create|item-names.update');
+
+        Route::apiResource('item-categories', ItemCategoryController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:item-categories.view')
+            ->middlewareFor('store', 'permission:item-categories.create')
+            ->middlewareFor('update', 'permission:item-categories.update');
+        Route::patch('/item-categories/{item_category}/status', [ItemCategoryController::class, 'updateStatus'])
+            ->name('item-categories.status')
+            ->middleware('permission:item-categories.update');
+
+        Route::apiResource('item-sub-categories', ItemSubCategoryController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:item-sub-categories.view')
+            ->middlewareFor('store', 'permission:item-sub-categories.create')
+            ->middlewareFor('update', 'permission:item-sub-categories.update');
+        Route::patch('/item-sub-categories/{item_sub_category}/status', [ItemSubCategoryController::class, 'updateStatus'])
+            ->name('item-sub-categories.status')
+            ->middleware('permission:item-sub-categories.update');
+
+        Route::apiResource('item-names', ItemNameController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:item-names.view')
+            ->middlewareFor('store', 'permission:item-names.create')
+            ->middlewareFor('update', 'permission:item-names.update');
+        Route::patch('/item-names/{item_name}/status', [ItemNameController::class, 'updateStatus'])
+            ->name('item-names.status')
+            ->middleware('permission:item-names.update');
     });
 });
