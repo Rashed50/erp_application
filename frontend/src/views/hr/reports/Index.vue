@@ -7,9 +7,7 @@
                 <div class="row align-items-end g-2">
                     <div class="col-md-3">
                         <label>{{ $t('Report:') }}</label>
-                        <select class="form-select" v-model="reportKey">
-                            <option v-for="(report, key) in reports" :key="key" :value="key">{{ $t(report.title) }}</option>
-                        </select>
+                        <SearchSelect v-model="reportKey" :items="reportItems" item-value="key" :clearable="false" />
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('month')">
                         <label>{{ $t('Month:') }}</label>
@@ -21,37 +19,24 @@
                     </div>
                     <div class="col-md-3" v-if="report.filters.includes('employee')">
                         <label>{{ $t('Employee:') }}</label>
-                        <select class="form-select" v-model="filters.employee_id">
-                            <option value="">{{ $t(report.requiresEmployee ? 'Select an employee' : 'All Employees') }}</option>
-                            <option v-for="employee in employees" :key="employee.id" :value="employee.id">
-                                {{ employee.employee_code }} - {{ employee.name }}
-                            </option>
-                        </select>
+                        <SearchSelect v-model="filters.employee_id" :items="employees"
+                            :item-title="(e) => `${e.employee_code} - ${e.name}`"
+                            :placeholder="$t(report.requiresEmployee ? 'Select an employee' : 'All Employees')" />
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('department')">
                         <label>{{ $t('Department:') }}</label>
-                        <select class="form-select" v-model="filters.department">
-                            <option value="">{{ $t('All') }}</option>
-                            <option v-for="department in options.departments" :key="department" :value="department">
-                                {{ department }}
-                            </option>
-                        </select>
+                        <SearchSelect v-model="filters.department" :items="options.departments" item-value="name"
+                            :placeholder="$t('All')" />
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('designation')">
                         <label>{{ $t('Designation:') }}</label>
-                        <select class="form-select" v-model="filters.designation">
-                            <option value="">{{ $t('All') }}</option>
-                            <option v-for="designation in options.designations" :key="designation" :value="designation">
-                                {{ designation }}
-                            </option>
-                        </select>
+                        <SearchSelect v-model="filters.designation" :items="options.designations" item-value="name"
+                            :placeholder="$t('All')" />
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('status')">
                         <label>{{ $t('Status:') }}</label>
-                        <select class="form-select" v-model="filters.status">
-                            <option value="">{{ $t('All') }}</option>
-                            <option v-for="status in report.statuses" :key="status" :value="status">{{ $t(status) }}</option>
-                        </select>
+                        <SearchSelect v-model="filters.status" :items="report.statuses" :item-title="(s) => $t(s)"
+                            :item-value="(s) => s" :placeholder="$t('All')" />
                     </div>
                     <div class="col-md-auto d-flex gap-2">
                         <v-btn class="text-none text-white" color="blue-darken-3" rounded="0" variant="flat"
@@ -113,6 +98,7 @@
 <script setup>
 import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePrintable } from '@/composables/usePrintable';
 import { SALARY_STATUSES, currentMonth, money, monthLabel } from '../helpers';
 import { t } from '@/i18n';
@@ -254,6 +240,7 @@ const loading = ref(false)
 const message = ref('')
 const employees = ref([])
 const options = ref({ departments: [], designations: [] })
+const reportItems = computed(() => Object.entries(reports).map(([key, r]) => ({ key, name: t(r.title) })))
 
 const cell = (column, row, index) => {
     if (column.key === 'index') return index + 1

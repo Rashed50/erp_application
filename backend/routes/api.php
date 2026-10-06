@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\CompanySettingController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerTransactionController;
 use App\Http\Controllers\Api\FundTransferController;
+use App\Http\Controllers\Api\Hr\DepartmentController;
+use App\Http\Controllers\Api\Hr\DesignationController;
 use App\Http\Controllers\Api\Hr\EmployeeController;
 use App\Http\Controllers\Api\Hr\EmployeeFileController;
 use App\Http\Controllers\Api\Hr\EmployeeWorkController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Api\Hr\HrReportController;
 use App\Http\Controllers\Api\Hr\PayrollController;
 use App\Http\Controllers\Api\Hr\SalaryDetailController;
 use App\Http\Controllers\Api\IncomeExpenseTransactionController;
+use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PermissionCategoryController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProductController;
@@ -46,6 +49,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user', function (Request $request) {
         return ApiResponse::success(new UserResource($request->user()->load('roles')));
+    });
+
+    // Address dropdowns: any signed-in user may read the location lists.
+    Route::prefix('/locations')->name('locations.')->group(function () {
+        Route::get('/divisions', [LocationController::class, 'divisions'])->name('divisions');
+        Route::get('/districts', [LocationController::class, 'districts'])->name('districts');
+        Route::get('/upazilas', [LocationController::class, 'upazilas'])->name('upazilas');
+
+        Route::middleware('permission:locations.create')->group(function () {
+            Route::post('/divisions', [LocationController::class, 'storeDivision'])->name('divisions.store');
+            Route::post('/districts', [LocationController::class, 'storeDistrict'])->name('districts.store');
+            Route::post('/upazilas', [LocationController::class, 'storeUpazila'])->name('upazilas.store');
+        });
     });
 
     // Every signed-in user needs the company branding (sidebar logo); only editing is gated.
@@ -274,6 +290,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [HrReportController::class, 'dashboard'])
             ->name('dashboard')
             ->middleware('permission:employees.view|payroll.view');
+
+        Route::apiResource('departments', DepartmentController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:departments.view')
+            ->middlewareFor('store', 'permission:departments.create')
+            ->middlewareFor('update', 'permission:departments.update');
+        Route::patch('/departments/{department}/status', [DepartmentController::class, 'updateStatus'])
+            ->name('departments.status')
+            ->middleware('permission:departments.update');
+
+        Route::apiResource('designations', DesignationController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:designations.view')
+            ->middlewareFor('store', 'permission:designations.create')
+            ->middlewareFor('update', 'permission:designations.update');
+        Route::patch('/designations/{designation}/status', [DesignationController::class, 'updateStatus'])
+            ->name('designations.status')
+            ->middleware('permission:designations.update');
 
         Route::get('/employees/options', [EmployeeController::class, 'options'])
             ->name('employees.options')

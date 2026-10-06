@@ -7,26 +7,16 @@
             <v-card style="padding: 5px; margin-top: 15px;">
                 <div class="row align-items-center mb-2">
                     <div class="col-md-2">
-                        <select class="form-select" v-model="filters.department">
-                            <option value="">{{ $t('All Departments') }}</option>
-                            <option v-for="department in options.departments" :key="department" :value="department">
-                                {{ department }}
-                            </option>
-                        </select>
+                        <SearchSelect v-model="filters.department" :items="options.departments" item-value="name"
+                            :placeholder="$t('All Departments')" />
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select" v-model="filters.designation">
-                            <option value="">{{ $t('All Designations') }}</option>
-                            <option v-for="designation in options.designations" :key="designation" :value="designation">
-                                {{ designation }}
-                            </option>
-                        </select>
+                        <SearchSelect v-model="filters.designation" :items="options.designations" item-value="name"
+                            :placeholder="$t('All Designations')" />
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select" v-model="filters.status">
-                            <option value="">{{ $t('All Status') }}</option>
-                            <option v-for="status in options.statuses" :key="status" :value="status">{{ $t(status) }}</option>
-                        </select>
+                        <SearchSelect v-model="filters.status" :items="options.statuses" :item-title="(s) => $t(s)"
+                            :item-value="(s) => s" :placeholder="$t('All Status')" />
                     </div>
                     <div class="col-md-6">
                         <div class="search-wrapper d-flex align-center gap-2">
@@ -128,6 +118,7 @@ import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
 import { employeeStatusClass } from '../helpers';

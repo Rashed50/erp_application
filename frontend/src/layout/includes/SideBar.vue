@@ -294,7 +294,7 @@
             <!-- HR Menu START -->
             <v-list-group value="hr" v-if="canAny([
                 'employees.view', 'employees.create', 'employee-works.view', 'employee-works.create',
-                'payroll.view', 'payroll.generate', 'hr-reports.view',
+                'payroll.view', 'payroll.generate', 'hr-reports.view', 'departments.view', 'designations.view',
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -312,6 +312,20 @@
                         <span class="ml-5">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
                             {{ $t('nav.hrDashboard') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_departments' }" class="custom_router_sub_link"
+                        v-if="can(['departments.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.departments') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_designations' }" class="custom_router_sub_link"
+                        v-if="can(['designations.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.designations') }}
                         </span>
                     </router-link>
                     <router-link :to="{ name: 'admin_hr_employees_list' }" class="custom_router_sub_link"

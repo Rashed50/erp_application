@@ -39,10 +39,8 @@
         <div class="col-md-4">
             <div class="form-group mb-3">
                 <label for="gender">{{ $t('Gender:') }}</label>
-                <select id="gender" class="form-control" v-model="form.gender">
-                    <option value="">{{ $t('Select') }}</option>
-                    <option v-for="gender in options.genders" :key="gender" :value="gender">{{ $t(gender) }}</option>
-                </select>
+                <SearchSelect id="gender" v-model="form.gender" :items="options.genders" :item-title="translated"
+                    :item-value="plain" :placeholder="$t('Select')" />
             </div>
         </div>
         <div class="col-md-4">
@@ -59,10 +57,42 @@
                 <div v-if="errors.email" class="error-msg">{{ errors.email }}</div>
             </div>
         </div>
+    </div>
+
+    <!-- Present Address -->
+    <h6 class="section-title">{{ $t('Present Address') }}</h6>
+    <LocationSelect v-model:division="form.division_id" v-model:district="form.district_id"
+        v-model:upazila="form.upazila_id"
+        :errors="{ division: errors.division_id, district: errors.district_id, upazila: errors.upazila_id }" />
+    <div class="row">
         <div class="col-md-12">
             <div class="form-group mb-3">
-                <label for="address">{{ $t('Present Address:') }}</label>
+                <label for="address">{{ $t('Address (House, Road, Village):') }}</label>
                 <textarea id="address" class="form-control" rows="2" v-model="form.address"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permanent Address (emp_details) -->
+    <h6 class="section-title d-flex align-items-center justify-content-between">
+        <span>{{ $t('Permanent Address') }}</span>
+        <label class="same-address">
+            <input type="checkbox" class="form-check-input me-1" v-model="sameAsPresent" />
+            {{ $t('Same as present address') }}
+        </label>
+    </h6>
+    <LocationSelect v-model:division="form.detail.permanent_division_id"
+        v-model:district="form.detail.permanent_district_id" v-model:upazila="form.detail.permanent_upazila_id"
+        :errors="{
+            division: errors['detail.permanent_division_id'],
+            district: errors['detail.permanent_district_id'],
+            upazila: errors['detail.permanent_upazila_id'],
+        }" />
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group mb-3">
+                <label>{{ $t('Address (House, Road, Village):') }}</label>
+                <textarea class="form-control" rows="2" v-model="form.detail.permanent_address"></textarea>
             </div>
         </div>
     </div>
@@ -72,30 +102,29 @@
     <div class="row">
         <div class="col-md-4">
             <div class="form-group mb-3">
-                <label for="department">{{ $t('Department:') }}</label>
-                <input type="text" id="department" class="form-control" list="department-options"
-                    v-model="form.department" />
-                <datalist id="department-options">
-                    <option v-for="department in options.departments" :key="department" :value="department" />
-                </datalist>
+                <label for="department_id">{{ $t('Department:') }}</label>
+                <SearchSelect id="department_id" v-model="form.department_id" :items="departmentItems"
+                    :placeholder="$t('Select Department')" :error="errors.department_id"
+                    :addable="can(['departments.create'])" :add-title="$t('Add Department')"
+                    @add="openAdd('department')" />
+                <div v-if="errors.department_id" class="error-msg">{{ errors.department_id }}</div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="form-group mb-3">
-                <label for="designation">{{ $t('Designation:') }}</label>
-                <input type="text" id="designation" class="form-control" list="designation-options"
-                    v-model="form.designation" />
-                <datalist id="designation-options">
-                    <option v-for="designation in options.designations" :key="designation" :value="designation" />
-                </datalist>
+                <label for="designation_id">{{ $t('Designation:') }}</label>
+                <SearchSelect id="designation_id" v-model="form.designation_id" :items="designationItems"
+                    :placeholder="$t('Select Designation')" :error="errors.designation_id"
+                    :addable="can(['designations.create'])" :add-title="$t('Add Designation')"
+                    @add="openAdd('designation')" />
+                <div v-if="errors.designation_id" class="error-msg">{{ errors.designation_id }}</div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="form-group mb-3">
                 <label for="employment_type">{{ $t('Employment Type:') }} <span class="text-danger">*</span></label>
-                <select id="employment_type" class="form-control" v-model="form.employment_type" required>
-                    <option v-for="type in options.employment_types" :key="type" :value="type">{{ $t(type) }}</option>
-                </select>
+                <SearchSelect id="employment_type" v-model="form.employment_type" :items="options.employment_types"
+                    :item-title="translated" :item-value="plain" :clearable="false" />
             </div>
         </div>
         <div class="col-md-4">
@@ -108,9 +137,8 @@
         <div class="col-md-4">
             <div class="form-group mb-3">
                 <label for="status">{{ $t('Employment Status:') }} <span class="text-danger">*</span></label>
-                <select id="status" class="form-control" v-model="form.status" required>
-                    <option v-for="status in options.statuses" :key="status" :value="status">{{ $t(status) }}</option>
-                </select>
+                <SearchSelect id="status" v-model="form.status" :items="options.statuses" :item-title="translated"
+                    :item-value="plain" :clearable="false" />
             </div>
         </div>
         <div class="col-md-4">
@@ -127,8 +155,8 @@
         </div>
     </div>
 
-    <!-- Personal & Payment Details (emp_details) -->
-    <h6 class="section-title">{{ $t('Personal & Payment Details') }}</h6>
+    <!-- Personal Details (emp_details) -->
+    <h6 class="section-title">{{ $t('Personal Details') }}</h6>
     <div class="row">
         <div class="col-md-3">
             <div class="form-group mb-3">
@@ -145,65 +173,60 @@
         <div class="col-md-3">
             <div class="form-group mb-3">
                 <label>{{ $t('Marital Status:') }}</label>
-                <select class="form-control" v-model="form.detail.marital_status">
-                    <option value="">{{ $t('Select') }}</option>
-                    <option v-for="status in ['Single', 'Married', 'Divorced', 'Widowed']" :key="status" :value="status">
-                        {{ $t(status) }}
-                    </option>
-                </select>
+                <SearchSelect v-model="form.detail.marital_status" :items="MARITAL_STATUSES" :item-title="translated"
+                    :item-value="plain" :placeholder="$t('Select')" />
             </div>
         </div>
         <div class="col-md-3">
             <div class="form-group mb-3">
                 <label>{{ $t('Blood Group:') }}</label>
-                <select class="form-control" v-model="form.detail.blood_group">
-                    <option value="">{{ $t('Select') }}</option>
-                    <option v-for="group in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']" :key="group" :value="group">
-                        {{ group }}
-                    </option>
-                </select>
+                <SearchSelect v-model="form.detail.blood_group" :items="BLOOD_GROUPS" :item-title="plain"
+                    :item-value="plain" :placeholder="$t('Select')" />
             </div>
         </div>
-        <div class="col-md-12">
-            <div class="form-group mb-3">
-                <label>{{ $t('Permanent Address:') }}</label>
-                <textarea class="form-control" rows="2" v-model="form.detail.permanent_address"></textarea>
-            </div>
-        </div>
-        <div class="col-md-3">
+    </div>
+
+    <!-- Salary Payment & Bank Details (emp_bank_details) -->
+    <h6 class="section-title">{{ $t('Salary Payment & Bank Details') }}</h6>
+    <div class="row">
+        <div class="col-md-4">
             <div class="form-group mb-3">
                 <label>{{ $t('Salary Payment Method:') }}</label>
-                <select class="form-control" v-model="form.detail.payment_method">
-                    <option value="Cash">{{ $t('Cash') }}</option>
-                    <option value="Bank">{{ $t('Bank') }}</option>
-                </select>
+                <SearchSelect v-model="form.detail.payment_method" :items="PAYMENT_METHODS" :item-title="translated"
+                    :item-value="plain" :clearable="false" />
             </div>
         </div>
         <template v-if="form.detail.payment_method === 'Bank'">
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <div class="form-group mb-3">
                     <label>{{ $t('Bank Name:') }} <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" v-model="form.detail.bank_name" />
-                    <div v-if="errors['detail.bank_name']" class="error-msg">{{ errors['detail.bank_name'] }}</div>
+                    <input type="text" class="form-control" v-model="form.bank.bank_name" />
+                    <div v-if="errors['bank.bank_name']" class="error-msg">{{ errors['bank.bank_name'] }}</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <div class="form-group mb-3">
                     <label>{{ $t('Branch:') }}</label>
-                    <input type="text" class="form-control" v-model="form.detail.bank_branch" />
+                    <input type="text" class="form-control" v-model="form.bank.branch_name" />
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="form-group mb-3">
-                    <label>{{ $t('Account No:') }} <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" v-model="form.detail.bank_account_no" />
-                    <div v-if="errors['detail.bank_account_no']" class="error-msg">{{ errors['detail.bank_account_no'] }}</div>
-                </div>
-            </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="form-group mb-3">
                     <label>{{ $t('Account Name:') }}</label>
-                    <input type="text" class="form-control" v-model="form.detail.bank_account_name" />
+                    <input type="text" class="form-control" v-model="form.bank.account_name" />
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group mb-3">
+                    <label>{{ $t('Account No:') }} <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" v-model="form.bank.account_no" />
+                    <div v-if="errors['bank.account_no']" class="error-msg">{{ errors['bank.account_no'] }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group mb-3">
+                    <label>{{ $t('Routing No:') }}</label>
+                    <input type="text" class="form-control" v-model="form.bank.routing_no" />
                 </div>
             </div>
         </template>
@@ -236,15 +259,73 @@
             </div>
         </div>
     </div>
+
+    <QuickAddDialog v-if="adding" v-model="addDialog" :title="$t(adding.title)" :endpoint="adding.endpoint"
+        with-description @created="onCreated" />
 </template>
 
 <script setup>
-// Fields shared by the Add and Edit employee pages; `form.detail` maps to emp_details.
-defineProps({
+import { t } from '@/i18n';
+import { usePermission } from '@/composables/usePermission';
+import LocationSelect from '@/components/common/LocationSelect.vue';
+import QuickAddDialog from '@/components/common/QuickAddDialog.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
+
+// Fields shared by the Add and Edit employee pages; `form.detail` maps to
+// emp_details and `form.bank` to emp_bank_details.
+const props = defineProps({
     form: { type: Object, required: true },
     errors: { type: Object, required: true },
     options: { type: Object, required: true },
 })
+
+const MARITAL_STATUSES = ['Single', 'Married', 'Divorced', 'Widowed']
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+const PAYMENT_METHODS = ['Cash', 'Bank']
+
+// For lists of plain strings: the string is both the value and (translated) the label.
+const plain = (value) => value
+const translated = (value) => t(value)
+
+// Active rows only, plus the employee's current one even if it was deactivated since.
+const choosable = (rows, selectedId) => (rows || []).filter((row) => row.status || row.id === selectedId)
+const departmentItems = computed(() => choosable(props.options.departments, props.form.department_id))
+const designationItems = computed(() => choosable(props.options.designations, props.form.designation_id))
+
+// "+" beside Department / Designation: create the missing one and select it.
+const { can } = usePermission()
+const ADDABLE = {
+    department: { title: 'Add Department', endpoint: '/api/hr/departments', list: 'departments', field: 'department_id' },
+    designation: { title: 'Add Designation', endpoint: '/api/hr/designations', list: 'designations', field: 'designation_id' },
+}
+const addDialog = ref(false)
+const adding = ref(null)
+
+const openAdd = (kind) => {
+    adding.value = ADDABLE[kind]
+    addDialog.value = true
+}
+
+const onCreated = (record) => {
+    const { list, field } = adding.value
+    const rows = [...(props.options[list] || []), { id: record.id, name: record.name, status: record.status }]
+    props.options[list] = rows.sort((a, b) => a.name.localeCompare(b.name))
+    props.form[field] = record.id
+}
+
+// Copies the present address into the permanent one while ticked.
+const sameAsPresent = ref(false)
+watch(
+    () => [sameAsPresent.value, props.form.address, props.form.division_id, props.form.district_id, props.form.upazila_id],
+    () => {
+        if (!sameAsPresent.value) return
+        const detail = props.form.detail
+        detail.permanent_address = props.form.address
+        detail.permanent_division_id = props.form.division_id
+        detail.permanent_district_id = props.form.district_id
+        detail.permanent_upazila_id = props.form.upazila_id
+    },
+)
 </script>
 
 <style scoped>
@@ -254,5 +335,12 @@ defineProps({
     border-bottom: 1px solid #dee2e6;
     padding-bottom: 6px;
     margin: 10px 0 15px;
+}
+
+.same-address {
+    font-weight: 400;
+    font-size: 0.875rem;
+    color: #495057;
+    cursor: pointer;
 }
 </style>

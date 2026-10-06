@@ -210,6 +210,26 @@ const routes = [
             },
 
             {
+                path: 'hr/departments',
+                name: 'admin_hr_departments',
+                component: () => import('@/views/hr/setup/Departments.vue'),
+                meta: {
+                    title: 'Departments',
+                    permissions: ['departments.view']
+                }
+            },
+
+            {
+                path: 'hr/designations',
+                name: 'admin_hr_designations',
+                component: () => import('@/views/hr/setup/Designations.vue'),
+                meta: {
+                    title: 'Designations',
+                    permissions: ['designations.view']
+                }
+            },
+
+            {
                 path: 'hr/employees',
                 name: 'admin_hr_employees_list',
                 component: () => import('@/views/hr/employees/Index.vue'),
@@ -638,7 +658,9 @@ router.beforeEach(async (to) => {
     // Check for permissions
     if (to.meta.permissions && auth.isAuthenticated) {
         const userPermissions = auth.user?.permissions || [];
-        const hasPermission = to.meta.permissions.some(p => userPermissions.includes(p));
+        // Super Admin passes every check, matching the backend's Gate::before.
+        const isSuperAdmin = (auth.user?.roles || []).includes('Super Admin');
+        const hasPermission = isSuperAdmin || to.meta.permissions.some(p => userPermissions.includes(p));
 
         if (!hasPermission) {
             setToast('error', t('common.noPermission'));

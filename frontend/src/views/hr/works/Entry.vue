@@ -13,13 +13,9 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label>{{ $t('Employee:') }} <span class="text-danger">*</span></label>
-                                    <select class="form-control" v-model="selection.employee_id">
-                                        <option value="">{{ $t('Select an employee') }}</option>
-                                        <option v-for="employee in employees" :key="employee.id" :value="employee.id">
-                                            {{ employee.employee_code }} - {{ employee.name }}
-                                            ({{ employee.designation || $t('No designation') }})
-                                        </option>
-                                    </select>
+                                    <SearchSelect v-model="selection.employee_id" :items="employees"
+                                        :item-title="(e) => `${e.employee_code} - ${e.name} (${e.designation || $t('No designation')})`"
+                                        :placeholder="$t('Select an employee')" />
                                 </div>
                             </div>
                             <div class="col-md-3">
@@ -109,6 +105,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePermission } from '@/composables/usePermission';
 import { useRoute } from 'vue-router';
 import { currentMonth } from '../helpers';

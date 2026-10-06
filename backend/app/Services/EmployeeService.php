@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Department;
+use App\Models\Designation;
 use App\Models\Employee;
+use App\Models\EmployeeBankDetail;
 use App\Models\EmployeeDetail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -18,9 +21,10 @@ class EmployeeService
     public function paginate(int $perPage, array $filters): LengthAwarePaginator
     {
         return Employee::query()
+            ->with(['department', 'designation'])
             ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->search($search))
-            ->when($filters['department'] ?? null, fn (Builder $query, string $department) => $query->where('department', $department))
-            ->when($filters['designation'] ?? null, fn (Builder $query, string $designation) => $query->where('designation', $designation))
+            ->when($filters['department'] ?? null, fn (Builder $query, string $department) => $query->inDepartment($department))
+            ->when($filters['designation'] ?? null, fn (Builder $query, string $designation) => $query->withDesignation($designation))
             ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($filters['employment_type'] ?? null, fn (Builder $query, string $type) => $query->where('employment_type', $type))
             ->orderBy('employee_code')
@@ -30,28 +34,40 @@ class EmployeeService
     public function find(Employee $employee): Employee
     {
         return $employee->load([
-            'detail',
+            'department',
+            'designation',
+            'division',
+            'district',
+            'upazila',
+            'detail.permanentDivision',
+            'detail.permanentDistrict',
+            'detail.permanentUpazila',
+            'bankDetail',
             'files',
             'salaryDetails' => fn ($query) => $query->withCount('salaryHistories')->orderByDesc('effective_date'),
         ]);
     }
 
     /**
-     * Create the employee and its one-to-one detail row together.
+     * Create the employee and its one-to-one detail and bank rows together.
      *
-     * @param  array<string, mixed>  $data  Employee columns plus an optional `detail` array.
+     * @param  array<string, mixed>  $data  Employee columns plus optional `detail` and `bank` arrays.
      */
     public function create(array $data): Employee
     {
         return DB::transaction(function () use ($data) {
             $employee = Employee::create([
-                ...Arr::except($data, 'detail'),
+                ...Arr::except($data, ['detail', 'bank']),
                 'employee_code' => ($data['employee_code'] ?? null) ?: $this->nextEmployeeCode(),
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
 
             $employee->detail()->create(Arr::only($data['detail'] ?? [], EmployeeDetail::FIELDS));
+
+            if (array_filter($data['bank'] ?? [])) {
+                $employee->bankDetail()->create(Arr::only($data['bank'], EmployeeBankDetail::FIELDS));
+            }
 
             return $this->find($employee);
         });
@@ -63,11 +79,15 @@ class EmployeeService
     public function update(Employee $employee, array $data): Employee
     {
         return DB::transaction(function () use ($employee, $data) {
-            $employee->fill([...Arr::except($data, 'detail'), 'updated_by' => Auth::id()]);
+            $employee->fill([...Arr::except($data, ['detail', 'bank']), 'updated_by' => Auth::id()]);
             $employee->save();
 
             if (array_key_exists('detail', $data)) {
                 $employee->detail()->updateOrCreate([], Arr::only($data['detail'] ?? [], EmployeeDetail::FIELDS));
+            }
+
+            if (array_key_exists('bank', $data)) {
+                $employee->bankDetail()->updateOrCreate([], Arr::only($data['bank'] ?? [], EmployeeBankDetail::FIELDS));
             }
 
             return $this->find($employee);
@@ -95,24 +115,16 @@ class EmployeeService
     }
 
     /**
-     * Departments and designations already in use, for form suggestions and
-     * report filters.
+     * Every department and designation (inactive ones included, so a
+     * filter or an employee that still uses one can show it).
      *
-     * @return array{departments: array<int, string>, designations: array<int, string>}
+     * @return array{departments: array<int, array{id: int, name: string, status: bool}>, designations: array<int, array{id: int, name: string, status: bool}>}
      */
     public function options(): array
     {
-        $distinct = fn (string $column) => Employee::query()
-            ->whereNotNull($column)
-            ->where($column, '!=', '')
-            ->distinct()
-            ->orderBy($column)
-            ->pluck($column)
-            ->all();
-
         return [
-            'departments' => $distinct('department'),
-            'designations' => $distinct('designation'),
+            'departments' => Department::query()->orderBy('name')->get(['id', 'name', 'status'])->toArray(),
+            'designations' => Designation::query()->orderBy('name')->get(['id', 'name', 'status'])->toArray(),
         ];
     }
 }

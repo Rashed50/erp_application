@@ -122,6 +122,15 @@ class PermissionSeeder extends Seeder
             'salary-configs.update',
             'salary-configs.delete',
         ],
+        'HR Setup' => [
+            'departments.view',
+            'departments.create',
+            'departments.update',
+            'designations.view',
+            'designations.create',
+            'designations.update',
+            'locations.create',
+        ],
         'Employee Works' => [
             'employee-works.view',
             'employee-works.create',

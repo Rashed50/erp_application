@@ -43,6 +43,8 @@ export default {
         add: 'Add',
         hr: 'HR',
         hrDashboard: 'HR Dashboard',
+        departments: 'Departments',
+        designations: 'Designations',
         employees: 'Employees',
         addEmployee: 'Add Employee',
         monthlyWorkEntry: 'Monthly Work Entry',

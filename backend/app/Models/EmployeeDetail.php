@@ -22,7 +22,7 @@ class EmployeeDetail extends Model
      */
     public const FIELDS = [
         'national_id', 'passport_no', 'marital_status', 'blood_group', 'permanent_address',
-        'payment_method', 'bank_name', 'bank_branch', 'bank_account_name', 'bank_account_no',
+        'permanent_division_id', 'permanent_district_id', 'permanent_upazila_id', 'payment_method',
         'emergency_contact_name', 'emergency_contact_relation', 'emergency_contact_phone', 'notes',
     ];
 
@@ -33,5 +33,20 @@ class EmployeeDetail extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    public function permanentDivision(): BelongsTo
+    {
+        return $this->belongsTo(Division::class, 'permanent_division_id');
+    }
+
+    public function permanentDistrict(): BelongsTo
+    {
+        return $this->belongsTo(District::class, 'permanent_district_id');
+    }
+
+    public function permanentUpazila(): BelongsTo
+    {
+        return $this->belongsTo(Upazila::class, 'permanent_upazila_id');
     }
 }
