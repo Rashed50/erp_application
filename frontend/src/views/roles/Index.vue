@@ -1,5 +1,8 @@
 <template lang="html">
-    <Breadcrumb title="Roles" buttonText="Add Role" :buttonLink="{ name: 'admin_role_add' }" />
+    <Breadcrumb title="Roles" :buttons="[
+        { text: 'Add Role', link: { name: 'admin_role_add' }, icon: 'fa-solid fa-circle-plus' },
+        ...(can(['permissions.view']) ? [{ text: 'Permissions', link: { name: 'admin_permissions' }, icon: 'fa-solid fa-key' }] : []),
+    ]" />
 
     <div class="main-content-wrapper mt-4">
         <div class="container-fluid">
@@ -83,6 +86,9 @@
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { useFetch } from '@/composables/useFetch';
+import { usePermission } from '@/composables/usePermission';
+
+const { can } = usePermission()
 
 
 const { items, loading, error, filters, fetchData } = useFetch('/api/roles', {

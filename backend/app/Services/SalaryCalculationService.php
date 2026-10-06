@@ -76,8 +76,8 @@ class SalaryCalculationService
 
             'employee_code' => $employee->employee_code,
             'employee_name' => $employee->name,
-            'department' => $employee->department,
-            'designation' => $employee->designation,
+            'department' => $employee->department?->name,
+            'designation' => $employee->designation?->name,
 
             'days_in_month' => $daysInMonth,
             'employed_days' => $employedDays,
@@ -121,6 +121,8 @@ class SalaryCalculationService
         $employees = Employee::query()
             ->payrollEligible($monthStart)
             ->with([
+                'department',
+                'designation',
                 'salaryDetails' => fn ($query) => $query->where('status', true)
                     ->whereDate('effective_date', '<=', $monthStart->endOfMonth()->toDateString())
                     ->orderByDesc('effective_date'),

@@ -29,7 +29,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { setToast } from "@/helpers/toast";
 import { useRouter, useRoute } from 'vue-router';
 import EmployeeFormFields from './EmployeeFormFields.vue';
-import { emptyEmployeeDetail, useEmployeeForm } from './useEmployeeForm';
+import { emptyEmployeeBank, emptyEmployeeDetail, useEmployeeForm } from './useEmployeeForm';
 
 const router = useRouter();
 const route = useRoute();
@@ -51,13 +51,14 @@ const loadEmployee = async () => {
         if (data.success) {
             const employee = data.data
             for (const key of Object.keys(form)) {
-                if (key !== 'detail') form[key] = employee[key] ?? ''
+                if (key !== 'detail' && key !== 'bank') form[key] = employee[key] ?? ''
             }
-            const detail = { ...emptyEmployeeDetail() }
-            for (const key of Object.keys(detail)) {
-                detail[key] = employee.detail?.[key] ?? detail[key]
-            }
-            form.detail = detail
+            // Keep only the keys the form sends, defaulting any the API left empty.
+            const pick = (empty, source) => Object.fromEntries(
+                Object.entries(empty).map(([key, fallback]) => [key, source?.[key] ?? fallback]),
+            )
+            form.detail = pick(emptyEmployeeDetail(), employee.detail)
+            form.bank = pick(emptyEmployeeBank(), employee.bank)
         }
     } catch (e) {
         console.error(e)

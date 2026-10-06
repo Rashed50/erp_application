@@ -10,12 +10,8 @@
                         <input type="month" class="form-control" v-model="filters.month" />
                     </div>
                     <div class="col-md-3">
-                        <select class="form-select" v-model="filters.department">
-                            <option value="">{{ $t('All Departments') }}</option>
-                            <option v-for="department in options.departments" :key="department" :value="department">
-                                {{ department }}
-                            </option>
-                        </select>
+                        <SearchSelect v-model="filters.department" :items="options.departments" item-value="name"
+                            :placeholder="$t('All Departments')" />
                     </div>
                     <div class="col-md-7">
                         <div class="search-wrapper d-flex align-center gap-2">
@@ -91,6 +87,7 @@
 import axios from 'axios';
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
 import { currentMonth, money, monthLabel } from '../helpers';

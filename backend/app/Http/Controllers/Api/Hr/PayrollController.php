@@ -37,8 +37,8 @@ class PayrollController extends Controller
                 'employee_id' => $row['employee']->id,
                 'employee_code' => $row['employee']->employee_code,
                 'employee_name' => $row['employee']->name,
-                'department' => $row['employee']->department,
-                'designation' => $row['employee']->designation,
+                'department' => $row['employee']->department?->name,
+                'designation' => $row['employee']->designation?->name,
                 'existing_salary' => $row['existing_salary'] ? [
                     'id' => $row['existing_salary']->id,
                     'status' => $row['existing_salary']->status,

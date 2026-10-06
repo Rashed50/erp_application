@@ -8,15 +8,22 @@ export const emptyEmployeeDetail = () => ({
     marital_status: '',
     blood_group: '',
     permanent_address: '',
+    permanent_division_id: '',
+    permanent_district_id: '',
+    permanent_upazila_id: '',
     payment_method: 'Cash',
-    bank_name: '',
-    bank_branch: '',
-    bank_account_name: '',
-    bank_account_no: '',
     emergency_contact_name: '',
     emergency_contact_relation: '',
     emergency_contact_phone: '',
     notes: '',
+})
+
+export const emptyEmployeeBank = () => ({
+    bank_name: '',
+    branch_name: '',
+    account_name: '',
+    account_no: '',
+    routing_no: '',
 })
 
 // Form state for the Add/Edit employee pages plus the choice lists they need.
@@ -31,13 +38,17 @@ export function useEmployeeForm() {
         phone: '',
         email: '',
         address: '',
+        division_id: '',
+        district_id: '',
+        upazila_id: '',
         joining_date: new Date().toISOString().slice(0, 10),
         last_working_date: '',
-        department: '',
-        designation: '',
+        department_id: '',
+        designation_id: '',
         employment_type: 'Permanent',
         status: 'Active',
         detail: emptyEmployeeDetail(),
+        bank: emptyEmployeeBank(),
     })
 
     const options = ref({ departments: [], designations: [], statuses: [], employment_types: [], genders: [] })

@@ -293,8 +293,7 @@
 
             <!-- HR Menu START -->
             <v-list-group value="hr" v-if="canAny([
-                'employees.view', 'employees.create', 'employee-works.view', 'employee-works.create',
-                'payroll.view', 'payroll.generate', 'hr-reports.view',
+                'employees.view', 'employees.create', 'payroll.view', 'departments.view', 'designations.view',
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -314,6 +313,20 @@
                             {{ $t('nav.hrDashboard') }}
                         </span>
                     </router-link>
+                    <router-link :to="{ name: 'admin_hr_departments' }" class="custom_router_sub_link"
+                        v-if="can(['departments.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.departments') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_designations' }" class="custom_router_sub_link"
+                        v-if="can(['designations.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.designations') }}
+                        </span>
+                    </router-link>
                     <router-link :to="{ name: 'admin_hr_employees_list' }" class="custom_router_sub_link"
                         v-if="can(['employees.view'])">
                         <span class="ml-5">
@@ -328,6 +341,26 @@
                             {{ $t('nav.addEmployee') }}
                         </span>
                     </router-link>
+                </div>
+            </v-list-group>
+            <!-- HR Menu END -->
+
+            <!-- Payroll Menu START -->
+            <v-list-group value="payroll" v-if="canAny([
+                'employee-works.view', 'employee-works.create', 'employee-works.update',
+                'payroll.view', 'payroll.generate', 'hr-reports.view',
+            ])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-money-check-dollar"></i>
+                            </span>
+                            {{ $t('nav.payroll') }}
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
                     <router-link :to="{ name: 'admin_hr_works_entry' }" class="custom_router_sub_link"
                         v-if="canAny(['employee-works.create', 'employee-works.update'])">
                         <span class="ml-5">
@@ -365,7 +398,45 @@
                     </router-link>
                 </div>
             </v-list-group>
-            <!-- HR Menu END -->
+            <!-- Payroll Menu END -->
+
+            <!-- Asset Menu START -->
+            <v-list-group value="asset" v-if="canAny(['item-categories.view', 'item-sub-categories.view', 'item-names.view'])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                            </span>
+                            {{ $t('nav.asset') }}
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
+                    <router-link :to="{ name: 'admin_asset_item_categories' }" class="custom_router_sub_link"
+                        v-if="can(['item-categories.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.itemCategory') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_asset_item_sub_categories' }" class="custom_router_sub_link"
+                        v-if="can(['item-sub-categories.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.itemSubCategory') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_asset_item_names' }" class="custom_router_sub_link"
+                        v-if="can(['item-names.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.itemName') }}
+                        </span>
+                    </router-link>
+                </div>
+            </v-list-group>
+            <!-- Asset Menu END -->
 
             <v-list-item class="" v-if="can(['settings.update'])">
                 <router-link :to="{ name: 'admin_settings' }" class="custom_router_link">
