@@ -216,9 +216,8 @@
                             @submit.prevent="uploadDocument">
                             <div class="col-md-3">
                                 <label>{{ $t('Document Type:') }}</label>
-                                <select class="form-control" v-model="upload.document_type" required>
-                                    <option v-for="type in documentTypes" :key="type" :value="type">{{ $t(type) }}</option>
-                                </select>
+                                <SearchSelect v-model="upload.document_type" :items="documentTypes" :item-title="(type) => $t(type)"
+                                    :item-value="(type) => type" :clearable="false" />
                             </div>
                             <div class="col-md-3">
                                 <label>{{ $t('Title:') }}</label>
@@ -283,6 +282,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePermission } from '@/composables/usePermission';
 import { useRoute } from 'vue-router';
 import { employeeStatusClass, money, monthLabel, salaryStatusClass } from '../helpers';
@@ -318,8 +318,8 @@ const basicRows = computed(() => {
         ['Gender', e.gender, true],
         ['Phone', e.phone],
         ['Email', e.email],
-        ['Present Address', e.address],
-        ['Permanent Address', e.detail?.permanent_address],
+        ['Present Address', [e.address, e.upazila, e.district, e.division].filter(Boolean).join(', ')],
+        ['Permanent Address', [e.detail?.permanent_address, e.detail?.permanent_upazila, e.detail?.permanent_district, e.detail?.permanent_division].filter(Boolean).join(', ')],
         ['National ID', e.detail?.national_id],
         ['Passport No', e.detail?.passport_no],
         ['Marital Status', e.detail?.marital_status, true],
@@ -331,6 +331,7 @@ const basicRows = computed(() => {
 const employmentRows = computed(() => {
     const e = employee.value
     const detail = e.detail || {}
+    const bank = e.bank || {}
     return [
         ['Department', e.department],
         ['Designation', e.designation],
@@ -339,8 +340,9 @@ const employmentRows = computed(() => {
         ['Joining Date', e.joining_date],
         ['Last Working Date', e.last_working_date],
         ['Salary Payment Method', detail.payment_method, true],
-        ['Bank', [detail.bank_name, detail.bank_branch].filter(Boolean).join(', ')],
-        ['Account', [detail.bank_account_name, detail.bank_account_no].filter(Boolean).join(' - ')],
+        ['Bank', [bank.bank_name, bank.branch_name].filter(Boolean).join(', ')],
+        ['Account', [bank.account_name, bank.account_no].filter(Boolean).join(' - ')],
+        ['Routing No', bank.routing_no],
         ['Notes', detail.notes],
     ]
 })

@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Department;
+use App\Models\Designation;
 use App\Models\Employee;
 use App\Models\EmployeeWork;
 use App\Models\SalaryDetail;
@@ -12,6 +14,14 @@ use Illuminate\Database\UniqueConstraintViolationException;
  */
 function payrollEmployee(array $attributes = [], array $work = []): Employee
 {
+    // Department and designation are given by name and resolved to their lookup rows.
+    foreach (['department' => Department::class, 'designation' => Designation::class] as $key => $model) {
+        if (array_key_exists($key, $attributes)) {
+            $attributes["{$key}_id"] = $model::firstOrCreate(['name' => $attributes[$key]])->id;
+            unset($attributes[$key]);
+        }
+    }
+
     $employee = Employee::factory()->create(['joining_date' => '2025-01-01', ...$attributes]);
     SalaryDetail::factory()->for($employee)->create(['effective_date' => '2025-01-01']);
     EmployeeWork::factory()->for($employee)->create(['salary_month' => '2026-01-01', ...$work]);
@@ -112,7 +122,7 @@ describe('generate', function () {
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/salary-histories/approve', ['ids' => [$salary->id]]);
 
         SalaryDetail::factory()->for($employee)->create(['effective_date' => '2026-01-01', 'basic_salary' => 50000]);
-        $employee->update(['name' => 'Renamed Person', 'department' => 'Sales']);
+        $employee->update(['name' => 'Renamed Person', 'department_id' => Department::firstOrCreate(['name' => 'Sales'])->id]);
 
         $this->actingAs($this->actor, 'sanctum')
             ->postJson('/api/hr/payroll/generate', ['month' => '2026-01'])

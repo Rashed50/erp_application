@@ -20,33 +20,8 @@
 
                                     <div class="form-group mt-4">
                                         <label>{{ $t('Assign Permissions:') }}</label>
-                                        <div class="row">
-                                            <div v-for="(groupPermissions, groupName) in groupedPermissions"
-                                                :key="groupName" class="mb-3 col-md-4">
-                                                <div class="d-flex align-items-center mb-1">
-                                                    <input type="checkbox" :id="groupName + '-group'"
-                                                        :checked="isGroupSelected(groupName)"
-                                                        @change="toggleGroup(groupName, $event.target.checked)">
-                                                    <label :for="groupName + '-group'"
-                                                        class="ms-2 fw-bold text-primary">{{
-                                                            groupName }}</label>
-                                                </div>
-
-                                                <div class="ms-4">
-                                                    <div v-for="perm in groupPermissions" :key="perm.id"
-                                                        class="form-check">
-                                                        <input type="checkbox" class="form-check-input"
-                                                            :id="'perm-' + perm.id" :value="perm.name"
-                                                            v-model="form.permissions">
-                                                        <label :for="'perm-' + perm.id" class="form-check-label">{{
-                                                            perm.name
-                                                            }}</label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div v-if="errors.permissions" class="error-msg">{{ errors.permissions }}
-                                            </div>
-                                        </div>
+                                        <PermissionChecklist v-model="form.permissions" />
+                                        <div v-if="errors.permissions" class="error-msg">{{ errors.permissions }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -69,7 +44,7 @@
 </template>
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
-import { useFetch } from '@/composables/useFetch';
+import PermissionChecklist from '@/views/roles/PermissionChecklist.vue';
 import { setToast } from "@/helpers/toast";
 import { useRouter } from 'vue-router';
 import { t } from '@/i18n';
@@ -118,65 +93,4 @@ const handleSubmit = async () => {
     }
 }
 
-// fetch data property
-const { items, fetchData } = useFetch('/api/permissions')
-
-onMounted(() => {
-    fetchData()
-})
-
-
-const groupedPermissions = computed(() => {
-    const groups = {}
-
-    items.value.forEach(p => {
-        // permission names are "group.action" (e.g. "users.view")
-        const [group] = p.name.split('.')
-
-        if (!groups[group]) groups[group] = []
-        groups[group].push(p)
-    })
-
-    return groups
-})
-
-
-
-// Check if all permissions in group are selected
-const isGroupSelected = (groupName) => {
-    const names = groupedPermissions.value[groupName].map(p => p.name)
-    return names.every(name => form.permissions.includes(name))
-}
-
-// Toggle group selection
-const toggleGroup = (groupName, checked) => {
-    const names = groupedPermissions.value[groupName].map(p => p.name)
-    if (checked) {
-        names.forEach(name => {
-            if (!form.permissions.includes(name)) form.permissions.push(name)
-        })
-    } else {
-        form.permissions = form.permissions.filter(name => !names.includes(name))
-    }
-}
-
 </script>
-
-
-<style scoped>
-.ms-2 {
-    margin-left: 8px;
-}
-
-.ms-4 {
-    margin-left: 16px;
-}
-
-.fw-bold {
-    font-weight: 600;
-}
-
-.text-primary {
-    color: #1976d2;
-}
-</style>

@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Department;
+use App\Models\Designation;
 use App\Models\Employee;
 use App\Models\SalaryHistory;
 use App\Models\User;
@@ -100,8 +102,8 @@ class HrDemoDataSeeder extends Seeder
                 'address' => "House {$number}, Road ".($number + 2).', Dhaka',
                 'joining_date' => $joining,
                 'last_working_date' => $lastWorkingDate,
-                'department' => $department,
-                'designation' => $designation,
+                'department_id' => Department::firstOrCreate(['name' => $department])->id,
+                'designation_id' => Designation::firstOrCreate(['name' => $designation])->id,
                 'employment_type' => $type,
                 'status' => $status,
                 'detail' => [
@@ -110,14 +112,16 @@ class HrDemoDataSeeder extends Seeder
                     'blood_group' => ['A+', 'B+', 'O+', 'AB+', 'O-'][$index % 5],
                     'permanent_address' => "Village {$number}, Cumilla",
                     'payment_method' => $isBank ? 'Bank' : 'Cash',
-                    'bank_name' => $isBank ? 'Demo Commercial Bank' : null,
-                    'bank_branch' => $isBank ? 'Motijheel' : null,
-                    'bank_account_name' => $isBank ? $name : null,
-                    'bank_account_no' => $isBank ? '1001'.str_pad((string) $number, 8, '0', STR_PAD_LEFT) : null,
                     'emergency_contact_name' => 'Relative of '.$name,
                     'emergency_contact_relation' => $number % 2 ? 'Spouse' : 'Parent',
                     'emergency_contact_phone' => '0181100'.str_pad((string) $number, 4, '0', STR_PAD_LEFT),
                 ],
+                'bank' => $isBank ? [
+                    'bank_name' => 'Demo Commercial Bank',
+                    'branch_name' => 'Motijheel',
+                    'account_name' => $name,
+                    'account_no' => '1001'.str_pad((string) $number, 8, '0', STR_PAD_LEFT),
+                ] : [],
             ]);
 
             $salaryService->create($employee, $this->salaryStructure($joining, $basic, $overtimeRate, $number));
@@ -183,7 +187,7 @@ class HrDemoDataSeeder extends Seeder
                 $absent = ($index + $monthIndex) % 4 === 0 ? 1 : 0;
                 $paidLeave = ($index * ($monthIndex + 1)) % 5 === 1 ? 1 : 0;
                 $unpaidLeave = ($index === 5 && $monthIndex === 1) ? 2 : 0;
-                $hasOvertime = in_array($employee->department, ['Sales', 'Operations'], true);
+                $hasOvertime = in_array($employee->department?->name, ['Sales', 'Operations'], true);
 
                 $workService->create([
                     'employee_id' => $employee->id,
@@ -195,7 +199,7 @@ class HrDemoDataSeeder extends Seeder
                     'unpaid_leave_days' => $unpaidLeave,
                     'overtime_hours' => $hasOvertime ? 6 + (($index + $monthIndex) % 3) * 4 : 0,
                     // A performance bonus for sales in the second demo month.
-                    'bonus' => $employee->department === 'Sales' && $monthIndex === 1 ? 3000 : 0,
+                    'bonus' => $employee->department?->name === 'Sales' && $monthIndex === 1 ? 3000 : 0,
                     'other_addition' => 0,
                     // A small salary advance recovered from one employee.
                     'other_deduction' => $index === 3 && $monthIndex === 2 ? 1000 : 0,

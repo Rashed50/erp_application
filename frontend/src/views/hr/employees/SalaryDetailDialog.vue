@@ -26,10 +26,7 @@
                         <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label>{{ $t('Absence Deduction Based On:') }}</label>
-                                <select class="form-control" v-model="form.deduction_basis">
-                                    <option value="basic">{{ $t('Basic salary') }}</option>
-                                    <option value="gross">{{ $t('Basic + allowances') }}</option>
-                                </select>
+                                <SearchSelect v-model="form.deduction_basis" :items="deductionBases" :clearable="false" />
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -72,8 +69,14 @@
 <script setup>
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
+import SearchSelect from '@/components/common/SearchSelect.vue';
 import { money } from '../helpers';
 import { t } from '@/i18n';
+
+const deductionBases = computed(() => [
+    { id: 'basic', name: t('Basic salary') },
+    { id: 'gross', name: t('Basic + allowances') },
+])
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },

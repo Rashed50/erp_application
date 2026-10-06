@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\EmployeeBankDetail;
+use App\Models\EmployeeDetail;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,17 +27,27 @@ class EmployeeResource extends JsonResource
             'phone' => $this->phone,
             'email' => $this->email,
             'address' => $this->address,
+            'division_id' => $this->division_id,
+            'district_id' => $this->district_id,
+            'upazila_id' => $this->upazila_id,
+            'division' => $this->whenLoaded('division', fn () => $this->division?->name),
+            'district' => $this->whenLoaded('district', fn () => $this->district?->name),
+            'upazila' => $this->whenLoaded('upazila', fn () => $this->upazila?->name),
             'joining_date' => $this->joining_date?->toDateString(),
             'last_working_date' => $this->last_working_date?->toDateString(),
-            'department' => $this->department,
-            'designation' => $this->designation,
+            'department_id' => $this->department_id,
+            'designation_id' => $this->designation_id,
+            'department' => $this->whenLoaded('department', fn () => $this->department?->name),
+            'designation' => $this->whenLoaded('designation', fn () => $this->designation?->name),
             'employment_type' => $this->employment_type,
             'status' => $this->status,
-            'detail' => $this->whenLoaded('detail', fn () => $this->detail?->only([
-                'national_id', 'passport_no', 'marital_status', 'blood_group', 'permanent_address',
-                'payment_method', 'bank_name', 'bank_branch', 'bank_account_name', 'bank_account_no',
-                'emergency_contact_name', 'emergency_contact_relation', 'emergency_contact_phone', 'notes',
-            ])),
+            'detail' => $this->whenLoaded('detail', fn () => $this->detail ? [
+                ...$this->detail->only(EmployeeDetail::FIELDS),
+                'permanent_division' => $this->detail->relationLoaded('permanentDivision') ? $this->detail->permanentDivision?->name : null,
+                'permanent_district' => $this->detail->relationLoaded('permanentDistrict') ? $this->detail->permanentDistrict?->name : null,
+                'permanent_upazila' => $this->detail->relationLoaded('permanentUpazila') ? $this->detail->permanentUpazila?->name : null,
+            ] : null),
+            'bank' => $this->whenLoaded('bankDetail', fn () => $this->bankDetail?->only(EmployeeBankDetail::FIELDS)),
             'files' => EmployeeFileResource::collection($this->whenLoaded('files')),
             'salary_details' => SalaryDetailResource::collection($this->whenLoaded('salaryDetails')),
             'created_at' => $this->created_at,

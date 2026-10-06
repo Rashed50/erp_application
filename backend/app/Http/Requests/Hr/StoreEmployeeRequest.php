@@ -49,10 +49,11 @@ class StoreEmployeeRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
+            ...$this->locationRules('', ''),
             'joining_date' => ['required', 'date'],
             'last_working_date' => ['nullable', 'date', 'after_or_equal:joining_date', 'required_if:status,Resigned,Terminated'],
-            'department' => ['nullable', 'string', 'max:100'],
-            'designation' => ['nullable', 'string', 'max:100'],
+            'department_id' => ['nullable', 'integer', Rule::exists('departments', 'id')],
+            'designation_id' => ['nullable', 'integer', Rule::exists('designations', 'id')],
             'employment_type' => ['required', Rule::in(Employee::EMPLOYMENT_TYPES)],
             'status' => ['required', Rule::in(Employee::STATUSES)],
 
@@ -62,15 +63,43 @@ class StoreEmployeeRequest extends FormRequest
             'detail.marital_status' => ['nullable', Rule::in(['Single', 'Married', 'Divorced', 'Widowed'])],
             'detail.blood_group' => ['nullable', Rule::in(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])],
             'detail.permanent_address' => ['nullable', 'string', 'max:1000'],
+            ...$this->locationRules('detail.', 'permanent_'),
             'detail.payment_method' => ['nullable', Rule::in(EmployeeDetail::PAYMENT_METHODS)],
-            'detail.bank_name' => ['nullable', 'required_if:detail.payment_method,Bank', 'string', 'max:255'],
-            'detail.bank_branch' => ['nullable', 'string', 'max:255'],
-            'detail.bank_account_name' => ['nullable', 'string', 'max:255'],
-            'detail.bank_account_no' => ['nullable', 'required_if:detail.payment_method,Bank', 'string', 'max:50'],
             'detail.emergency_contact_name' => ['nullable', 'string', 'max:255'],
             'detail.emergency_contact_relation' => ['nullable', 'string', 'max:50'],
             'detail.emergency_contact_phone' => ['nullable', 'string', 'max:50'],
             'detail.notes' => ['nullable', 'string', 'max:2000'],
+
+            'bank' => ['nullable', 'array'],
+            'bank.bank_name' => ['nullable', 'required_if:detail.payment_method,Bank', 'string', 'max:255'],
+            'bank.branch_name' => ['nullable', 'string', 'max:255'],
+            'bank.account_name' => ['nullable', 'string', 'max:255'],
+            'bank.account_no' => ['nullable', 'required_if:detail.payment_method,Bank', 'string', 'max:50'],
+            'bank.routing_no' => ['nullable', 'string', 'max:50'],
+        ];
+    }
+
+    /**
+     * Division, district and thana (upazila) of an address, where each must
+     * belong to the one above it.
+     *
+     * @return array<string, array<mixed>>
+     */
+    private function locationRules(string $prefix, string $column): array
+    {
+        $divisionId = $this->input("{$prefix}{$column}division_id");
+        $districtId = $this->input("{$prefix}{$column}district_id");
+
+        return [
+            "{$prefix}{$column}division_id" => ['nullable', 'integer', Rule::exists('divisions', 'id')],
+            "{$prefix}{$column}district_id" => [
+                'nullable', 'integer',
+                Rule::exists('districts', 'id')->when($divisionId, fn ($rule) => $rule->where('division_id', $divisionId)),
+            ],
+            "{$prefix}{$column}upazila_id" => [
+                'nullable', 'integer',
+                Rule::exists('upazilas', 'id')->when($districtId, fn ($rule) => $rule->where('district_id', $districtId)),
+            ],
         ];
     }
 
@@ -80,8 +109,16 @@ class StoreEmployeeRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'detail.bank_name' => 'bank name',
-            'detail.bank_account_no' => 'bank account number',
+            'department_id' => 'department',
+            'designation_id' => 'designation',
+            'division_id' => 'division',
+            'district_id' => 'district',
+            'upazila_id' => 'thana',
+            'detail.permanent_division_id' => 'division',
+            'detail.permanent_district_id' => 'district',
+            'detail.permanent_upazila_id' => 'thana',
+            'bank.bank_name' => 'bank name',
+            'bank.account_no' => 'bank account number',
         ];
     }
 

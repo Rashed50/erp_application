@@ -83,6 +83,16 @@ const routes = [
                     permissions: ['roles.update']
                 }
             },
+
+            {
+                path: 'permissions',
+                name: 'admin_permissions',
+                component: () => import('@/views/permissions/Index.vue'),
+                meta: {
+                    title: 'Permissions',
+                    permissions: ['permissions.view']
+                }
+            },
             /* ====================== User Route  ====================== */
             {
                 path: 'users',
@@ -200,6 +210,26 @@ const routes = [
             },
 
             {
+                path: 'hr/departments',
+                name: 'admin_hr_departments',
+                component: () => import('@/views/hr/setup/Departments.vue'),
+                meta: {
+                    title: 'Departments',
+                    permissions: ['departments.view']
+                }
+            },
+
+            {
+                path: 'hr/designations',
+                name: 'admin_hr_designations',
+                component: () => import('@/views/hr/setup/Designations.vue'),
+                meta: {
+                    title: 'Designations',
+                    permissions: ['designations.view']
+                }
+            },
+
+            {
                 path: 'hr/employees',
                 name: 'admin_hr_employees_list',
                 component: () => import('@/views/hr/employees/Index.vue'),
@@ -289,6 +319,38 @@ const routes = [
                 }
             },
             /* ====================== HR Route END ====================== */
+
+            /* ====================== Asset Route START ====================== */
+            {
+                path: 'asset/item-categories',
+                name: 'admin_asset_item_categories',
+                component: () => import('@/views/asset/categories/Index.vue'),
+                meta: {
+                    title: 'Item Categories',
+                    permissions: ['item-categories.view']
+                }
+            },
+
+            {
+                path: 'asset/item-sub-categories',
+                name: 'admin_asset_item_sub_categories',
+                component: () => import('@/views/asset/sub-categories/Index.vue'),
+                meta: {
+                    title: 'Item Sub Categories',
+                    permissions: ['item-sub-categories.view']
+                }
+            },
+
+            {
+                path: 'asset/item-names',
+                name: 'admin_asset_item_names',
+                component: () => import('@/views/asset/items/Index.vue'),
+                meta: {
+                    title: 'Item Names',
+                    permissions: ['item-names.view']
+                }
+            },
+            /* ====================== Asset Route END ====================== */
 
             /* ====================== Supplier Route START ====================== */
             {
@@ -596,7 +658,9 @@ router.beforeEach(async (to) => {
     // Check for permissions
     if (to.meta.permissions && auth.isAuthenticated) {
         const userPermissions = auth.user?.permissions || [];
-        const hasPermission = to.meta.permissions.some(p => userPermissions.includes(p));
+        // Super Admin passes every check, matching the backend's Gate::before.
+        const isSuperAdmin = (auth.user?.roles || []).includes('Super Admin');
+        const hasPermission = isSuperAdmin || to.meta.permissions.some(p => userPermissions.includes(p));
 
         if (!hasPermission) {
             setToast('error', t('common.noPermission'));

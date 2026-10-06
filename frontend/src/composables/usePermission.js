@@ -11,6 +11,12 @@ export function usePermission() {
             return false
         }
 
+        // Super Admin passes every check, matching the backend's Gate::before,
+        // so permissions added after the role was seeded are not hidden.
+        if (Array.isArray(auth.user.roles) && auth.user.roles.includes('Super Admin')) {
+            return true
+        }
+
         // permissions on the user are already flat name strings
         return permissions.some(p => auth.user.permissions.includes(p))
     }

@@ -10,18 +10,12 @@
                         <input type="month" class="form-control" v-model="filters.month" />
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select" v-model="filters.department">
-                            <option value="">{{ $t('All Departments') }}</option>
-                            <option v-for="department in options.departments" :key="department" :value="department">
-                                {{ department }}
-                            </option>
-                        </select>
+                        <SearchSelect v-model="filters.department" :items="options.departments" item-value="name"
+                            :placeholder="$t('All Departments')" />
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select" v-model="filters.status">
-                            <option value="">{{ $t('All (except cancelled)') }}</option>
-                            <option v-for="status in SALARY_STATUSES" :key="status" :value="status">{{ $t(status) }}</option>
-                        </select>
+                        <SearchSelect v-model="filters.status" :items="SALARY_STATUSES" :item-title="(s) => $t(s)"
+                            :item-value="(s) => s" :placeholder="$t('All (except cancelled)')" />
                     </div>
                     <div class="col-md-6 d-flex justify-content-end gap-2">
                         <v-btn v-if="can(['payroll.approve'])" class="text-none text-white" color="blue-darken-3"
@@ -193,6 +187,7 @@ import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
 import { usePrintable } from '@/composables/usePrintable';
