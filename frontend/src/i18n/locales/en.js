@@ -42,6 +42,7 @@ export default {
         list: 'List',
         add: 'Add',
         hr: 'HR',
+        payroll: 'Payroll',
         hrDashboard: 'HR Dashboard',
         departments: 'Departments',
         designations: 'Designations',

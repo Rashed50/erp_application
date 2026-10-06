@@ -293,8 +293,7 @@
 
             <!-- HR Menu START -->
             <v-list-group value="hr" v-if="canAny([
-                'employees.view', 'employees.create', 'employee-works.view', 'employee-works.create',
-                'payroll.view', 'payroll.generate', 'hr-reports.view', 'departments.view', 'designations.view',
+                'employees.view', 'employees.create', 'payroll.view', 'departments.view', 'designations.view',
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -342,6 +341,26 @@
                             {{ $t('nav.addEmployee') }}
                         </span>
                     </router-link>
+                </div>
+            </v-list-group>
+            <!-- HR Menu END -->
+
+            <!-- Payroll Menu START -->
+            <v-list-group value="payroll" v-if="canAny([
+                'employee-works.view', 'employee-works.create', 'employee-works.update',
+                'payroll.view', 'payroll.generate', 'hr-reports.view',
+            ])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-money-check-dollar"></i>
+                            </span>
+                            {{ $t('nav.payroll') }}
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
                     <router-link :to="{ name: 'admin_hr_works_entry' }" class="custom_router_sub_link"
                         v-if="canAny(['employee-works.create', 'employee-works.update'])">
                         <span class="ml-5">
@@ -379,7 +398,7 @@
                     </router-link>
                 </div>
             </v-list-group>
-            <!-- HR Menu END -->
+            <!-- Payroll Menu END -->
 
             <!-- Asset Menu START -->
             <v-list-group value="asset" v-if="canAny(['item-categories.view', 'item-sub-categories.view', 'item-names.view'])">

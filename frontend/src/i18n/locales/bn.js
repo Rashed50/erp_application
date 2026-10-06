@@ -42,6 +42,7 @@ export default {
         list: 'তালিকা',
         add: 'যোগ করুন',
         hr: 'এইচআর',
+        payroll: 'পে-রোল',
         hrDashboard: 'এইচআর ড্যাশবোর্ড',
         departments: 'বিভাগসমূহ',
         designations: 'পদবিসমূহ',
