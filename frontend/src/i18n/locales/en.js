@@ -52,6 +52,7 @@ export default {
         workHistory: 'Work History',
         generateSalary: 'Generate Salary',
         salarySheet: 'Salary Sheet',
+        advanceSalary: 'Advance Salary',
         asset: 'Asset',
         itemCategory: 'Item Category',
         itemSubCategory: 'Item Sub Category',

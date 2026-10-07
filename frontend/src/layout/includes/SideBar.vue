@@ -348,7 +348,7 @@
             <!-- Payroll Menu START -->
             <v-list-group value="payroll" v-if="canAny([
                 'employee-works.view', 'employee-works.create', 'employee-works.update',
-                'payroll.view', 'payroll.generate', 'hr-reports.view',
+                'employee-advances.view', 'payroll.view', 'payroll.generate', 'hr-reports.view',
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -373,6 +373,13 @@
                         <span class="ml-5">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
                             {{ $t('nav.workHistory') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_advances' }" class="custom_router_sub_link"
+                        v-if="can(['employee-advances.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.advanceSalary') }}
                         </span>
                     </router-link>
                     <router-link :to="{ name: 'admin_hr_payroll_generate' }" class="custom_router_sub_link"
