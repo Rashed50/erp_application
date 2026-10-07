@@ -22,18 +22,24 @@ use Illuminate\Support\Collection;
  * - Per-day rate = deduction basis (basic, or basic + allowances) / working days.
  * - Absence and unpaid leave are deducted at the per-day rate; the configured
  *   fixed deduction and the month's other deduction are added on top.
+ * - Advance salary installments due for the month are deducted last, only as
+ *   far as the remaining salary allows; the rest stays outstanding.
  * - Net = gross - total deductions.
  */
 class SalaryCalculationService
 {
+    public function __construct(private readonly EmployeeAdvanceService $advanceService) {}
+
     /**
      * Calculate one employee's salary for a month from a salary configuration
      * and a work record. The result uses salary_history column names, so it
      * can be stored as the salary snapshot as-is.
      *
+     * $advanceDue is the total of the advance installments due this month.
+     *
      * @return array<string, mixed>
      */
-    public function calculate(Employee $employee, CarbonInterface $month, SalaryDetail $config, EmployeeWork $work): array
+    public function calculate(Employee $employee, CarbonInterface $month, SalaryDetail $config, EmployeeWork $work, float $advanceDue = 0.0): array
     {
         $monthStart = CarbonImmutable::parse($month)->startOfMonth();
         $monthEnd = $monthStart->endOfMonth()->startOfDay();
@@ -66,7 +72,9 @@ class SalaryCalculationService
         $absenceDeduction = round($perDayRate * (float) $work->absent_days, 2);
         $unpaidLeaveDeduction = round($perDayRate * (float) $work->unpaid_leave_days, 2);
         $otherDeduction = round((float) $config->other_deduction + (float) $work->other_deduction, 2);
-        $totalDeduction = round($absenceDeduction + $unpaidLeaveDeduction + $otherDeduction, 2);
+        $deductionBeforeAdvance = $absenceDeduction + $unpaidLeaveDeduction + $otherDeduction;
+        $advanceDeduction = round(min($advanceDue, max(0, $grossSalary - $deductionBeforeAdvance)), 2);
+        $totalDeduction = round($deductionBeforeAdvance + $advanceDeduction, 2);
 
         return [
             'employee_id' => $employee->id,
@@ -102,6 +110,7 @@ class SalaryCalculationService
             'absence_deduction' => $absenceDeduction,
             'unpaid_leave_deduction' => $unpaidLeaveDeduction,
             'other_deduction' => $otherDeduction,
+            'advance_deduction' => $advanceDeduction,
             'total_deduction' => $totalDeduction,
             'net_salary' => round($grossSalary - $totalDeduction, 2),
         ];
@@ -112,7 +121,7 @@ class SalaryCalculationService
      * flagging anyone who cannot be generated (missing configuration or work
      * record, deductions above gross, or a salary already approved/paid).
      *
-     * @return Collection<int, array{employee: Employee, existing_salary: ?SalaryHistory, calculation: ?array<string, mixed>, issues: array<int, string>, can_generate: bool}>
+     * @return Collection<int, array{employee: Employee, existing_salary: ?SalaryHistory, calculation: ?array<string, mixed>, advance_allocations: array<int, array{employee_advance_id: int, amount: float}>, issues: array<int, string>, can_generate: bool}>
      */
     public function previewMonth(CarbonInterface $month): Collection
     {
@@ -127,6 +136,7 @@ class SalaryCalculationService
                     ->whereDate('effective_date', '<=', $monthStart->endOfMonth()->toDateString())
                     ->orderByDesc('effective_date'),
                 'works' => fn ($query) => $query->whereDate('salary_month', $monthStart->toDateString()),
+                'advances' => fn ($query) => $this->advanceService->constrainDueInMonth($query, $monthStart),
             ])
             ->orderBy('employee_code')
             ->get();
@@ -150,7 +160,10 @@ class SalaryCalculationService
                 $issues[] = 'No work record for this month.';
             }
 
-            $calculation = $config && $work ? $this->calculate($employee, $monthStart, $config, $work) : null;
+            $installments = $this->advanceService->dueInstallments($employee->advances);
+            $calculation = $config && $work
+                ? $this->calculate($employee, $monthStart, $config, $work, array_sum(array_column($installments, 'amount')))
+                : null;
 
             if ($calculation && $calculation['net_salary'] < 0) {
                 $issues[] = 'Total deductions exceed the gross salary.';
@@ -163,6 +176,7 @@ class SalaryCalculationService
                 'employee' => $employee,
                 'existing_salary' => $existingSalary,
                 'calculation' => $calculation,
+                'advance_allocations' => $calculation ? $this->advanceService->allocate($installments, $calculation['advance_deduction']) : [],
                 'issues' => $issues,
                 'can_generate' => $issues === [],
             ];

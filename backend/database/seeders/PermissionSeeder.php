@@ -137,6 +137,13 @@ class PermissionSeeder extends Seeder
             'employee-works.update',
             'employee-works.delete',
         ],
+        'Employee Advances' => [
+            'employee-advances.view',
+            'employee-advances.create',
+            'employee-advances.update',
+            'employee-advances.delete',
+            'employee-advances.recover',
+        ],
         'Payroll' => [
             'payroll.view',
             'payroll.generate',

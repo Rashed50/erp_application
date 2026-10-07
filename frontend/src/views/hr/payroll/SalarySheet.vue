@@ -154,6 +154,7 @@
                                     <td class="text-end">{{ money(detail.unpaid_leave_deduction) }}</td>
                                 </tr>
                                 <tr><td>{{ $t('Other Deductions') }}</td><td class="text-end">{{ money(detail.other_deduction) }}</td></tr>
+                                <tr><td>{{ $t('Advance Salary Installment') }}</td><td class="text-end">{{ money(detail.advance_deduction) }}</td></tr>
                                 <tr class="fw-bold"><td>{{ $t('Total') }}</td><td class="text-end">{{ money(detail.total_deduction) }}</td></tr>
                             </tbody>
                         </table>

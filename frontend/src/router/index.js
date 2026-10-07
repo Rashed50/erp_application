@@ -290,6 +290,16 @@ const routes = [
             },
 
             {
+                path: 'hr/advance-salary',
+                name: 'admin_hr_advances',
+                component: () => import('@/views/hr/advances/Index.vue'),
+                meta: {
+                    title: 'Advance Salary',
+                    permissions: ['employee-advances.view']
+                }
+            },
+
+            {
                 path: 'hr/salary-generate',
                 name: 'admin_hr_payroll_generate',
                 component: () => import('@/views/hr/payroll/Generate.vue'),

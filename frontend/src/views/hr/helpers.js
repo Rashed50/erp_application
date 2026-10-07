@@ -4,6 +4,8 @@ import { intlLocale } from '@/i18n'
 
 export const SALARY_STATUSES = ['Generated', 'Approved', 'Paid', 'Cancelled']
 
+export const ADVANCE_STATUSES = ['Running', 'Completed']
+
 export const money = (value) =>
     Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -29,4 +31,9 @@ export const employeeStatusClass = (status) => ({
     Inactive: 'badge bg-secondary',
     Resigned: 'badge bg-warning text-dark',
     Terminated: 'badge bg-danger',
+}[status] || 'badge bg-light text-dark')
+
+export const advanceStatusClass = (status) => ({
+    Running: 'badge bg-warning text-dark',
+    Completed: 'badge bg-success',
 }[status] || 'badge bg-light text-dark')

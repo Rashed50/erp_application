@@ -105,6 +105,11 @@ class Employee extends Model
         return $this->hasMany(SalaryHistory::class);
     }
 
+    public function advances(): HasMany
+    {
+        return $this->hasMany(EmployeeAdvance::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

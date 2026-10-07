@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\CustomerTransactionController;
 use App\Http\Controllers\Api\FundTransferController;
 use App\Http\Controllers\Api\Hr\DepartmentController;
 use App\Http\Controllers\Api\Hr\DesignationController;
+use App\Http\Controllers\Api\Hr\EmployeeAdvanceController;
 use App\Http\Controllers\Api\Hr\EmployeeController;
 use App\Http\Controllers\Api\Hr\EmployeeFileController;
 use App\Http\Controllers\Api\Hr\EmployeeWorkController;
@@ -313,10 +314,10 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('employees.options')
             ->middleware('permission:employees.view|employee-works.view|payroll.view|hr-reports.view');
 
-        // Employee pickers on the work, payroll and report screens use the list too.
+        // Employee pickers on the work, advance, payroll and report screens use the list too.
         Route::get('/employees', [EmployeeController::class, 'index'])
             ->name('employees.index')
-            ->middleware('permission:employees.view|employee-works.view|hr-reports.view');
+            ->middleware('permission:employees.view|employee-works.view|employee-advances.create|hr-reports.view');
         Route::apiResource('employees', EmployeeController::class)
             ->except('index')
             ->middlewareFor('show', 'permission:employees.view')
@@ -358,6 +359,19 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middlewareFor('store', 'permission:employee-works.create')
             ->middlewareFor('update', 'permission:employee-works.update')
             ->middlewareFor('destroy', 'permission:employee-works.delete');
+
+        // Advance salary, recovered by installments at salary generation.
+        Route::apiResource('employee-advances', EmployeeAdvanceController::class)
+            ->middlewareFor(['index', 'show'], 'permission:employee-advances.view')
+            ->middlewareFor('store', 'permission:employee-advances.create')
+            ->middlewareFor('update', 'permission:employee-advances.update')
+            ->middlewareFor('destroy', 'permission:employee-advances.delete');
+        Route::post('/employee-advances/{employee_advance}/recoveries', [EmployeeAdvanceController::class, 'storeRecovery'])
+            ->name('employee-advances.recoveries.store')
+            ->middleware('permission:employee-advances.recover');
+        Route::delete('/advance-recoveries/{advance_recovery}', [EmployeeAdvanceController::class, 'destroyRecovery'])
+            ->name('advance-recoveries.destroy')
+            ->middleware('permission:employee-advances.recover');
 
         Route::get('/payroll/preview', [PayrollController::class, 'preview'])
             ->name('payroll.preview')

@@ -50,13 +50,14 @@
                                 <th class="text-right">{{ $t('Gross') }}</th>
                                 <th class="text-right">{{ $t('Absence / Unpaid') }}</th>
                                 <th class="text-right">{{ $t('Other Ded.') }}</th>
+                                <th class="text-right">{{ $t('Advance') }}</th>
                                 <th class="text-right">{{ $t('Net') }}</th>
                                 <th>{{ $t('Status') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="!preview.rows.length">
-                                <td colspan="12" class="text-center py-3">{{ $t('No employees on payroll for this month.') }}</td>
+                                <td colspan="13" class="text-center py-3">{{ $t('No employees on payroll for this month.') }}</td>
                             </tr>
                             <tr v-for="row in preview.rows" :key="row.employee_id"
                                 :class="{ 'table-warning': !row.can_generate }">
@@ -84,9 +85,10 @@
                                         {{ money(row.calculation.absence_deduction + row.calculation.unpaid_leave_deduction) }}
                                     </td>
                                     <td class="text-right">{{ money(row.calculation.other_deduction) }}</td>
+                                    <td class="text-right">{{ money(row.calculation.advance_deduction) }}</td>
                                     <td class="text-right"><strong>{{ money(row.calculation.net_salary) }}</strong></td>
                                 </template>
-                                <td v-else colspan="9" class="text-muted">-</td>
+                                <td v-else colspan="10" class="text-muted">-</td>
                                 <td>
                                     <span v-if="row.existing_salary" :class="salaryStatusClass(row.existing_salary.status)">
                                         {{ $t(row.existing_salary.status) }}
@@ -103,7 +105,7 @@
                             <tr class="fw-bold">
                                 <td colspan="7" class="text-right">{{ $t('Total (all ready employees)') }}</td>
                                 <td class="text-right">{{ money(preview.totals.gross_salary) }}</td>
-                                <td colspan="2" class="text-right">{{ money(preview.totals.total_deduction) }}</td>
+                                <td colspan="3" class="text-right">{{ money(preview.totals.total_deduction) }}</td>
                                 <td class="text-right">{{ money(preview.totals.net_salary) }}</td>
                                 <td></td>
                             </tr>
