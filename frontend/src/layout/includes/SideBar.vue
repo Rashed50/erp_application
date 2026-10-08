@@ -540,6 +540,9 @@ const accountReportLinks = [
     { report: 'trial_balance', label: 'nav.trialBalance' },
     { report: 'profit_loss', label: 'nav.profitLoss' },
     { report: 'balance_sheet', label: 'nav.balanceSheet' },
+    { report: 'bank_reconciliation', label: 'nav.bankReconciliation' },
+    { report: 'work_order_collections', label: 'nav.workOrderCollections' },
+    { report: 'customer_collections', label: 'nav.customerCollections' },
     { report: 'cash_transactions', label: 'nav.otherReports' },
 ]
 

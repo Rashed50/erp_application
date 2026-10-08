@@ -243,6 +243,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/expense-details', [AccountReportController::class, 'expenseDetails'])->name('expense-details');
         Route::get('/sales-purchase-summary', [AccountReportController::class, 'salesPurchaseSummary'])->name('sales-purchase-summary');
         Route::get('/sales', [AccountReportController::class, 'salesRegister'])->name('sales');
+        Route::get('/work-order-collections', [AccountReportController::class, 'workOrderCollections'])->name('work-order-collections');
+        Route::get('/customer-collections', [AccountReportController::class, 'customerCollections'])->name('customer-collections');
+        Route::get('/bank-reconciliation', [AccountReportController::class, 'bankReconciliation'])->name('bank-reconciliation');
+        Route::patch('/bank-reconciliation/cleared', [AccountReportController::class, 'markCleared'])
+            ->name('bank-reconciliation.cleared')
+            ->middleware('permission:account-reports.reconcile');
     });
 
     Route::apiResource('income-expenses', IncomeExpenseTransactionController::class)

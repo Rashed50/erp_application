@@ -11,15 +11,17 @@ use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
 use App\Models\SupplierTransaction;
+use App\Models\WorkOrder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The payroll_software Account module's reports: the ledger reports (general
  * ledger, trial balance, profit & loss, balance sheet, cash transactions),
- * computed from the journal lines dated by their entry's date, and the
- * supplier, customer, expense and sales/purchase reports built from the
- * sub-ledgers and documents.
+ * computed from the journal lines dated by their entry's date, the bank
+ * reconciliation, and the supplier, customer, expense and sales/purchase
+ * reports built from the sub-ledgers and documents.
  */
 class AccountReportService
 {
@@ -90,6 +92,111 @@ class AccountReportService
             'closing_balance' => abs($balance),
             'closing_balance_type' => $this->side($balance),
         ];
+    }
+
+    /**
+     * A cash/bank account's book balance on the statement date reconciled
+     * to the bank: deposits not yet cleared are taken off and payments not
+     * yet cleared are added back, giving the balance the bank should show.
+     * A line is outstanding when it has no cleared date or was cleared after
+     * the statement date. The rows are the period's lines (from `from_date`)
+     * plus any older line still outstanding, so each can be ticked off.
+     *
+     * @return array{account: array{id: int, name: string, account_number: ?string}, from_date: ?string, to_date: string, transactions: array<int, array<string, mixed>>, book_balance: float, outstanding_deposits: float, outstanding_payments: float, adjusted_balance: float, statement_balance: ?float, difference: ?float, is_reconciled: ?bool}
+     */
+    public function bankReconciliation(ChartOfAccount $account, ?string $fromDate, string $toDate, ?float $statementBalance): array
+    {
+        $isOutstanding = fn (Builder $query) => $query->where(fn (Builder $query) => $query
+            ->whereNull('account_transaction_details.cleared_date')
+            ->orWhereDate('account_transaction_details.cleared_date', '>', $toDate));
+
+        $accountLines = fn () => $this->lines()
+            ->where('account_transaction_details.chart_of_account_id', $account->id)
+            ->whereDate('account_transactions.date', '<=', $toDate);
+
+        $bookBalance = round((float) $accountLines()
+            ->selectRaw('COALESCE(SUM(account_transaction_details.debit), 0) - COALESCE(SUM(account_transaction_details.credit), 0) as net')
+            ->value('net'), 2);
+
+        $outstanding = $isOutstanding($accountLines())
+            ->selectRaw('COALESCE(SUM(account_transaction_details.debit), 0) as deposits, COALESCE(SUM(account_transaction_details.credit), 0) as payments')
+            ->first();
+        $outstandingDeposits = round((float) $outstanding->deposits, 2);
+        $outstandingPayments = round((float) $outstanding->payments, 2);
+
+        $transactions = $accountLines()
+            ->where(fn (Builder $query) => $fromDate
+                ? $isOutstanding($query)->orWhereDate('account_transactions.date', '>=', $fromDate)
+                : $isOutstanding($query))
+            ->orderBy('account_transactions.date')
+            ->orderBy('account_transaction_details.id')
+            ->get([
+                'account_transaction_details.id',
+                'account_transaction_details.account_transaction_id',
+                'account_transactions.date',
+                'account_transactions.tr_no',
+                'account_transactions.general_particular',
+                'account_transaction_details.particular',
+                'account_transaction_details.debit',
+                'account_transaction_details.credit',
+                'account_transaction_details.cleared_date',
+            ])
+            ->map(fn (AccountTransactionDetail $line) => [
+                'id' => $line->id,
+                'account_transaction_id' => $line->account_transaction_id,
+                'date' => substr((string) $line->getRawOriginal('date'), 0, 10),
+                'tr_no' => $line->tr_no,
+                'general_particular' => $line->general_particular,
+                'particular' => $line->particular,
+                'debit' => (float) $line->debit,
+                'credit' => (float) $line->credit,
+                'cleared_date' => $line->cleared_date?->toDateString(),
+                'is_cleared' => $line->cleared_date !== null && $line->cleared_date->toDateString() <= $toDate,
+            ])
+            ->all();
+
+        $adjustedBalance = round($bookBalance - $outstandingDeposits + $outstandingPayments, 2);
+        $difference = $statementBalance === null ? null : round($statementBalance - $adjustedBalance, 2);
+
+        return [
+            'account' => ['id' => $account->id, 'name' => $account->name, 'account_number' => $account->account_number],
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'transactions' => $transactions,
+            'book_balance' => $bookBalance,
+            'outstanding_deposits' => $outstandingDeposits,
+            'outstanding_payments' => $outstandingPayments,
+            'adjusted_balance' => $adjustedBalance,
+            'statement_balance' => $statementBalance,
+            'difference' => $difference,
+            'is_reconciled' => $difference === null ? null : $difference === 0.0,
+        ];
+    }
+
+    /**
+     * Mark an account's lines as cleared on the bank statement on a date, or
+     * clear that mark when the date is null. A line cannot clear before its
+     * entry's date.
+     *
+     * @param  array<int, int>  $lineIds
+     *
+     * @throws ValidationException
+     */
+    public function markCleared(ChartOfAccount $account, array $lineIds, ?string $clearedDate): int
+    {
+        $lines = $this->lines()
+            ->where('account_transaction_details.chart_of_account_id', $account->id)
+            ->whereIn('account_transaction_details.id', $lineIds);
+
+        if ((clone $lines)->count() !== count(array_unique($lineIds))) {
+            throw ValidationException::withMessages(['line_ids' => __('Some of the selected lines do not belong to this account.')]);
+        }
+
+        if ($clearedDate && (clone $lines)->whereDate('account_transactions.date', '>', $clearedDate)->exists()) {
+            throw ValidationException::withMessages(['cleared_date' => __('A line cannot be cleared before its entry date.')]);
+        }
+
+        return AccountTransactionDetail::query()->whereIn('id', $lineIds)->update(['cleared_date' => $clearedDate]);
     }
 
     /**
@@ -448,6 +555,122 @@ class AccountReportService
             'to_date' => $toDate,
             'rows' => $rows->all(),
             'totals' => $totals,
+        ];
+    }
+
+    /**
+     * Work orders (by issue date, customer and status) with what has been
+     * billed (active invoices) and collected (active payments received)
+     * against each, and the due left of the work order's amount, as the
+     * work order screen computes its outstanding amount.
+     *
+     * @return array{from_date: ?string, to_date: ?string, rows: array<int, array<string, mixed>>, totals: array<string, float>}
+     */
+    public function workOrderCollections(?int $customerId, ?string $status, ?string $fromDate, ?string $toDate): array
+    {
+        $rows = WorkOrder::query()
+            ->with('customer:id,name')
+            ->withPaymentTotals()
+            ->withSum(['transactions as billed_amount' => fn ($query) => $query->where('status', true)->where('transaction_type', 'Invoice')], 'debit')
+            ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
+            ->when($status, fn ($query) => $query->where('status', $status))
+            ->when($fromDate, fn ($query) => $query->whereDate('issue_date', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('issue_date', '<=', $toDate))
+            ->orderBy('issue_date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (WorkOrder $workOrder) => [
+                'id' => $workOrder->id,
+                'work_order_no' => $workOrder->work_order_no,
+                'work_title' => $workOrder->work_title,
+                'customer_name' => $workOrder->customer?->name,
+                'issue_date' => $workOrder->issue_date?->toDateString(),
+                'status' => $workOrder->status,
+                'total_amount' => (float) $workOrder->total_amount,
+                'retention_amount' => $workOrder->retention_amount,
+                'billed_amount' => round((float) $workOrder->billed_amount, 2),
+                'collected_amount' => round((float) $workOrder->paid_amount, 2),
+                'due_amount' => round((float) $workOrder->total_amount - (float) $workOrder->paid_amount, 2),
+            ]);
+
+        $totals = [];
+        foreach (['total_amount', 'retention_amount', 'billed_amount', 'collected_amount', 'due_amount'] as $column) {
+            $totals[$column] = round($rows->sum($column), 2);
+        }
+
+        return [
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'rows' => $rows->all(),
+            'totals' => $totals,
+        ];
+    }
+
+    /**
+     * Each customer's billing (debits), collection (credits) and due at the
+     * end of every month or year in a date range, from the active customer
+     * ledger entries. The due carries the opening balance and everything
+     * before the range forward, as the customer statement does. Only periods
+     * in which a customer had entries are listed.
+     *
+     * @param  array<int, int>  $customerIds
+     * @return array{period: string, from_date: string, to_date: string, rows: array<int, array<string, mixed>>, total_billed: float, total_collected: float, total_due: float}
+     */
+    public function customerCollections(array $customerIds, string $period, string $fromDate, string $toDate): array
+    {
+        $customers = Customer::query()
+            ->when($customerIds, fn ($query) => $query->whereIn('id', $customerIds))
+            ->get(['id', 'name', 'opening_balance'])
+            ->keyBy('id');
+
+        $transactions = CustomerTransaction::query()
+            ->where('status', true)
+            ->whereIn('customer_id', $customers->keys())
+            ->whereDate('transaction_date', '<=', $toDate);
+
+        $broughtForward = (clone $transactions)
+            ->whereDate('transaction_date', '<', $fromDate)
+            ->groupBy('customer_id')
+            ->selectRaw('customer_id, COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0) as net')
+            ->pluck('net', 'customer_id');
+
+        $format = $period === 'yearly' ? 'Y' : 'Y-m';
+        $due = $customers->map(fn (Customer $customer) => round((float) $customer->opening_balance + (float) ($broughtForward[$customer->id] ?? 0), 2));
+
+        $rows = $transactions
+            ->whereDate('transaction_date', '>=', $fromDate)
+            ->orderBy('transaction_date')
+            ->orderBy('id')
+            ->get(['id', 'customer_id', 'transaction_date', 'debit', 'credit'])
+            ->groupBy(fn (CustomerTransaction $row) => $row->transaction_date->format($format))
+            ->flatMap(fn (Collection $periodRows, string $periodKey) => $periodRows
+                ->groupBy('customer_id')
+                ->map(function (Collection $customerRows, int $customerId) use ($periodKey, $customers, $due) {
+                    $billed = round((float) $customerRows->sum('debit'), 2);
+                    $collected = round((float) $customerRows->sum('credit'), 2);
+                    $due[$customerId] = round($due[$customerId] + $billed - $collected, 2);
+
+                    return [
+                        'period' => $periodKey,
+                        'customer_id' => $customerId,
+                        'customer_name' => $customers[$customerId]->name,
+                        'billed_amount' => $billed,
+                        'collected_amount' => $collected,
+                        'due_amount' => $due[$customerId],
+                    ];
+                })
+                ->sortBy('customer_name')
+                ->values())
+            ->values();
+
+        return [
+            'period' => $period,
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'rows' => $rows->all(),
+            'total_billed' => round($rows->sum('billed_amount'), 2),
+            'total_collected' => round($rows->sum('collected_amount'), 2),
+            'total_due' => round($due->sum(), 2),
         ];
     }
 

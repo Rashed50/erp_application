@@ -24,6 +24,7 @@ class AccountTransactionDetail extends Model
         return [
             'debit' => 'decimal:2',
             'credit' => 'decimal:2',
+            'cleared_date' => 'date',
         ];
     }
 

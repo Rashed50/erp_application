@@ -11,6 +11,13 @@
                             <option v-for="(item, key) in reports" :key="key" :value="key">{{ $t(item.title) }}</option>
                         </select>
                     </div>
+                    <div class="col-md-2" v-if="has('period')">
+                        <label>{{ $t('Period:') }}</label>
+                        <select class="form-select" v-model="filters.period">
+                            <option value="monthly">{{ $t('Monthly') }}</option>
+                            <option value="yearly">{{ $t('Yearly') }}</option>
+                        </select>
+                    </div>
                     <div class="col-md-2" v-if="has('reportType')">
                         <label>{{ $t('Type:') }}</label>
                         <select class="form-select" v-model="filters.report_type">
@@ -23,17 +30,21 @@
                         <input type="date" class="form-control" v-model="filters.from_date" />
                     </div>
                     <div class="col-md-2" v-if="has('toDate')">
-                        <label>{{ $t(has('fromDate') ? 'To Date:' : 'As of Date:') }}</label>
+                        <label>{{ $t(report.toDateLabel || (has('fromDate') ? 'To Date:' : 'As of Date:')) }}</label>
                         <input type="date" class="form-control" v-model="filters.to_date" />
                     </div>
                     <div class="col-md-3" v-if="has('account')">
-                        <label>{{ $t('Account:') }}</label>
+                        <label>{{ $t(report.accountLabel || 'Account:') }}</label>
                         <select class="form-select" v-model="filters.account_id">
                             <option value="">{{ $t('Select an account') }}</option>
-                            <option v-for="account in accounts" :key="account.id" :value="account.id">
+                            <option v-for="account in accountOptions" :key="account.id" :value="account.id">
                                 {{ account.account_number }} - {{ account.name }}
                             </option>
                         </select>
+                    </div>
+                    <div class="col-md-2" v-if="has('statementBalance')">
+                        <label>{{ $t('Statement Balance:') }}</label>
+                        <input type="number" step="0.01" class="form-control" v-model="filters.statement_balance" />
                     </div>
                     <div class="col-md-4" v-if="has('accounts')">
                         <label>{{ $t(report.accountsLabel || 'Accounts:') }}</label>
@@ -60,6 +71,13 @@
                             <option v-for="customer in customers" :key="customer.id" :value="customer.id">
                                 {{ customer.name }}
                             </option>
+                        </select>
+                    </div>
+                    <div class="col-md-2" v-if="has('workOrderStatus')">
+                        <label>{{ $t('Status:') }}</label>
+                        <select class="form-select" v-model="filters.status">
+                            <option value="">{{ $t('All') }}</option>
+                            <option v-for="status in WORK_ORDER_STATUSES" :key="status" :value="status">{{ $t(status) }}</option>
                         </select>
                     </div>
                     <div class="col-md-auto d-flex gap-2">
@@ -100,8 +118,11 @@
                             </tr>
                             <tr v-else v-for="(row, index) in rows" :key="index" :class="{ 'fw-bold': row.__emphasis }">
                                 <td v-for="column in columns" :key="column.key"
-                                    :class="column.align === 'right' ? 'text-right' : 'text-left'">
-                                    {{ cell(column, row) }}
+                                    :class="column.align === 'right' ? 'text-right' : column.toggle ? 'text-center' : 'text-left'">
+                                    <input v-if="column.toggle && !row.__label" type="checkbox" class="form-check-input"
+                                        :checked="!!row[column.key]" :disabled="!column.toggle.enabled() || toggling"
+                                        @change="column.toggle.onChange(row, $event.target)" />
+                                    <template v-else>{{ cell(column, row) }}</template>
                                 </td>
                             </tr>
                         </tbody>
@@ -127,14 +148,19 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { useFetch } from '@/composables/useFetch';
 import { usePrintable } from '@/composables/usePrintable';
 import { money } from '@/views/hr/helpers';
+import { toast } from 'vue3-toastify';
+import { usePermission } from '@/composables/usePermission';
 import { t } from '@/i18n';
 
 const { printTable } = usePrintable()
+const { can } = usePermission()
 const route = useRoute()
 const router = useRouter()
 
 const ALL = 100000
 const BASE = '/api/accounting/reports'
+const ASSET = 1
+const WORK_ORDER_STATUSES = ['Pending', 'In Progress', 'Completed', 'Cancelled']
 
 // Cells hold English phrases (row labels, types) that are translated on display.
 const text = (value) => (value ? t(value) : '')
@@ -174,6 +200,45 @@ const reports = {
             balance_type: data.closing_balance_type,
         }),
         note: (data) => ({ text: '{number} - {name}', params: { number: data.account.account_number ?? '', name: data.account.name } }),
+    },
+    bank_reconciliation: {
+        title: 'Bank Reconciliation',
+        endpoint: `${BASE}/bank-reconciliation`,
+        filters: ['account', 'fromDate', 'toDate', 'statementBalance'],
+        required: ['account_id', 'to_date'],
+        missingMessage: 'Select a cash/bank account and the statement date.',
+        accountLabel: 'Bank Account:',
+        accountTypeId: ASSET,
+        toDateLabel: 'Statement Date:',
+        columns: () => [
+            column('is_cleared', 'Cleared', {
+                format: (value) => (value ? '✓' : ''),
+                toggle: { enabled: () => can(['account-reports.reconcile']), onChange: toggleCleared },
+            }),
+            column('date', 'Date'),
+            column('tr_no', 'Voucher No'),
+            column('particular', 'Details'),
+            moneyColumn('debit', 'Deposit'),
+            moneyColumn('credit', 'Payment'),
+            column('cleared_date', 'Cleared Date'),
+            moneyColumn('summary', 'Amount'),
+        ],
+        rows: (data) => [
+            ...data.transactions,
+            labelRow('particular', 'Balance as per Books', { summary: data.book_balance }),
+            labelRow('particular', 'Less: Deposits not yet cleared', { summary: data.outstanding_deposits }),
+            labelRow('particular', 'Add: Payments not yet cleared', { summary: data.outstanding_payments }),
+            labelRow('particular', 'Expected Balance as per Bank', { summary: data.adjusted_balance }),
+            ...(data.statement_balance === null ? [] : [
+                labelRow('particular', 'Balance as per Bank Statement', { summary: data.statement_balance }),
+                labelRow('particular', 'Difference', { summary: data.difference }),
+            ]),
+        ],
+        note: (data) => data.is_reconciled === null
+            ? { text: '{number} - {name}', params: { number: data.account.account_number ?? '', name: data.account.name } }
+            : data.is_reconciled
+                ? { text: 'The account is reconciled with the bank statement.', class: 'text-success' }
+                : { text: 'Not reconciled: difference of {amount}.', params: { amount: money(data.difference) }, class: 'text-danger' },
     },
     trial_balance: {
         title: 'Trial Balance',
@@ -319,6 +384,45 @@ const reports = {
         rows: (data) => data.rows,
         totals: (data) => labelRow('supplier_name', 'Total', { vat_amount: data.total_vat, net_total: data.total_net_amount }),
     },
+    work_order_collections: {
+        title: 'Work Order Collection & Due',
+        endpoint: `${BASE}/work-order-collections`,
+        filters: ['customer', 'workOrderStatus', 'fromDate', 'toDate'],
+        columns: () => [
+            column('issue_date', 'Issue Date'),
+            column('work_order_no', 'Work Order No'),
+            column('work_title', 'Work Title'),
+            column('customer_name', 'Customer'),
+            column('status', 'Status', { format: text }),
+            moneyColumn('total_amount', 'Work Order Amount'),
+            moneyColumn('retention_amount', 'Retention'),
+            moneyColumn('billed_amount', 'Billed'),
+            moneyColumn('collected_amount', 'Collected'),
+            moneyColumn('due_amount', 'Due Amount'),
+        ],
+        rows: (data) => data.rows,
+        totals: (data) => labelRow('customer_name', 'Total', data.totals),
+    },
+    customer_collections: {
+        title: 'Customer Collection & Due',
+        endpoint: `${BASE}/customer-collections`,
+        filters: ['period', 'customers', 'fromDate', 'toDate'],
+        required: ['from_date', 'to_date'],
+        columns: () => [
+            column('period', filters.period === 'yearly' ? 'Year' : 'Month', { format: periodLabel }),
+            column('customer_name', 'Customer'),
+            moneyColumn('billed_amount', 'Billed'),
+            moneyColumn('collected_amount', 'Collected'),
+            moneyColumn('due_amount', 'Due at Period End'),
+        ],
+        rows: (data) => data.rows,
+        totals: (data) => labelRow('customer_name', 'Total', {
+            billed_amount: data.total_billed,
+            collected_amount: data.total_collected,
+            due_amount: data.total_due,
+        }),
+        note: (data) => ({ text: 'Total due as of {date}: {amount}', params: { date: data.to_date, amount: money(data.total_due) } }),
+    },
     sales_purchase_summary: {
         title: 'Sales & Purchase Summary',
         endpoint: `${BASE}/sales-purchase-summary`,
@@ -336,6 +440,13 @@ const reports = {
         rows: (data) => data.rows,
         totals: (data) => labelRow('description', 'Total', { debit: data.total_purchase, credit: data.total_sales, balance: data.balance }),
     },
+}
+
+// "2026-03" reads as "Mar 2026"; a year stays as it is.
+function periodLabel(value) {
+    if (!value || value.length !== 7) return value ?? ''
+    const [year, month] = value.split('-').map(Number)
+    return new Date(year, month - 1, 1).toLocaleString('en', { month: 'short', year: 'numeric' })
 }
 
 function partyColumns(partyLabel) {
@@ -370,11 +481,15 @@ const filters = reactive({
     supplier_ids: [],
     customer_ids: [],
     customer_id: '',
+    statement_balance: '',
+    period: 'monthly',
+    status: '',
 })
 
 const data = ref(null)
 const loading = ref(false)
 const message = ref('')
+const toggling = ref(false)
 
 const rows = computed(() => (data.value ? report.value.rows(data.value) : []))
 const totalRow = computed(() => (data.value && report.value.totals ? report.value.totals(data.value) : null))
@@ -383,6 +498,11 @@ const note = computed(() => (data.value && report.value.note ? report.value.note
 const { items: accounts, fetchData: loadAccounts } = useFetch('/api/ledger-accounts', { per_page: ALL })
 const { items: suppliers, fetchData: loadSuppliers } = useFetch('/api/suppliers', { per_page: ALL })
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: ALL })
+
+// Reports reconciling against a statement only offer accounts of their type (cash/bank assets).
+const accountOptions = computed(() => (report.value.accountTypeId
+    ? accounts.value.filter((account) => account.account_type_id === report.value.accountTypeId)
+    : accounts.value))
 
 const accountTitle = (account) => `${account.account_number ?? ''} - ${account.name}`
 
@@ -401,6 +521,9 @@ const params = () => {
     if (current.filters.includes('toDate') && filters.to_date) result.to_date = filters.to_date
     if (current.filters.includes('account') && filters.account_id) result.account_id = filters.account_id
     if (current.filters.includes('customer') && filters.customer_id) result.customer_id = filters.customer_id
+    if (current.filters.includes('period')) result.period = filters.period
+    if (current.filters.includes('workOrderStatus') && filters.status) result.status = filters.status
+    if (current.filters.includes('statementBalance') && filters.statement_balance !== '') result.statement_balance = filters.statement_balance
     for (const [filter, key] of [['accounts', 'account_ids'], ['suppliers', 'supplier_ids'], ['customers', 'customer_ids']]) {
         if (current.filters.includes(filter) && filters[key].length) result[key] = filters[key]
     }
@@ -412,9 +535,9 @@ const run = async () => {
     message.value = ''
     const missing = (report.value.required || []).some((key) => !filters[key])
     if (missing) {
-        message.value = report.value.required.includes('account_id') && !filters.account_id
+        message.value = report.value.missingMessage || (report.value.required.includes('account_id') && !filters.account_id
             ? 'Select an account to see its ledger.'
-            : 'Select the date range to see this report.'
+            : 'Select the date range to see this report.')
         return
     }
 
@@ -427,6 +550,27 @@ const run = async () => {
         message.value = errors ? Object.values(errors).flat().join(' ') : (e.response?.data?.message || t('Failed to load the report.'))
     } finally {
         loading.value = false
+    }
+}
+
+// Ticks a line off as cleared on the statement date (or unticks it), then refreshes the figures in place.
+async function toggleCleared(row, checkbox) {
+    const checked = checkbox.checked
+    toggling.value = true
+    try {
+        await axios.patch(`${BASE}/bank-reconciliation/cleared`, {
+            account_id: data.value.account.id,
+            line_ids: [row.id],
+            cleared_date: checked ? data.value.to_date : null,
+        })
+        const response = await axios.get(report.value.endpoint, { params: params() })
+        data.value = response.data.data
+    } catch (e) {
+        const errors = e.response?.status === 422 ? e.response.data.data : null
+        toast.error(errors ? Object.values(errors).flat().join(' ') : (e.response?.data?.message || t('common.actionFailed')))
+        checkbox.checked = !checked
+    } finally {
+        toggling.value = false
     }
 }
 
