@@ -61,3 +61,13 @@ npm run test:e2e -- tests/example.spec.ts
 # Runs the tests in debug mode
 npm run test:e2e -- --debug
 ```
+
+
+## RUN FRONTEND IN DOCKER CONTAINER
+```
+docker compose up --build -d
+```
+### Clear docker builder cache
+```
+docker builder prune -f
+```

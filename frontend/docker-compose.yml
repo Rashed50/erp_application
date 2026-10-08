@@ -13,17 +13,17 @@
 #       # Mount local dist directory to pull built files out of the container
 #       - ./dist:/app/dist
 
-version: '3.8'
-
 services:
   vue_app:
     build:
       context: .
       dockerfile: Dockerfile
       target: production-stage
+
     container_name: vue_app
+
     ports:
       - "8088:80"
-    volumes:
-      # Copy compiled dist files directly out of Nginx container to local host
-      - ./dist:/usr/share/nginx/html
+
+    restart: unless-stopped
+ 
