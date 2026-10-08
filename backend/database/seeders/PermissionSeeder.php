@@ -111,6 +111,7 @@ class PermissionSeeder extends Seeder
         ],
         'Account Reports' => [
             'account-reports.view',
+            'account-reports.reconcile',
         ],
         'Employees' => [
             'employees.view',

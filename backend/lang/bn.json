@@ -154,5 +154,8 @@
     "This advance has recoveries. Cancel the salaries and delete the cash repayments that recovered it first.": "এই অগ্রিমের আদায় রয়েছে। আগে সংশ্লিষ্ট বেতন বাতিল করুন এবং নগদ পরিশোধগুলো ডিলিট করুন।",
     "The amount cannot exceed the outstanding balance of :amount.": "পরিমাণ বকেয়া :amount এর বেশি হতে পারবে না।",
     "A salary installment cannot be deleted. Cancel the salary it was deducted from instead.": "বেতনের কিস্তি ডিলিট করা যায় না। পরিবর্তে যে বেতন থেকে কাটা হয়েছে সেটি বাতিল করুন।",
-    "Deduction cannot start before the month the advance was given.": "অগ্রিম দেওয়ার মাসের আগে কর্তন শুরু হতে পারবে না।"
+    "Deduction cannot start before the month the advance was given.": "অগ্রিম দেওয়ার মাসের আগে কর্তন শুরু হতে পারবে না।",
+    "Some of the selected lines do not belong to this account.": "নির্বাচিত কিছু লাইন এই অ্যাকাউন্টের নয়।",
+    "A line cannot be cleared before its entry date.": "এন্ট্রির তারিখের আগে কোনো লাইন ক্লিয়ার করা যাবে না।",
+    "Reconciliation updated.": "রিকনসিলিয়েশন হালনাগাদ হয়েছে।"
 }
