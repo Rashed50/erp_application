@@ -3,9 +3,19 @@
 use App\Http\Controllers\Api\AccountReportController;
 use App\Http\Controllers\Api\AccountTypeController;
 use App\Http\Controllers\Api\ApprovalController;
+use App\Http\Controllers\Api\Asset\AssetController;
+use App\Http\Controllers\Api\Asset\EmployeeInventoryController;
+use App\Http\Controllers\Api\Asset\InventoryDisposalController;
+use App\Http\Controllers\Api\Asset\InventoryLookupController;
+use App\Http\Controllers\Api\Asset\InventoryStockController;
+use App\Http\Controllers\Api\Asset\InventoryTransferController;
+use App\Http\Controllers\Api\Asset\InventoryUnitController;
+use App\Http\Controllers\Api\Asset\InventoryWarehouseController;
 use App\Http\Controllers\Api\Asset\ItemCategoryController;
 use App\Http\Controllers\Api\Asset\ItemNameController;
 use App\Http\Controllers\Api\Asset\ItemSubCategoryController;
+use App\Http\Controllers\Api\Asset\MaterialRequestController;
+use App\Http\Controllers\Api\Asset\PurchaseOrderController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChartOfAccountController;
 use App\Http\Controllers\Api\CompanySettingController;
@@ -447,5 +457,118 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/item-names/{item_name}/status', [ItemNameController::class, 'updateStatus'])
             ->name('item-names.status')
             ->middleware('permission:item-names.update');
+
+        /* ---------- Inventory setup ---------- */
+        Route::get('/units/options', [InventoryUnitController::class, 'options'])
+            ->name('units.options')
+            ->middleware('permission:inventory-units.view|item-names.create|item-names.update');
+        Route::apiResource('units', InventoryUnitController::class)
+            ->except('destroy')
+            ->parameters(['units' => 'inventory_unit'])
+            ->middlewareFor(['index', 'show'], 'permission:inventory-units.view')
+            ->middlewareFor('store', 'permission:inventory-units.create')
+            ->middlewareFor('update', 'permission:inventory-units.update');
+
+        // Store pickers on every stock movement screen.
+        Route::get('/warehouses/options', [InventoryWarehouseController::class, 'options'])
+            ->name('warehouses.options')
+            ->middleware('permission:warehouses.view|material-requests.create|purchase-orders.receive|inventory-transfers.create|employee-inventory.issue|employee-inventory.return|assets.return|inventory-disposals.create|inventory-stocks.view');
+        Route::apiResource('warehouses', InventoryWarehouseController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:warehouses.view')
+            ->middlewareFor('store', 'permission:warehouses.create')
+            ->middlewareFor('update', 'permission:warehouses.update');
+
+        // Dropdowns shared by the procurement, stock, custody and disposal screens.
+        Route::middleware('permission:warehouses.view|material-requests.view|material-requests.create|purchase-orders.view|purchase-orders.create|purchase-orders.receive|inventory-transfers.view|inventory-transfers.create|inventory-stocks.view|employee-inventory.view|employee-inventory.issue|assets.view|assets.assign|inventory-disposals.view|inventory-disposals.create')
+            ->group(function () {
+                Route::get('/lookups', [InventoryLookupController::class, 'index'])->name('lookups');
+                Route::get('/lookups/serials', [InventoryLookupController::class, 'serials'])->name('lookups.serials');
+            });
+
+        /* ---------- Procurement ---------- */
+        Route::apiResource('material-requests', MaterialRequestController::class)
+            ->only(['index', 'show', 'store'])
+            ->middlewareFor(['index', 'show'], 'permission:material-requests.view')
+            ->middlewareFor('store', 'permission:material-requests.create');
+        Route::post('/material-requests/{material_request}/approve', [MaterialRequestController::class, 'approve'])
+            ->name('material-requests.approve')
+            ->middleware('permission:material-requests.approve');
+        Route::post('/material-requests/{material_request}/reject', [MaterialRequestController::class, 'reject'])
+            ->name('material-requests.reject')
+            ->middleware('permission:material-requests.approve');
+
+        Route::apiResource('purchase-orders', PurchaseOrderController::class)
+            ->only(['index', 'show', 'store'])
+            ->middlewareFor(['index', 'show'], 'permission:purchase-orders.view')
+            ->middlewareFor('store', 'permission:purchase-orders.create');
+        Route::post('/purchase-orders/{purchase_order}/approve', [PurchaseOrderController::class, 'approve'])
+            ->name('purchase-orders.approve')
+            ->middleware('permission:purchase-orders.approve');
+        Route::post('/purchase-orders/{purchase_order}/receive', [PurchaseOrderController::class, 'receive'])
+            ->name('purchase-orders.receive')
+            ->middleware('permission:purchase-orders.receive');
+
+        /* ---------- Stock movement ---------- */
+        Route::apiResource('transfers', InventoryTransferController::class)
+            ->only(['index', 'show', 'store'])
+            ->middlewareFor(['index', 'show'], 'permission:inventory-transfers.view')
+            ->middlewareFor('store', 'permission:inventory-transfers.create');
+        Route::post('/transfers/{transfer}/approve', [InventoryTransferController::class, 'approve'])
+            ->name('transfers.approve')
+            ->middleware('permission:inventory-transfers.approve');
+        Route::post('/transfers/{transfer}/dispatch', [InventoryTransferController::class, 'dispatch'])
+            ->name('transfers.dispatch')
+            ->middleware('permission:inventory-transfers.dispatch');
+        Route::post('/transfers/{transfer}/receive', [InventoryTransferController::class, 'receive'])
+            ->name('transfers.receive')
+            ->middleware('permission:inventory-transfers.receive');
+
+        Route::get('/stocks', [InventoryStockController::class, 'index'])
+            ->name('stocks.index')
+            ->middleware('permission:inventory-stocks.view');
+        Route::get('/stock-transactions', [InventoryStockController::class, 'transactions'])
+            ->name('stock-transactions.index')
+            ->middleware('permission:inventory-stocks.view');
+
+        Route::get('/employee-inventory', [EmployeeInventoryController::class, 'index'])
+            ->name('employee-inventory.index')
+            ->middleware('permission:employee-inventory.view');
+        Route::post('/employee-inventory/issue', [EmployeeInventoryController::class, 'issue'])
+            ->name('employee-inventory.issue')
+            ->middleware('permission:employee-inventory.issue');
+        Route::get('/employee-inventory/{employee_inventory}', [EmployeeInventoryController::class, 'show'])
+            ->whereNumber('employee_inventory')
+            ->name('employee-inventory.show')
+            ->middleware('permission:employee-inventory.view');
+        Route::post('/employee-inventory/{employee_inventory}/return', [EmployeeInventoryController::class, 'returnItem'])
+            ->name('employee-inventory.return')
+            ->middleware('permission:employee-inventory.return');
+
+        /* ---------- Asset register ---------- */
+        Route::get('/assets', [AssetController::class, 'index'])
+            ->name('assets.index')
+            ->middleware('permission:assets.view');
+        Route::get('/assets/{asset}', [AssetController::class, 'show'])
+            ->name('assets.show')
+            ->middleware('permission:assets.view');
+        Route::post('/assets/{asset}/assign', [AssetController::class, 'assign'])
+            ->name('assets.assign')
+            ->middleware('permission:assets.assign');
+        Route::post('/asset-assignments/{asset_assignment}/return', [AssetController::class, 'returnAsset'])
+            ->name('asset-assignments.return')
+            ->middleware('permission:assets.return');
+
+        /* ---------- Disposal ---------- */
+        Route::apiResource('disposals', InventoryDisposalController::class)
+            ->only(['index', 'show', 'store'])
+            ->middlewareFor(['index', 'show'], 'permission:inventory-disposals.view')
+            ->middlewareFor('store', 'permission:inventory-disposals.create');
+        Route::post('/disposals/{disposal}/approve', [InventoryDisposalController::class, 'approve'])
+            ->name('disposals.approve')
+            ->middleware('permission:inventory-disposals.approve');
+        Route::post('/disposals/{disposal}/dispose', [InventoryDisposalController::class, 'dispose'])
+            ->name('disposals.dispose')
+            ->middleware('permission:inventory-disposals.dispose');
     });
 });

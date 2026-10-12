@@ -10,6 +10,8 @@ export function usePrintable() {
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
     }[char]))
 
+    const formatAmount = (value) => (Number(value) || 0).toFixed(2)
+
     // 🔹 Cell value formatter (array / object / primitive)
     const formatCellValue = (value) => {
         if (Array.isArray(value)) {
@@ -31,7 +33,7 @@ export function usePrintable() {
         return value ?? ''
     }
 
-    // Every report prints on A4, whatever the device or printer default is.
+    // Every print is on A4, whatever the device or printer default is.
     // Wide tables turn the sheet sideways (A4 landscape) instead of shrinking
     // the text; pass `orientation` to force one.
     const A4 = {
@@ -39,23 +41,28 @@ export function usePrintable() {
         landscape: { width: 297, height: 210 },
     }
     const WIDE_TABLE_COLUMNS = 8
+    const DEFAULT_SIGNATURES = ['Prepared by', 'Checked by', 'Approved by']
 
-    const printTable = ({
+    /**
+     * Open a print window in the shared company layout: header (logo, name,
+     * address, phone, email), the company name as a background watermark and
+     * signature lines in the footer. Every report and invoice prints through
+     * this so they all share one format.
+     */
+    const printDocument = ({
         title = '',
-        columns = [],
-        items = [],
+        contentHtml = '',
+        orientation = 'portrait',
+        signatures = DEFAULT_SIGNATURES,
         logo = settings.company?.logo_url || '',
-        orientation = columns.length >= WIDE_TABLE_COLUMNS ? 'landscape' : 'portrait',
     }) => {
-
-        if (!Array.isArray(items) || !items.length || !columns.length) return
-
         const sheet = A4[orientation] ?? A4.portrait
         const pageMargin = 12 // mm
         // CSS px are 96 per inch; the viewport is the sheet width so phones show the whole A4 page.
         const sheetWidthPx = Math.round((sheet.width / 25.4) * 96)
 
         const win = window.open('', '_blank')
+        if (!win) return
         // The print window is a separate document, so the app-wide image
         // fallback doesn't reach it; the placeholder needs an absolute URL.
         const placeholderUrl = new URL(imagePlaceholder, window.location.origin).href
@@ -69,63 +76,34 @@ export function usePrintable() {
         const headerHtml = `
             <div class="header">
                 <div class="logo-box">
-                    ${logo ? `<img src="${logo}" onerror="this.onerror=null;this.src='${placeholderUrl}'" />` : ''}
+                    ${logo ? `<img src="${escapeHtml(logo)}" onerror="this.onerror=null;this.src='${placeholderUrl}'" />` : ''}
                 </div>
                 <div class="title-box">
                     ${company.company_name ? `<h5>${escapeHtml(company.company_name)}</h5>` : ''}
                     ${company.address ? `<p>${escapeHtml(company.address)}</p>` : ''}
                     ${contactLine ? `<p>${contactLine}</p>` : ''}
                 </div>
+                <div class="logo-box"></div>
             </div>
         `
 
-        /* ---------- TABLE HEAD ---------- */
-        const tableHead = `
-            <thead>
-                <tr>
-                    ${columns.map(col =>
-                        `<th style="text-align:${col.align || 'left'}">${col.label}</th>`
-                    ).join('')}
-                </tr>
-            </thead>
-        `
+        /* ---------- WATERMARK (company name, repeated on every page) ---------- */
+        const watermarkText = company.company_name || ''
+        // Scale the text so long names still fit diagonally across the sheet.
+        const watermarkFontPx = Math.max(28, Math.min(110, Math.round((sheetWidthPx * 1.1) / ((watermarkText.length || 1) * 0.6))))
+        const watermarkHtml = watermarkText
+            ? `<div class="watermark"><span>${escapeHtml(watermarkText)}</span></div>`
+            : ''
 
-        /* ---------- TABLE BODY ---------- */
-        const tableBody = `
-            <tbody>
-                ${items.map((row, i) => `
-                    <tr>
-                        ${columns.map(col => `
-                            <td style="text-align:${col.align || 'left'}">
-                                ${
-                                    col.key === 'index'
-                                        ? i + 1
-                                        : col.format
-                                            ? col.format(row[col.key], row)
-                                            : formatCellValue(row[col.key])
-                                }
-                            </td>
-                        `).join('')}
-                    </tr>
-                `).join('')}
-            </tbody>
-        `
-
-        /* ---------- FOOTER ---------- */
+        /* ---------- FOOTER (signature lines) ---------- */
         const footerHtml = `
             <div class="print-footer">
-                <div class="sign">
-                    <div class="line"></div>
-                    <p>${escapeHtml(t('Prepared by'))}</p>
-                </div>
-                <div class="sign">
-                    <div class="line"></div>
-                    <p>${escapeHtml(t('Checked by'))}</p>
-                </div>
-                <div class="sign">
-                    <div class="line"></div>
-                    <p>${escapeHtml(t('Approved by'))}</p>
-                </div>
+                ${signatures.map(label => `
+                    <div class="sign">
+                        <div class="line"></div>
+                        <p>${escapeHtml(t(label))}</p>
+                    </div>
+                `).join('')}
             </div>
         `
 
@@ -136,7 +114,7 @@ export function usePrintable() {
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=${sheetWidthPx}">
-            <title>${title}</title>
+            <title>${escapeHtml(title)}</title>
             <style>
                 @page {
                     size: A4 ${orientation};
@@ -190,6 +168,29 @@ export function usePrintable() {
                     }
                 }
 
+                /* A fixed element repeats on every printed page. It sits above the
+                   content (faint and click-through) so shaded cells don't hide it. */
+                .watermark {
+                    position: fixed;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    pointer-events: none;
+                    z-index: 10;
+                    overflow: hidden;
+                }
+
+                .watermark span {
+                    font-size: ${watermarkFontPx}px;
+                    font-weight: bold;
+                    color: #000;
+                    opacity: 0.07;
+                    white-space: nowrap;
+                    text-transform: uppercase;
+                    transform: rotate(-30deg);
+                }
+
                 .header {
                     display: flex;
                     align-items: center;
@@ -220,6 +221,10 @@ export function usePrintable() {
                     margin: 2px 0;
                 }
 
+                .doc-title {
+                    text-align: center;
+                }
+
                 table {
                     width: 100%;
                     border-collapse: collapse;
@@ -246,6 +251,38 @@ export function usePrintable() {
                     page-break-inside: avoid;
                 }
 
+                /* ---------- INVOICE ---------- */
+                .invoice-info {
+                    display: flex;
+                    justify-content: space-between;
+                    gap: 20px;
+                }
+
+                .invoice-info p {
+                    margin: 3px 0;
+                }
+
+                .invoice-info .meta {
+                    text-align: right;
+                }
+
+                table.totals {
+                    width: 45%;
+                    margin-left: auto;
+                }
+
+                table.totals th {
+                    text-align: left;
+                }
+
+                table.totals td {
+                    text-align: right;
+                }
+
+                .notes {
+                    margin-top: 12px;
+                }
+
                 /* ---------- FOOTER ---------- */
                 .print-footer {
                     margin-top: auto;
@@ -262,26 +299,21 @@ export function usePrintable() {
                     border-top: 1px solid #000;
                     margin: 0 auto 5px;
                 }
-
-
             </style>
         </head>
 
         <body>
 
+        ${watermarkHtml}
+
         <div class="page-content">
         ${headerHtml}
-        ${title ? `<h3 style="text-align:center">${title}</h3>` : ''}
+        ${title ? `<h3 class="doc-title">${escapeHtml(title)}</h3>` : ''}
 
-        <table>
-            ${tableHead}
-            ${tableBody}
-        </table>
+        ${contentHtml}
 
         ${footerHtml}
-
         </div>
-
 
             <script>
                 window.onload = function () {
@@ -312,5 +344,168 @@ export function usePrintable() {
         win.document.close()
     }
 
-    return { printTable }
+    const printTable = ({
+        title = '',
+        columns = [],
+        items = [],
+        totalRow = null,
+        logo = settings.company?.logo_url || '',
+        orientation = columns.length >= WIDE_TABLE_COLUMNS ? 'landscape' : 'portrait',
+    }) => {
+
+        if (!Array.isArray(items) || !items.length || !columns.length) return
+
+        /* ---------- TABLE HEAD ---------- */
+        const tableHead = `
+            <thead>
+                <tr>
+                    ${columns.map(col =>
+                        `<th style="text-align:${col.align || 'left'}">${col.label}</th>`
+                    ).join('')}
+                </tr>
+            </thead>
+        `
+
+        /* ---------- TABLE BODY ---------- */
+        const tableBody = `
+            <tbody>
+                ${items.map((row, i) => `
+                    <tr>
+                        ${columns.map(col => `
+                            <td style="text-align:${col.align || 'left'}">
+                                ${
+                                    col.key === 'index'
+                                        ? i + 1
+                                        : col.format
+                                            ? col.format(row[col.key], row)
+                                            : formatCellValue(row[col.key])
+                                }
+                            </td>
+                        `).join('')}
+                    </tr>
+                `).join('')}
+            </tbody>
+        `
+
+        /* ---------- TABLE FOOT (optional totals, keyed like the columns) ---------- */
+        const tableFoot = totalRow
+            ? `
+                <tfoot>
+                    <tr>
+                        ${columns.map(col =>
+                            `<th style="text-align:${col.align || 'left'}">${totalRow[col.key] ?? ''}</th>`
+                        ).join('')}
+                    </tr>
+                </tfoot>
+            `
+            : ''
+
+        printDocument({
+            title,
+            logo,
+            orientation,
+            contentHtml: `<table>${tableHead}${tableBody}${tableFoot}</table>`,
+        })
+    }
+
+    /**
+     * Print a sale or purchase invoice in the shared company layout.
+     *
+     * @param {{
+     *   title?: string,
+     *   partyLabel: string,
+     *   partyName: string,
+     *   meta?: Array<{ label: string, value: string }>,
+     *   items: Array<{ item_name: string, description?: string, qty: number, unit_price: number, discount: number, vat: number, total_amount: number }>,
+     *   totals: { total_amount: number, discount_amount: number, vat_amount: number, net_total: number, paid_amount: number, due_amount: number },
+     *   notes?: string,
+     *   signatures?: string[],
+     * }} invoice
+     */
+    const printInvoice = ({
+        title = 'Invoice',
+        partyLabel = '',
+        partyName = '',
+        meta = [],
+        items = [],
+        totals = {},
+        notes = '',
+        signatures = ['Received by', 'Authorized Signature'],
+    }) => {
+        const infoHtml = `
+            <div class="invoice-info">
+                <div>
+                    <p><strong>${escapeHtml(t(partyLabel))}</strong> ${escapeHtml(partyName)}</p>
+                </div>
+                <div class="meta">
+                    ${meta.filter(row => row.value).map(row =>
+                        `<p><strong>${escapeHtml(t(row.label))}</strong> ${escapeHtml(row.value)}</p>`
+                    ).join('')}
+                </div>
+            </div>
+        `
+
+        const itemsHtml = `
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align:left">#</th>
+                        <th style="text-align:left">${escapeHtml(t('Item'))}</th>
+                        <th style="text-align:right">${escapeHtml(t('Qty'))}</th>
+                        <th style="text-align:right">${escapeHtml(t('Unit Price'))}</th>
+                        <th style="text-align:right">${escapeHtml(t('Discount'))}</th>
+                        <th style="text-align:right">${escapeHtml(t('VAT'))}</th>
+                        <th style="text-align:right">${escapeHtml(t('Total'))}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map((item, i) => `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td>
+                                ${escapeHtml(item.item_name)}
+                                ${item.description ? `<br><small>${escapeHtml(item.description)}</small>` : ''}
+                            </td>
+                            <td style="text-align:right">${escapeHtml(item.qty)}</td>
+                            <td style="text-align:right">${formatAmount(item.unit_price)}</td>
+                            <td style="text-align:right">${formatAmount(item.discount)}</td>
+                            <td style="text-align:right">${formatAmount(item.vat)}</td>
+                            <td style="text-align:right">${formatAmount(item.total_amount)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `
+
+        const totalRows = [
+            ['Total Amount', totals.total_amount],
+            ['Discount', totals.discount_amount],
+            ['VAT', totals.vat_amount],
+            ['Net Total', totals.net_total],
+            ['Paid', totals.paid_amount],
+            ['Due', totals.due_amount],
+        ]
+        const totalsHtml = `
+            <table class="totals">
+                ${totalRows.map(([label, value]) => `
+                    <tr>
+                        <th>${escapeHtml(t(label))}</th>
+                        <td>${formatAmount(value)}</td>
+                    </tr>
+                `).join('')}
+            </table>
+        `
+
+        const notesHtml = notes
+            ? `<div class="notes"><strong>${escapeHtml(t('Notes:'))}</strong> ${escapeHtml(notes)}</div>`
+            : ''
+
+        printDocument({
+            title: t(title),
+            signatures,
+            contentHtml: infoHtml + itemsHtml + totalsHtml + notesHtml,
+        })
+    }
+
+    return { printTable, printInvoice, printDocument }
 }

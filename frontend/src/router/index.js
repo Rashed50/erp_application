@@ -360,6 +360,96 @@ const routes = [
                     permissions: ['item-names.view']
                 }
             },
+
+            {
+                path: 'asset/units',
+                name: 'admin_asset_units',
+                component: () => import('@/views/asset/units/Index.vue'),
+                meta: {
+                    title: 'Units',
+                    permissions: ['inventory-units.view']
+                }
+            },
+
+            {
+                path: 'asset/warehouses',
+                name: 'admin_asset_warehouses',
+                component: () => import('@/views/asset/warehouses/Index.vue'),
+                meta: {
+                    title: 'Stores / Warehouses',
+                    permissions: ['warehouses.view']
+                }
+            },
+
+            {
+                path: 'asset/material-requests',
+                name: 'admin_asset_material_requests',
+                component: () => import('@/views/asset/material-requests/Index.vue'),
+                meta: {
+                    title: 'Material Requests',
+                    permissions: ['material-requests.view']
+                }
+            },
+
+            {
+                path: 'asset/purchase-orders',
+                name: 'admin_asset_purchase_orders',
+                component: () => import('@/views/asset/purchase-orders/Index.vue'),
+                meta: {
+                    title: 'Purchase Orders',
+                    permissions: ['purchase-orders.view']
+                }
+            },
+
+            {
+                path: 'asset/transfers',
+                name: 'admin_asset_transfers',
+                component: () => import('@/views/asset/transfers/Index.vue'),
+                meta: {
+                    title: 'Store Transfers',
+                    permissions: ['inventory-transfers.view']
+                }
+            },
+
+            {
+                path: 'asset/stocks',
+                name: 'admin_asset_stocks',
+                component: () => import('@/views/asset/stocks/Index.vue'),
+                meta: {
+                    title: 'Inventory Stock',
+                    permissions: ['inventory-stocks.view']
+                }
+            },
+
+            {
+                path: 'asset/register',
+                name: 'admin_asset_register',
+                component: () => import('@/views/asset/assets/Index.vue'),
+                meta: {
+                    title: 'Asset Register',
+                    permissions: ['assets.view']
+                }
+            },
+
+            {
+                path: 'asset/employee-issues',
+                name: 'admin_asset_employee_issues',
+                component: () => import('@/views/asset/employee-inventory/Index.vue'),
+                meta: {
+                    title: 'Employee Issues',
+                    permissions: ['employee-inventory.view']
+                }
+            },
+
+            {
+                path: 'asset/disposals',
+                name: 'admin_asset_disposals',
+                component: () => import('@/views/asset/disposals/Index.vue'),
+                meta: {
+                    title: 'Disposals',
+                    permissions: ['inventory-disposals.view']
+                }
+            },
             /* ====================== Asset Route END ====================== */
 
             /* ====================== Supplier Route START ====================== */

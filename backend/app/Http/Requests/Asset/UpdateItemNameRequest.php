@@ -55,6 +55,9 @@ class UpdateItemNameRequest extends FormRequest
                     ->ignore($item),
             ],
             'item_title' => ['required', 'string', 'max:50'],
+            'unit_id' => ['nullable', 'integer', Rule::exists('inventory_units', 'id')],
+            'track_type' => ['nullable', Rule::in(ItemName::TRACK_TYPES)],
+            'minimum_stock' => ['nullable', 'numeric', 'gte:0'],
             'item_code' => ['required', 'string', 'max:10', Rule::unique('item_names', 'item_code')->ignore($item)],
             'item_status' => ['sometimes', 'boolean'],
         ];
