@@ -545,7 +545,7 @@ const canAny = (perms) => perms.some((p) => can([p]))
 // Asset menu entries after the setup screens (categories, sub categories, items).
 const assetMenuLinks = [
     { name: 'admin_asset_units', title: 'Units', permission: 'inventory-units.view' },
-    { name: 'admin_asset_warehouses', title: 'Stores / Warehouses', permission: 'warehouses.view' },
+    { name: 'admin_asset_warehouses', title: 'Warehouses', permission: 'warehouses.view' },
     { name: 'admin_asset_material_requests', title: 'Material Requests', permission: 'material-requests.view' },
     { name: 'admin_asset_purchase_orders', title: 'Purchase Orders', permission: 'purchase-orders.view' },
     { name: 'admin_asset_transfers', title: 'Store Transfers', permission: 'inventory-transfers.view' },
