@@ -46,7 +46,7 @@ class StoreFundTransferRequest extends FormRequest
 
     /**
      * Money can only move between open asset (cash/bank) transaction
-     * accounts, and any bank charge or VAT needs the Bank Charges account.
+     * accounts, and any bank charge or VAT needs the bank charge (Purchase) account.
      */
     public function withValidator(Validator $validator): void
     {

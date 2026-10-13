@@ -44,20 +44,20 @@ class ProductController extends Controller
     {
         $product = $this->productService->create($request->validated());
 
-        return ApiResponse::success(new ProductResource($product), 'Product created successfully.', 201);
+        return ApiResponse::success(new ProductResource($product), __('Product created successfully.'), 201);
     }
 
     public function update(UpdateProductRequest $request, Product $product): JsonResponse
     {
         $product = $this->productService->update($product, $request->validated());
 
-        return ApiResponse::success(new ProductResource($product), 'Product updated successfully.');
+        return ApiResponse::success(new ProductResource($product), __('Product updated successfully.'));
     }
 
     public function destroy(Product $product): JsonResponse
     {
         $this->productService->delete($product);
 
-        return ApiResponse::success(message: 'Product deleted successfully.');
+        return ApiResponse::success(message: __('Product deleted successfully.'));
     }
 }

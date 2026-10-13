@@ -57,24 +57,24 @@ class EmployeeController extends Controller
     {
         $employee = $this->employeeService->create($request->validated());
 
-        return ApiResponse::success(new EmployeeResource($employee), 'Employee created successfully.', 201);
+        return ApiResponse::success(new EmployeeResource($employee), __('Employee created successfully.'), 201);
     }
 
     public function update(UpdateEmployeeRequest $request, Employee $employee): JsonResponse
     {
         $employee = $this->employeeService->update($employee, $request->validated());
 
-        return ApiResponse::success(new EmployeeResource($employee), 'Employee updated successfully.');
+        return ApiResponse::success(new EmployeeResource($employee), __('Employee updated successfully.'));
     }
 
     public function destroy(Employee $employee): JsonResponse
     {
         if ($employee->salaryHistories()->exists()) {
-            return ApiResponse::error('This employee has salary history and cannot be deleted. Set the status to Resigned or Inactive instead.', 422);
+            return ApiResponse::error(__('This employee has salary history and cannot be deleted. Set the status to Resigned or Inactive instead.'), 422);
         }
 
         $this->employeeService->delete($employee);
 
-        return ApiResponse::success(message: 'Employee deleted successfully.');
+        return ApiResponse::success(message: __('Employee deleted successfully.'));
     }
 }

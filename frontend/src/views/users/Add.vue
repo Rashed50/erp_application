@@ -14,7 +14,7 @@
                                 <div class="col-md-12">
                                     <!-- Name -->
                                     <div class="form-group mb-3">
-                                        <label for="name">Name:</label>
+                                        <label for="name">{{ $t('Name:') }}</label>
                                         <input type="text" id="name" class="form-control" v-model="form.name"
                                             required />
                                         <div v-if="errors.name" class="error-msg">{{ errors.name }}</div>
@@ -22,7 +22,7 @@
 
                                     <!-- Email -->
                                     <div class="form-group mb-3">
-                                        <label for="email">Email:</label>
+                                        <label for="email">{{ $t('Email:') }}</label>
                                         <input type="email" id="email" class="form-control" v-model="form.email"
                                             required />
                                         <div v-if="errors.email" class="error-msg">{{ errors.email }}</div>
@@ -30,7 +30,7 @@
 
                                     <!-- Password -->
                                     <div class="form-group mb-3">
-                                        <label for="password">Password:</label>
+                                        <label for="password">{{ $t('Password:') }}</label>
                                         <input type="password" id="password" class="form-control"
                                             v-model="form.password" required />
                                         <div v-if="errors.password" class="error-msg">{{ errors.password }}</div>
@@ -38,16 +38,16 @@
 
                                     <!-- Confirm Password -->
                                     <div class="form-group mb-3">
-                                        <label for="password_confirmation">Confirm Password:</label>
+                                        <label for="password_confirmation">{{ $t('Confirm Password:') }}</label>
                                         <input type="password" id="password_confirmation" class="form-control"
                                             v-model="form.password_confirmation" required />
                                     </div>
 
                                     <!-- Role Selection -->
                                     <div class="form-group mb-3">
-                                        <label for="role">Assign Role:</label>
+                                        <label for="role">{{ $t('Assign Role:') }}</label>
                                         <select id="role" class="form-control" v-model="form.role" required>
-                                            <option value="" disabled>Select a Role</option>
+                                            <option value="" disabled>{{ $t('Select a Role') }}</option>
                                             <option v-for="item in items" :key="item.id" :value="item.name">
                                                 {{ item.name }}
                                             </option>
@@ -60,7 +60,7 @@
                                 <div class="col-md-12">
                                     <v-btn type="submit" class="text-none text-white mr-2" color="blue-darken-4"
                                         rounded="0" variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
-                                        Submit
+                                        {{ $t('Submit') }}
                                     </v-btn>
                                 </div>
                             </div>
@@ -78,6 +78,7 @@ import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
 import { useRouter } from 'vue-router';
+import { t } from '@/i18n';
 
 
 const router = useRouter();
@@ -103,7 +104,7 @@ const handleSubmit = async () => {
             setToast('success', resp.message)
             router.push({ name: 'admin_users' })
         } catch (e) {
-            setToast('error', e.response?.data?.message || 'User created, but role assignment failed.')
+            setToast('error', e.response?.data?.message || t('User created, but role assignment failed.'))
         }
     }
 }

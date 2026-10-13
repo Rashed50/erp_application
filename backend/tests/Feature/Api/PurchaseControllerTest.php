@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AccountTransaction;
 use App\Models\ChartOfAccount;
 use App\Models\Product;
 use App\Models\Purchase;
@@ -339,11 +340,12 @@ describe('chart of account posting', function () {
     beforeEach(function () {
         $this->seed(ChartOfAccountSeeder::class);
 
+        $this->inventory = ChartOfAccount::query()->where('account_number', '1040')->first();
         $this->purchaseAccount = ChartOfAccount::query()->where('account_number', '5010')->first();
         $this->payable = ChartOfAccount::query()->where('account_number', '2010')->first();
     });
 
-    it('debits Purchase and credits Accounts Payable with the net total', function () {
+    it('debits Inventory/Stock for a product purchase and credits Accounts Payable with the net total', function () {
         $supplier = Supplier::factory()->create();
 
         $purchaseId = $this->actingAs(adminUser(), 'sanctum')
@@ -351,12 +353,40 @@ describe('chart of account posting', function () {
             ->assertStatus(201)
             ->json('data.id');
 
-        expect((float) $this->purchaseAccount->fresh()->balance)->toBe(88.0)
+        $purchase = Purchase::find($purchaseId);
+
+        expect((float) $this->inventory->fresh()->balance)->toBe(88.0)
             ->and((float) $this->payable->fresh()->balance)->toBe(88.0)
-            ->and(Purchase::find($purchaseId)->is_ledger_posted)->toBeTrue();
+            ->and($purchase->journalEntry->purchase_id)->toBe($purchase->id)
+            ->and($purchase->ledgerTransaction->account_transaction_id)->toBe($purchase->journalEntry->id);
     });
 
-    it('posts only the difference when the items change', function () {
+    it('debits Purchase for a service purchase', function () {
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/purchases', purchasePayload(Supplier::factory()->create()->id, ['purchase_type' => 'service']))
+            ->assertStatus(201);
+
+        expect((float) $this->purchaseAccount->fresh()->balance)->toBe(88.0)
+            ->and((float) $this->inventory->fresh()->balance)->toBe(0.0);
+    });
+
+    it('posts to the debit and credit accounts chosen on the purchase', function () {
+        $cash = ChartOfAccount::query()->where('account_number', '1010')->first();
+        $repairs = ChartOfAccount::query()->where('account_number', '5060')->first();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/purchases', purchasePayload(Supplier::factory()->create()->id, [
+                'debit_account_id' => $repairs->id,
+                'credit_account_id' => $cash->id,
+            ]))
+            ->assertStatus(201);
+
+        expect((float) $repairs->fresh()->balance)->toBe(88.0)
+            ->and((float) $cash->fresh()->balance)->toBe(-88.0)
+            ->and((float) $this->payable->fresh()->balance)->toBe(0.0);
+    });
+
+    it('rewrites its journal entry in place when the items change', function () {
         $actor = adminUser();
         $supplier = Supplier::factory()->create();
 
@@ -370,8 +400,9 @@ describe('chart of account posting', function () {
             ])
             ->assertOk();
 
-        expect((float) $this->purchaseAccount->fresh()->balance)->toBe(100.0)
-            ->and((float) $this->payable->fresh()->balance)->toBe(100.0);
+        expect((float) $this->inventory->fresh()->balance)->toBe(100.0)
+            ->and((float) $this->payable->fresh()->balance)->toBe(100.0)
+            ->and(AccountTransaction::count())->toBe(1);
     });
 
     it('reverses the posting when the purchase is deleted', function () {
@@ -384,12 +415,13 @@ describe('chart of account posting', function () {
 
         $this->actingAs($actor, 'sanctum')->deleteJson("/api/purchases/{$purchaseId}")->assertOk();
 
-        expect((float) $this->purchaseAccount->fresh()->balance)->toBe(0.0)
-            ->and((float) $this->payable->fresh()->balance)->toBe(0.0);
+        expect((float) $this->inventory->fresh()->balance)->toBe(0.0)
+            ->and((float) $this->payable->fresh()->balance)->toBe(0.0)
+            ->and(AccountTransaction::count())->toBe(0);
     });
 
-    it('never reverses a purchase that was created before posting existed', function () {
-        $purchase = Purchase::factory()->create(['is_ledger_posted' => false]);
+    it('deletes a purchase that never posted a journal entry', function () {
+        $purchase = Purchase::factory()->create();
 
         $this->actingAs(adminUser(), 'sanctum')->deleteJson("/api/purchases/{$purchase->id}")->assertOk();
 

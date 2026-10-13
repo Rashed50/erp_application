@@ -12,13 +12,13 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="credit_account_id" class="form-label text-end d-block">
-                                        Sender (CR) <span class="text-danger">*</span>
+                                        {{ $t('Sender (CR)') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
                                     <select id="credit_account_id" class="form-control input-height"
                                         v-model="form.credit_account_id" required>
-                                        <option value="" disabled>Select item</option>
+                                        <option value="" disabled>{{ $t('Select item') }}</option>
                                         <option v-for="account in assetAccounts" :key="account.id" :value="account.id">
                                             {{ account.account_number }} - {{ account.name }}
                                         </option>
@@ -31,12 +31,12 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="amount" class="form-label text-end d-block">
-                                        Amount <span class="text-danger">*</span>
+                                        {{ $t('Amount') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="number" id="amount" class="form-control input-height" step="0.01"
-                                        min="0.01" placeholder="Transfer Amount..." v-model="form.amount" required />
+                                        min="0.01" :placeholder="$t('Transfer Amount...')" v-model="form.amount" required />
                                     <div v-if="errors.amount" class="error-msg">{{ errors.amount }}</div>
                                 </div>
                             </div>
@@ -45,12 +45,12 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="bank_charge" class="form-label text-end d-block">
-                                        Bank Charge <span class="text-danger">*</span>
+                                        {{ $t('Bank Charge') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="number" id="bank_charge" class="form-control input-height" step="0.01"
-                                        min="0" placeholder="Bank Charge..." v-model="form.bank_charge" required />
+                                        min="0" :placeholder="$t('Bank Charge...')" v-model="form.bank_charge" required />
                                     <div v-if="errors.bank_charge" class="error-msg">{{ errors.bank_charge }}</div>
                                 </div>
                             </div>
@@ -59,12 +59,12 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="vat" class="form-label text-end d-block">
-                                        VAT <span class="text-danger">*</span>
+                                        {{ $t('VAT') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="number" id="vat" class="form-control input-height" step="0.01" min="0"
-                                        placeholder="VAT..." v-model="form.vat" required />
+                                        :placeholder="$t('VAT...')" v-model="form.vat" required />
                                     <div v-if="errors.vat" class="error-msg">{{ errors.vat }}</div>
                                 </div>
                             </div>
@@ -72,7 +72,7 @@
                             <!-- Total -->
                             <div class="row mt-2">
                                 <div class="col-md-3">
-                                    <label class="form-label text-end d-block">Total</label>
+                                    <label class="form-label text-end d-block">{{ $t('Total') }}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="text" class="form-control input-height" :value="total.toFixed(2)" disabled />
@@ -85,13 +85,13 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="debit_account_id" class="form-label text-end d-block">
-                                        Receiver (DR) <span class="text-danger">*</span>
+                                        {{ $t('Receiver (DR)') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
                                     <select id="debit_account_id" class="form-control input-height"
                                         v-model="form.debit_account_id" required>
-                                        <option value="" disabled>Select item</option>
+                                        <option value="" disabled>{{ $t('Select item') }}</option>
                                         <option v-for="account in receiverAccounts" :key="account.id" :value="account.id">
                                             {{ account.account_number }} - {{ account.name }}
                                         </option>
@@ -103,11 +103,11 @@
                             <!-- Receipt No -->
                             <div class="row mt-2">
                                 <div class="col-md-3">
-                                    <label for="receipt_no" class="form-label text-end d-block">Receipt No.</label>
+                                    <label for="receipt_no" class="form-label text-end d-block">{{ $t('Receipt No.') }}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="text" id="receipt_no" class="form-control input-height"
-                                        placeholder="Receipt No..." v-model="form.receipt_no" />
+                                        :placeholder="$t('Receipt No...')" v-model="form.receipt_no" />
                                     <div v-if="errors.receipt_no" class="error-msg">{{ errors.receipt_no }}</div>
                                 </div>
                             </div>
@@ -116,7 +116,7 @@
                             <div class="row mt-2">
                                 <div class="col-md-3">
                                     <label for="transfer_date" class="form-label text-end d-block">
-                                        Trans. Date <span class="text-danger">*</span>
+                                        {{ $t('Trans. Date') }} <span class="text-danger">*</span>
                                     </label>
                                 </div>
                                 <div class="col-md-9">
@@ -129,11 +129,11 @@
                             <!-- Remarks -->
                             <div class="row mt-2">
                                 <div class="col-md-3">
-                                    <label for="remarks" class="form-label text-end d-block">Remarks</label>
+                                    <label for="remarks" class="form-label text-end d-block">{{ $t('Remarks') }}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="text" id="remarks" class="form-control input-height"
-                                        placeholder="Remarks..." v-model="form.remarks" />
+                                        :placeholder="$t('Remarks...')" v-model="form.remarks" />
                                     <div v-if="errors.remarks" class="error-msg">{{ errors.remarks }}</div>
                                 </div>
                             </div>
@@ -141,7 +141,7 @@
                             <!-- Attachment -->
                             <div class="row mt-2">
                                 <div class="col-md-3">
-                                    <label for="attachment" class="form-label text-end d-block">Attachment</label>
+                                    <label for="attachment" class="form-label text-end d-block">{{ $t('Attachment') }}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <input type="file" id="attachment" ref="attachmentInput" class="form-control"
@@ -155,7 +155,7 @@
                     <div class="d-flex justify-content-end" v-if="can(['fund-transfers.create'])">
                         <v-btn type="submit" class="text-none text-white" color="success" rounded="0" variant="flat"
                             :disabled="isSubmitting" :loading="isSubmitting">
-                            <i class="fa-solid fa-check me-2"></i> Save
+                            <i class="fa-solid fa-check me-2"></i> {{ $t('Save') }}
                         </v-btn>
                     </div>
                 </form>
@@ -171,6 +171,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';
 import { objectToFormData } from '@/helpers/objectToFormData';
+import { t } from '@/i18n';
 
 const { can } = usePermission()
 
@@ -251,7 +252,7 @@ const handleSubmit = async () => {
                 errors[key] = respErrors[key].join(' ')
             }
         } else {
-            toast.error(err.response?.data?.message || 'An error occurred while saving.')
+            toast.error(err.response?.data?.message || t('An error occurred while saving.'))
         }
     } finally {
         isSubmitting.value = false

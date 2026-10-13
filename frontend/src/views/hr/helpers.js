@@ -1,6 +1,10 @@
 // Shared formatting for the HR & Payroll screens.
 
+import { intlLocale } from '@/i18n'
+
 export const SALARY_STATUSES = ['Generated', 'Approved', 'Paid', 'Cancelled']
+
+export const ADVANCE_STATUSES = ['Running', 'Completed']
 
 export const money = (value) =>
     Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -12,7 +16,7 @@ export const currentMonth = () => new Date().toISOString().slice(0, 7)
 export const monthLabel = (month) => {
     if (!month) return ''
     const [year, monthNumber] = month.split('-').map(Number)
-    return new Date(year, monthNumber - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
+    return new Date(year, monthNumber - 1, 1).toLocaleString(intlLocale(), { month: 'long', year: 'numeric' })
 }
 
 export const salaryStatusClass = (status) => ({
@@ -27,4 +31,9 @@ export const employeeStatusClass = (status) => ({
     Inactive: 'badge bg-secondary',
     Resigned: 'badge bg-warning text-dark',
     Terminated: 'badge bg-danger',
+}[status] || 'badge bg-light text-dark')
+
+export const advanceStatusClass = (status) => ({
+    Running: 'badge bg-warning text-dark',
+    Completed: 'badge bg-success',
 }[status] || 'badge bg-light text-dark')

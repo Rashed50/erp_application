@@ -33,6 +33,25 @@ describe('show', function () {
     });
 });
 
+describe('branding', function () {
+    it('returns the company name and logo without a token', function () {
+        CompanySetting::factory()->withLogo()->create(['company_name' => 'Acme Ltd', 'email' => 'info@acme.test']);
+
+        $this->getJson('/api/branding')
+            ->assertOk()
+            ->assertJsonPath('data.company_name', 'Acme Ltd')
+            ->assertJsonPath('data.logo_url', Storage::disk('public')->url('company/logo.png'))
+            ->assertJsonMissingPath('data.email');
+    });
+
+    it('returns nulls when no settings have been saved', function () {
+        $this->getJson('/api/branding')
+            ->assertOk()
+            ->assertJsonPath('data.company_name', null)
+            ->assertJsonPath('data.logo_url', null);
+    });
+});
+
 describe('update', function () {
     it('returns 403 for a user without the settings.update permission', function () {
         $this->actingAs(User::factory()->create(), 'sanctum')

@@ -18,7 +18,7 @@
                     <span class="sidebar-menu-icon">
                         <i class="fa-solid fa-house"></i>
                     </span>
-                    Dashboard
+                    {{ $t('nav.dashboard') }}
                 </router-link>
             </v-list-item>
 
@@ -28,7 +28,7 @@
                     <span class="sidebar-menu-icon">
                         <i class="fa-solid fa-address-card"></i>
                     </span>
-                    User
+                    {{ $t('nav.user') }}
                 </router-link>
             </v-list-item>
             <!-- User Menu END -->
@@ -39,7 +39,7 @@
                 'ledger-accounts.view', 'supplier-payments.view', 'supplier-payments.create',
                 'fund-transfers.view', 'fund-transfers.create', 'customers.view', 'work-orders.view', 'products.view', 'sales.view',
                 'sales.create', 'purchases.view', 'purchases.create', 'income-expenses.view',
-                'income-expenses.create', 'suppliers.view', 'suppliers.create',
+                'income-expenses.create', 'suppliers.view', 'suppliers.create', 'account-reports.view',
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -47,7 +47,7 @@
                             <span class="sidebar-menu-icon">
                                 <i class="fa-solid fa-wallet"></i>
                             </span>
-                            Accounting
+                            {{ $t('nav.accounting') }}
                         </div>
                     </v-list-item>
                 </template>
@@ -60,7 +60,7 @@
                                 <span class="sidebar-menu-icon">
                                     <i class="fa-solid fa-diagram-project"></i>
                                 </span>
-                                Account Setting
+                                {{ $t('nav.accountSetting') }}
                             </div>
                         </v-list-item>
                     </template>
@@ -69,7 +69,7 @@
                             v-if="can(['ledger-accounts.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                General Ledger
+                                {{ $t('nav.generalLedger') }}
                             </span>
                         </router-link>
                     </div>
@@ -85,7 +85,7 @@
                                 <span class="sidebar-menu-icon">
                                     <i class="fa-solid fa-money-bill-transfer"></i>
                                 </span>
-                                Payment
+                                {{ $t('nav.payment') }}
                             </div>
                         </v-list-item>
                     </template>
@@ -94,28 +94,28 @@
                             v-if="can(['supplier-payments.create'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Supplier Payment
+                                {{ $t('nav.supplierPayment') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_supplier_payments_list' }" class="custom_router_sub_link"
                             v-if="can(['supplier-payments.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Supplier Payment List
+                                {{ $t('nav.supplierPaymentList') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_fund_transfer_add' }" class="custom_router_sub_link"
                             v-if="can(['fund-transfers.create'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Internal Transfer
+                                {{ $t('nav.internalTransfer') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_fund_transfers_list' }" class="custom_router_sub_link"
                             v-if="can(['fund-transfers.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Internal Transfer List
+                                {{ $t('nav.internalTransferList') }}
                             </span>
                         </router-link>
                     </div>
@@ -130,7 +130,7 @@
                                 <span class="sidebar-menu-icon">
                                     <i class="fa-solid fa-money-bill"></i>
                                 </span>
-                                Sales
+                                {{ $t('nav.sales') }}
                             </div>
                         </v-list-item>
                     </template>
@@ -139,35 +139,35 @@
                             v-if="can(['customers.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Customers
+                                {{ $t('nav.customers') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_work_orders_list' }" class="custom_router_sub_link"
                             v-if="can(['work-orders.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Work Order
+                                {{ $t('nav.workOrder') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_products_list' }" class="custom_router_sub_link"
                             v-if="can(['products.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Products
+                                {{ $t('nav.products') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_sale_add' }" class="custom_router_sub_link"
                             v-if="can(['sales.create'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                New Sales
+                                {{ $t('nav.newSales') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_sales_list' }" class="custom_router_sub_link"
                             v-if="can(['sales.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Search Sales
+                                {{ $t('nav.searchSales') }}
                             </span>
                         </router-link>
                     </div>
@@ -181,7 +181,7 @@
                                 <span class="sidebar-menu-icon">
                                     <i class="fa-solid fa-cart-shopping"></i>
                                 </span>
-                                Purchase
+                                {{ $t('nav.purchase') }}
                             </div>
                         </v-list-item>
                     </template>
@@ -190,14 +190,14 @@
                             v-if="can(['purchases.create'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                New Purchase
+                                {{ $t('nav.newPurchase') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_purchases_list' }" class="custom_router_sub_link"
                             v-if="can(['purchases.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Purchase List
+                                {{ $t('nav.purchaseList') }}
                             </span>
                         </router-link>
                     </div>
@@ -212,7 +212,7 @@
                                 <span class="sidebar-menu-icon">
                                     <i class="fa-solid fa-receipt"></i>
                                 </span>
-                                Daily Expense
+                                {{ $t('nav.dailyExpense') }}
                             </div>
                         </v-list-item>
                     </template>
@@ -221,14 +221,14 @@
                             v-if="can(['income-expenses.create'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Add New Expense
+                                {{ $t('nav.addNewExpense') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_income_expenses_list' }" class="custom_router_sub_link"
                             v-if="can(['income-expenses.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Search Expense
+                                {{ $t('nav.searchExpense') }}
                             </span>
                         </router-link>
                     </div>
@@ -242,7 +242,7 @@
                                 <span class="sidebar-menu-icon">
                                     <i class="fa-solid fa-truck-field"></i>
                                 </span>
-                                Suppliers
+                                {{ $t('nav.suppliers') }}
                             </div>
                         </v-list-item>
                     </template>
@@ -251,14 +251,39 @@
                             v-if="can(['suppliers.view'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                List
+                                {{ $t('nav.list') }}
                             </span>
                         </router-link>
                         <router-link :to="{ name: 'admin_supplier_add' }" class="custom_router_sub_link"
                             v-if="can(['suppliers.create'])">
                             <span class="ml-5">
                                 <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                                Add
+                                {{ $t('nav.add') }}
+                            </span>
+                        </router-link>
+                    </div>
+                </v-list-group>
+                <!-- Reports -->
+                <v-list-group value="accounts-reports" v-if="can(['account-reports.view'])">
+                    <template v-slot:activator="{ props }">
+                        <v-list-item v-bind="props">
+                            <div class="custom_dropdown_router_link custom_mb_10 ml-3">
+                                <span class="sidebar-menu-icon">
+                                    <i class="fa-solid fa-chart-line"></i>
+                                </span>
+                                {{ $t('nav.reports') }}
+                            </div>
+                        </v-list-item>
+                    </template>
+                    <div>
+                        <!-- Vue Router ignores query when matching, so active state is set per report key -->
+                        <router-link v-for="item in accountReportLinks" :key="item.report"
+                            :to="{ name: 'admin_account_reports', query: { report: item.report } }"
+                            class="custom_router_sub_link" active-class="" exact-active-class=""
+                            :class="{ 'router-link-active router-link-exact-active': isAccountReportActive(item.report) }">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                {{ $t(item.label) }}
                             </span>
                         </router-link>
                     </div>
@@ -268,8 +293,7 @@
 
             <!-- HR Menu START -->
             <v-list-group value="hr" v-if="canAny([
-                'employees.view', 'employees.create', 'employee-works.view', 'employee-works.create',
-                'payroll.view', 'payroll.generate', 'hr-reports.view',
+                'employees.view', 'employees.create', 'payroll.view', 'departments.view', 'designations.view',
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -277,7 +301,7 @@
                             <span class="sidebar-menu-icon">
                                 <i class="fa-solid fa-people-group"></i>
                             </span>
-                            HR
+                            {{ $t('nav.hr') }}
                         </div>
                     </v-list-item>
                 </template>
@@ -286,68 +310,154 @@
                         v-if="canAny(['employees.view', 'payroll.view'])">
                         <span class="ml-5">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            HR Dashboard
+                            {{ $t('nav.hrDashboard') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_departments' }" class="custom_router_sub_link"
+                        v-if="can(['departments.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.departments') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_designations' }" class="custom_router_sub_link"
+                        v-if="can(['designations.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.designations') }}
                         </span>
                     </router-link>
                     <router-link :to="{ name: 'admin_hr_employees_list' }" class="custom_router_sub_link"
                         v-if="can(['employees.view'])">
                         <span class="ml-5">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Employees
+                            {{ $t('nav.employees') }}
                         </span>
                     </router-link>
                     <router-link :to="{ name: 'admin_hr_employee_add' }" class="custom_router_sub_link"
                         v-if="can(['employees.create'])">
                         <span class="ml-5">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Add Employee
-                        </span>
-                    </router-link>
-                    <router-link :to="{ name: 'admin_hr_works_entry' }" class="custom_router_sub_link"
-                        v-if="canAny(['employee-works.create', 'employee-works.update'])">
-                        <span class="ml-5">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Monthly Work Entry
-                        </span>
-                    </router-link>
-                    <router-link :to="{ name: 'admin_hr_works_list' }" class="custom_router_sub_link"
-                        v-if="can(['employee-works.view'])">
-                        <span class="ml-5">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Work History
-                        </span>
-                    </router-link>
-                    <router-link :to="{ name: 'admin_hr_payroll_generate' }" class="custom_router_sub_link"
-                        v-if="can(['payroll.generate'])">
-                        <span class="ml-5">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Generate Salary
-                        </span>
-                    </router-link>
-                    <router-link :to="{ name: 'admin_hr_salary_sheet' }" class="custom_router_sub_link"
-                        v-if="can(['payroll.view'])">
-                        <span class="ml-5">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Salary Sheet
-                        </span>
-                    </router-link>
-                    <router-link :to="{ name: 'admin_hr_reports' }" class="custom_router_sub_link"
-                        v-if="can(['hr-reports.view'])">
-                        <span class="ml-5">
-                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            Reports
+                            {{ $t('nav.addEmployee') }}
                         </span>
                     </router-link>
                 </div>
             </v-list-group>
             <!-- HR Menu END -->
 
+            <!-- Payroll Menu START -->
+            <v-list-group value="payroll" v-if="canAny([
+                'employee-works.view', 'employee-works.create', 'employee-works.update',
+                'employee-advances.view', 'payroll.view', 'payroll.generate', 'hr-reports.view',
+            ])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-money-check-dollar"></i>
+                            </span>
+                            {{ $t('nav.payroll') }}
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
+                    <router-link :to="{ name: 'admin_hr_works_entry' }" class="custom_router_sub_link"
+                        v-if="canAny(['employee-works.create', 'employee-works.update'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.monthlyWorkEntry') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_works_list' }" class="custom_router_sub_link"
+                        v-if="can(['employee-works.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.workHistory') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_advances' }" class="custom_router_sub_link"
+                        v-if="can(['employee-advances.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.advanceSalary') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_payroll_generate' }" class="custom_router_sub_link"
+                        v-if="can(['payroll.generate'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.generateSalary') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_salary_sheet' }" class="custom_router_sub_link"
+                        v-if="can(['payroll.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.salarySheet') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_hr_reports' }" class="custom_router_sub_link"
+                        v-if="can(['hr-reports.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.reports') }}
+                        </span>
+                    </router-link>
+                </div>
+            </v-list-group>
+            <!-- Payroll Menu END -->
+
+            <!-- Asset Menu START -->
+            <v-list-group value="asset" v-if="canAny(assetMenuPermissions)">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                            </span>
+                            {{ $t('nav.asset') }}
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
+                    <router-link :to="{ name: 'admin_asset_item_categories' }" class="custom_router_sub_link"
+                        v-if="can(['item-categories.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.itemCategory') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_asset_item_sub_categories' }" class="custom_router_sub_link"
+                        v-if="can(['item-sub-categories.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.itemSubCategory') }}
+                        </span>
+                    </router-link>
+                    <router-link :to="{ name: 'admin_asset_item_names' }" class="custom_router_sub_link"
+                        v-if="can(['item-names.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.itemName') }}
+                        </span>
+                    </router-link>
+                    <router-link v-for="link in visibleAssetMenuLinks" :key="link.name" :to="{ name: link.name }"
+                        class="custom_router_sub_link">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t(link.title) }}
+                        </span>
+                    </router-link>
+                </div>
+            </v-list-group>
+            <!-- Asset Menu END -->
+
             <v-list-item class="" v-if="can(['settings.update'])">
                 <router-link :to="{ name: 'admin_settings' }" class="custom_router_link">
                     <span class="sidebar-menu-icon">
                         <i class="fa-solid fa-gear"></i>
                     </span>
-                    Settings
+                    {{ $t('nav.settings') }}
                 </router-link>
             </v-list-item>
 
@@ -357,7 +467,7 @@
                     <span class="sidebar-menu-icon">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </span>
-                    Logout
+                    {{ $t('nav.logout') }}
                 </button>
             </v-list-item>
 
@@ -374,6 +484,10 @@
         </div>
 
         <div class="header_right_side_wrapper">
+
+            <div class="custom_header_top_language_content">
+                <LanguageSwitcher />
+            </div>
 
             <div class="custom_header_top_company_content">
 
@@ -399,10 +513,10 @@
                     <div class="menu-list">
                         <ul>
                             <li>
-                                <router-link :to="{ name: 'admin_profile' }">Profile</router-link>
+                                <router-link :to="{ name: 'admin_profile' }">{{ $t('nav.profile') }}</router-link>
                             </li>
                             <li>
-                                <button type="button" @click="logoutAccount">Logout</button>
+                                <button type="button" @click="logoutAccount">{{ $t('nav.logout') }}</button>
                             </li>
                         </ul>
                     </div>
@@ -422,9 +536,45 @@ import { useAuthStore } from '@/stores/auth';
 import { useSettingStore } from '@/stores/settings';
 import { logoPlaceholder, userPlaceholder } from '@/helpers/imagePlaceholder';
 import { useRoute, useRouter } from 'vue-router';
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue';
+import { t } from '@/i18n';
 const route = useRoute();
 const { can } = usePermission()
 const canAny = (perms) => perms.some((p) => can([p]))
+
+// Asset menu entries after the setup screens (categories, sub categories, items).
+const assetMenuLinks = [
+    { name: 'admin_asset_units', title: 'Units', permission: 'inventory-units.view' },
+    { name: 'admin_asset_warehouses', title: 'Stores / Warehouses', permission: 'warehouses.view' },
+    { name: 'admin_asset_material_requests', title: 'Material Requests', permission: 'material-requests.view' },
+    { name: 'admin_asset_purchase_orders', title: 'Purchase Orders', permission: 'purchase-orders.view' },
+    { name: 'admin_asset_transfers', title: 'Store Transfers', permission: 'inventory-transfers.view' },
+    { name: 'admin_asset_stocks', title: 'Inventory Stock', permission: 'inventory-stocks.view' },
+    { name: 'admin_asset_register', title: 'Asset Register', permission: 'assets.view' },
+    { name: 'admin_asset_employee_issues', title: 'Employee Issues', permission: 'employee-inventory.view' },
+    { name: 'admin_asset_disposals', title: 'Disposals', permission: 'inventory-disposals.view' },
+]
+const visibleAssetMenuLinks = computed(() => assetMenuLinks.filter((link) => can([link.permission])))
+const assetMenuPermissions = ['item-categories.view', 'item-sub-categories.view', 'item-names.view', ...assetMenuLinks.map((link) => link.permission)]
+
+const accountReportLinks = [
+    { report: 'general_ledger', label: 'nav.generalLedgerReport' },
+    { report: 'trial_balance', label: 'nav.trialBalance' },
+    { report: 'profit_loss', label: 'nav.profitLoss' },
+    { report: 'balance_sheet', label: 'nav.balanceSheet' },
+    { report: 'bank_reconciliation', label: 'nav.bankReconciliation' },
+    { report: 'work_order_collections', label: 'nav.workOrderCollections' },
+    { report: 'customer_collections', label: 'nav.customerCollections' },
+    { report: 'cash_transactions', label: 'nav.otherReports' },
+]
+
+// Missing ?report opens general_ledger; reports without their own link belong under "Other Reports"
+const isAccountReportActive = (report) => {
+    if (route.name !== 'admin_account_reports') return false
+    const current = route.query.report || 'general_ledger'
+    const hasOwnLink = accountReportLinks.some((l) => l.report === current)
+    return hasOwnLink ? current === report : report === 'cash_transactions'
+}
 
 // drawer state
 const drawer = ref(null)
@@ -443,7 +593,7 @@ onMounted(() => {
 const logoutAccount = async () => {
     try {
         await auth.logout()
-        setToast('success', 'Successfully Logout Account!')
+        setToast('success', t('auth.logoutSuccess'))
         router.push({ name: 'admin_login' })
     } catch (err) {
         setToast('error', err)
@@ -490,29 +640,6 @@ const toggleDrawer = () => {
 
 .custom_header_top_language_content {
     padding-right: 15px;
-}
-
-.__custom__header__top__language {
-    background-color: #ecedfd;
-    border-radius: 30px;
-    display: flex;
-    align-items: center;
-}
-
-.__custom__header__top__language__english {
-    font-size: 12px;
-    padding: 1px 5px;
-}
-
-.__custom__header__top__language__bangla {
-    font-size: 12px;
-    padding: 1px 5px;
-}
-
-.language__select__active {
-    background-color: #464deb;
-    color: #ffffff;
-    border-radius: 30px;
 }
 
 .custom_header_top_company_content {

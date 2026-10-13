@@ -23,7 +23,7 @@ class ChartOfAccountFactory extends Factory
             'name' => fake()->unique()->words(2, true),
             'account_number' => null,
             'sibling_level' => 0,
-            'balance' => 0,
+            'opening_balance' => 0,
             'opening_date' => fake()->date(),
             'active_status' => true,
             'is_transaction' => true,

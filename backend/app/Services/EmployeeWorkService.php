@@ -17,14 +17,14 @@ class EmployeeWorkService
     public function paginate(int $perPage, array $filters): LengthAwarePaginator
     {
         return EmployeeWork::query()
-            ->with('employee:id,employee_code,name,department,designation')
+            ->with(['employee:id,employee_code,name,department_id,designation_id', 'employee.department', 'employee.designation'])
             ->when($filters['month'] ?? null, fn (Builder $query, string $month) => $query->whereDate('salary_month', $month.'-01'))
             ->when($filters['employee_id'] ?? null, fn (Builder $query, int $employeeId) => $query->where('employee_id', $employeeId))
             ->when(
                 ($filters['department'] ?? null) || ($filters['designation'] ?? null) || ($filters['search'] ?? null),
                 fn (Builder $query) => $query->whereHas('employee', fn (Builder $query) => $query
-                    ->when($filters['department'] ?? null, fn (Builder $query, string $department) => $query->where('department', $department))
-                    ->when($filters['designation'] ?? null, fn (Builder $query, string $designation) => $query->where('designation', $designation))
+                    ->when($filters['department'] ?? null, fn (Builder $query, string $department) => $query->inDepartment($department))
+                    ->when($filters['designation'] ?? null, fn (Builder $query, string $designation) => $query->withDesignation($designation))
                     ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->search($search)))
             )
             ->orderByDesc('salary_month')
@@ -50,7 +50,7 @@ class EmployeeWorkService
             'salary_month' => $data['salary_month'].'-01',
             'created_by' => Auth::id(),
             'updated_by' => Auth::id(),
-        ])->load('employee');
+        ])->load(['employee.department', 'employee.designation']);
     }
 
     /**
@@ -63,7 +63,7 @@ class EmployeeWorkService
         $work->fill([...$data, 'updated_by' => Auth::id()]);
         $work->save();
 
-        return $work->load('employee');
+        return $work->load(['employee.department', 'employee.designation']);
     }
 
     public function delete(EmployeeWork $work): void
@@ -72,7 +72,7 @@ class EmployeeWorkService
 
         if ($this->hasLiveSalary($work)) {
             throw ValidationException::withMessages([
-                'salary_month' => 'A salary has been generated from this work record. Cancel that salary first.',
+                'salary_month' => __('A salary has been generated from this work record. Cancel that salary first.'),
             ]);
         }
 
@@ -96,7 +96,7 @@ class EmployeeWorkService
     {
         if ($work->isLocked()) {
             throw ValidationException::withMessages([
-                'salary_month' => 'The salary for this month is already approved or paid, so its work record can no longer change.',
+                'salary_month' => __('The salary for this month is already approved or paid, so its work record can no longer change.'),
             ]);
         }
     }

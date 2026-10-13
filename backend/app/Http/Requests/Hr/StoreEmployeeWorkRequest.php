@@ -59,7 +59,7 @@ class StoreEmployeeWorkRequest extends FormRequest
                 ->exists();
 
             if ($duplicate) {
-                $validator->errors()->add('salary_month', 'A work record for this employee and month already exists.');
+                $validator->errors()->add('salary_month', __('A work record for this employee and month already exists.'));
 
                 return;
             }

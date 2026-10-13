@@ -12,7 +12,8 @@ beforeEach(function () {
 
     $this->cash = ChartOfAccount::query()->where('account_number', '1010')->first();
     $this->bank = ChartOfAccount::query()->where('account_number', '1020')->first();
-    $this->bankCharges = ChartOfAccount::query()->where('account_number', '5090')->first();
+    // As in the payroll module, bank charges are debited to Purchase.
+    $this->bankCharges = ChartOfAccount::query()->where('account_number', '5010')->first();
 });
 
 /**

@@ -1,16 +1,16 @@
 <template>
     <v-dialog :model-value="modelValue" @update:model-value="(val) => emit('update:modelValue', val)" max-width="500">
         <v-card>
-            <v-card-title>{{ title }}</v-card-title>
+            <v-card-title>{{ $t(title) }}</v-card-title>
             <v-card-text>
                 <p class="mb-3">
-                    Due amount: <strong>{{ Number(dueAmount).toFixed(2) }}</strong>
+                    {{ $t('Due amount:') }} <strong>{{ Number(dueAmount).toFixed(2) }}</strong>
                 </p>
                 <form @submit.prevent="handleSubmit">
                     <div class="form-group mb-3" v-if="withPaymentAccount">
-                        <label>Payment Account (Cash/Bank):</label>
+                        <label>{{ $t('Payment Account (Cash/Bank):') }}</label>
                         <select class="form-control" v-model="form.payment_account_id" required>
-                            <option value="" disabled>Select item</option>
+                            <option value="" disabled>{{ $t('Select item') }}</option>
                             <option v-for="account in paymentAccounts" :key="account.id" :value="account.id">
                                 {{ account.account_number }} - {{ account.name }}
                             </option>
@@ -18,18 +18,18 @@
                         <div v-if="errors.payment_account_id" class="error-msg">{{ errors.payment_account_id }}</div>
                     </div>
                     <div class="form-group mb-3">
-                        <label>Amount:</label>
+                        <label>{{ $t('Amount:') }}</label>
                         <input type="number" step="0.01" min="0.01" :max="dueAmount" class="form-control"
                             v-model.number="form.amount" required />
                         <div v-if="errors.amount" class="error-msg">{{ errors.amount }}</div>
                     </div>
                     <div class="form-group mb-3">
-                        <label>Payment Date:</label>
+                        <label>{{ $t('Payment Date:') }}</label>
                         <input type="date" class="form-control" v-model="form.payment_date" :max="today" required />
                         <div v-if="errors.payment_date" class="error-msg">{{ errors.payment_date }}</div>
                     </div>
                     <div class="form-group mb-3">
-                        <label>Notes:</label>
+                        <label>{{ $t('Notes:') }}</label>
                         <input type="text" class="form-control" v-model="form.notes" />
                     </div>
                 </form>
@@ -38,11 +38,11 @@
                 <v-spacer></v-spacer>
                 <v-btn class="text-none" color="grey-lighten-3" rounded="0" variant="flat"
                     @click="emit('update:modelValue', false)">
-                    Cancel
+                    {{ $t('common.cancel') }}
                 </v-btn>
                 <v-btn class="text-none text-white" color="blue-darken-4" rounded="0" variant="flat"
                     :disabled="isSubmitting" :loading="isSubmitting" @click="handleSubmit">
-                    Record Payment
+                    {{ $t('Record Payment') }}
                 </v-btn>
             </v-card-actions>
         </v-card>
@@ -52,6 +52,7 @@
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import { useFetch } from '@/composables/useFetch';
+import { t } from '@/i18n';
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
@@ -120,7 +121,7 @@ const handleSubmit = async () => {
             const respErrors = e.response.data.data
             for (const key in respErrors) errors[key] = respErrors[key].join(' ')
         } else {
-            toast.error(e.response?.data?.message || 'Failed to record payment.')
+            toast.error(e.response?.data?.message || t('Failed to record payment.'))
         }
     } finally {
         isSubmitting.value = false

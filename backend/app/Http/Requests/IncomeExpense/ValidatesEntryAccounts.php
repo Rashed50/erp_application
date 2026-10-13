@@ -24,17 +24,17 @@ trait ValidatesEntryAccounts
         $expectedLabel = $type === 'income' ? 'revenue' : 'expense';
 
         if ($account && $account->account_type_id !== $expectedType) {
-            $validator->errors()->add('income_expense_account_id', "This account is not a {$expectedLabel} account.");
+            $validator->errors()->add('income_expense_account_id', __('This account is not a :type account.', ['type' => __($expectedLabel)]));
         } elseif ($account && ! $account->canReceiveEntries()) {
-            $validator->errors()->add('income_expense_account_id', 'This account cannot receive transactions (it is a group, inactive or closed).');
+            $validator->errors()->add('income_expense_account_id', __('This account cannot receive transactions (it is a group, inactive or closed).'));
         }
 
         $paymentAccount = ChartOfAccount::find($paymentAccountId);
 
         if ($paymentAccount && $paymentAccount->account_type_id !== AccountType::ASSET) {
-            $validator->errors()->add('payment_account_id', 'The payment account must be an asset account.');
+            $validator->errors()->add('payment_account_id', __('The payment account must be an asset account.'));
         } elseif ($paymentAccount && ! $paymentAccount->canReceiveEntries()) {
-            $validator->errors()->add('payment_account_id', 'This account cannot receive transactions (it is a group, inactive or closed).');
+            $validator->errors()->add('payment_account_id', __('This account cannot receive transactions (it is a group, inactive or closed).'));
         }
     }
 }

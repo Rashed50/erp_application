@@ -21,6 +21,6 @@ class SalePaymentController extends Controller
     {
         $sale = $this->saleService->recordPayment($sale, $request->validated());
 
-        return ApiResponse::success(new SaleResource($sale), 'Payment recorded successfully.', 201);
+        return ApiResponse::success(new SaleResource($sale), __('Payment recorded successfully.'), 201);
     }
 }

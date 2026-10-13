@@ -48,14 +48,14 @@ class ChartOfAccountController extends Controller
     {
         $account = $this->accountService->create($request->validated());
 
-        return ApiResponse::success(new ChartOfAccountResource($account), 'Account created successfully.', 201);
+        return ApiResponse::success(new ChartOfAccountResource($account), __('Account created successfully.'), 201);
     }
 
     public function update(UpdateChartOfAccountRequest $request, ChartOfAccount $ledger_account): JsonResponse
     {
         $account = $this->accountService->update($ledger_account, $request->validated());
 
-        return ApiResponse::success(new ChartOfAccountResource($account), 'Account updated successfully.');
+        return ApiResponse::success(new ChartOfAccountResource($account), __('Account updated successfully.'));
     }
 
     public function nextAccountNumber(ChartOfAccount $ledger_account): JsonResponse
@@ -68,11 +68,11 @@ class ChartOfAccountController extends Controller
     public function destroy(ChartOfAccount $ledger_account): JsonResponse
     {
         if (! $ledger_account->canBeDeleted()) {
-            return ApiResponse::error('This account is predefined, has child accounts, or has transactions posted against it and cannot be deleted.', 422);
+            return ApiResponse::error(__('This account is predefined, has child accounts, or has transactions posted against it and cannot be deleted.'), 422);
         }
 
         $this->accountService->delete($ledger_account);
 
-        return ApiResponse::success(message: 'Account deleted successfully.');
+        return ApiResponse::success(message: __('Account deleted successfully.'));
     }
 }

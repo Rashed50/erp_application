@@ -34,6 +34,6 @@ class PurchasePaymentController extends Controller
             'remarks' => $request->validated('notes'),
         ]);
 
-        return ApiResponse::success(new PurchaseResource($this->purchaseService->find($purchase->refresh())), 'Payment recorded successfully.', 201);
+        return ApiResponse::success(new PurchaseResource($this->purchaseService->find($purchase->refresh())), __('Payment recorded successfully.'), 201);
     }
 }

@@ -1,5 +1,6 @@
 import { ref, reactive } from 'vue'
 import axios from 'axios'
+import { t } from '@/i18n'
 
 export function useStoreForm(initialData = {}) {
   // reactive form data
@@ -49,7 +50,7 @@ export function useStoreForm(initialData = {}) {
                 }
             } else {
                 errorMessage.value =
-                    err.response?.data?.message || err.message || 'Something went wrong'
+                    err.response?.data?.message || err.message || t('common.somethingWentWrong')
             }
 
             isSubmitting.value = false

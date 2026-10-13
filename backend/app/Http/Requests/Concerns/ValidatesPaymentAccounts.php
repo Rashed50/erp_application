@@ -23,14 +23,14 @@ trait ValidatesPaymentAccounts
         $paymentAccount = ChartOfAccount::find($paymentAccountId);
 
         if ($paymentAccount && $paymentAccount->account_type_id !== AccountType::ASSET) {
-            $validator->errors()->add($field, 'The payment account must be an asset (cash/bank) account.');
+            $validator->errors()->add($field, __('The payment account must be an asset (cash/bank) account.'));
         } elseif ($paymentAccount && ! $paymentAccount->canReceiveEntries()) {
-            $validator->errors()->add($field, 'This account cannot receive transactions (it is a group, inactive or closed).');
+            $validator->errors()->add($field, __('This account cannot receive transactions (it is a group, inactive or closed).'));
         }
 
         foreach ($requiredAccountNumbers as $accountNumber) {
             if (! ChartOfAccount::query()->where('account_number', $accountNumber)->exists()) {
-                $validator->errors()->add($field, "The predefined account {$accountNumber} is missing. Run the chart of account seeder.");
+                $validator->errors()->add($field, __('The predefined account :number is missing. Run the chart of account seeder.', ['number' => $accountNumber]));
             }
         }
     }

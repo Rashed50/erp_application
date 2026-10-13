@@ -30,20 +30,20 @@ class SalaryDetailController extends Controller
     {
         $salaryDetail = $this->salaryDetailService->create($employee, $request->validated());
 
-        return ApiResponse::success(new SalaryDetailResource($salaryDetail), 'Salary configuration saved successfully.', 201);
+        return ApiResponse::success(new SalaryDetailResource($salaryDetail), __('Salary configuration saved successfully.'), 201);
     }
 
     public function update(UpdateSalaryDetailRequest $request, SalaryDetail $salaryDetail): JsonResponse
     {
         $salaryDetail = $this->salaryDetailService->update($salaryDetail, $request->validated());
 
-        return ApiResponse::success(new SalaryDetailResource($salaryDetail), 'Salary configuration updated successfully.');
+        return ApiResponse::success(new SalaryDetailResource($salaryDetail), __('Salary configuration updated successfully.'));
     }
 
     public function destroy(SalaryDetail $salaryDetail): JsonResponse
     {
         $this->salaryDetailService->delete($salaryDetail);
 
-        return ApiResponse::success(message: 'Salary configuration deleted successfully.');
+        return ApiResponse::success(message: __('Salary configuration deleted successfully.'));
     }
 }

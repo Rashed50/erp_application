@@ -13,22 +13,22 @@
                             <div class="col-md-5"></div>
                             <div class="col-md-3">
                                 <select class="form-select" v-model="filters.active_status">
-                                    <option value="">All Status</option>
-                                    <option value="1">Active</option>
-                                    <option value="0">Inactive</option>
+                                    <option value="">{{ $t('All Status') }}</option>
+                                    <option value="1">{{ $t('Active') }}</option>
+                                    <option value="0">{{ $t('Inactive') }}</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <div class="search-wrapper d-flex align-center gap-2">
-                                    <v-text-field variant="outlined" density="compact" placeholder="Search..."
+                                    <v-text-field variant="outlined" density="compact" :placeholder="$t('Search...')"
                                         v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
                                     <v-btn type="button" @click="fetchData" class="text-none text-white"
                                         color="blue-darken-3" rounded="0" variant="flat" min-width="100">
-                                        Search
+                                        {{ $t('Search') }}
                                     </v-btn>
                                     <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3"
                                         rounded="0" variant="flat" min-width="100">
-                                        Reload
+                                        {{ $t('Reload') }}
                                     </v-btn>
                                 </div>
                             </div>
@@ -40,13 +40,13 @@
                         <thead>
                             <tr>
                                 <th class="text-left">#</th>
-                                <th class="text-left">Name</th>
-                                <th class="text-left">Email</th>
-                                <th class="text-left">Phone</th>
-                                <th class="text-right">Balance</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center">Approval</th>
-                                <th class="text-center">Action</th>
+                                <th class="text-left">{{ $t('Name') }}</th>
+                                <th class="text-left">{{ $t('Email') }}</th>
+                                <th class="text-left">{{ $t('Phone') }}</th>
+                                <th class="text-right">{{ $t('Balance') }}</th>
+                                <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-center">{{ $t('Approval') }}</th>
+                                <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -55,14 +55,14 @@
                             <tr v-if="loading">
                                 <td colspan="8" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
-                                    Loading...
+                                    {{ $t('Loading...') }}
                                 </td>
                             </tr>
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
                                 <td colspan="8" class="text-center py-4">
-                                    No records found.
+                                    {{ $t('No records found.') }}
                                 </td>
                             </tr>
 
@@ -75,7 +75,7 @@
                                 <td class="text-right">{{ Number(item.current_balance).toFixed(2) }}</td>
                                 <td class="text-center">
                                     <span :class="item.active_status ? 'badge bg-success' : 'badge bg-secondary'">
-                                        {{ item.active_status ? 'Active' : 'Inactive' }}
+                                        {{ $t(item.active_status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
                                 <td class="text-center">
@@ -92,24 +92,24 @@
                                         <ul class="table-action-menu">
                                             <li class="menu-item" v-if="!item.approved_by && can(['customers.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'customer')">
-                                                    Approve
+                                                    {{ $t('Approve') }}
                                                 </button>
                                             </li>
                                             <li class="menu-item">
                                                 <router-link :to="{ name: 'admin_customer_ledger', params: { id: item.id } }"
                                                     class="menu-link">
-                                                    Ledger
+                                                    {{ $t('Ledger') }}
                                                 </router-link>
                                             </li>
                                             <li class="menu-item">
                                                 <router-link :to="{ name: 'admin_customer_edit', params: { id: item.id } }"
                                                     class="menu-link">
-                                                    Edit
+                                                    {{ $t('Edit') }}
                                                 </router-link>
                                             </li>
                                             <li class="menu-item">
                                                 <button type="button" class="menu-link" @click="handleDelete(item)">
-                                                    Delete
+                                                    {{ $t('Delete') }}
                                                 </button>
                                             </li>
                                         </ul>
@@ -141,6 +141,7 @@ import { usePermission } from '@/composables/usePermission';
 import ApprovalBadge from '@/components/common/ApprovalBadge.vue';
 import { useApproval } from '@/composables/useApproval';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
+import { t } from '@/i18n';
 
 const {
     items,
@@ -161,12 +162,12 @@ const { approve } = useApproval('/api/customers', () => fetchData())
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: `Delete customer "${item.name}"? This cannot be undone.`,
+        title: t('Are you sure?'),
+        text: t('Delete customer "{name}"? This cannot be undone.', { name: item.name }),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('Yes, delete'),
+        cancelButtonText: t('Cancel'),
     })
 
     if (!result.isConfirmed) return
@@ -179,7 +180,7 @@ const handleDelete = async (item) => {
         }
     } catch (e) {
         // A customer with ledger transactions cannot be deleted (422).
-        toast.error(e.response?.data?.message || 'Failed to delete customer.')
+        toast.error(e.response?.data?.message || t('Failed to delete customer.'))
     }
 }
 

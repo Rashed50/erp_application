@@ -38,6 +38,10 @@ class StoreSaleRequest extends FormRequest
             'issue_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:issue_date'],
             'notes' => ['nullable', 'string'],
+            // The journal entry's accounts, as on the payroll module's form; omitted
+            // to use the predefined defaults.
+            'debit_account_id' => ['nullable', Rule::exists('chart_of_accounts', 'id')->where('is_transaction', 1)->where('is_closed', 0)->whereNull('deleted_at'), 'different:credit_account_id'],
+            'credit_account_id' => ['nullable', Rule::exists('chart_of_accounts', 'id')->where('is_transaction', 1)->where('is_closed', 0)->whereNull('deleted_at')],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->withoutTrashed()],

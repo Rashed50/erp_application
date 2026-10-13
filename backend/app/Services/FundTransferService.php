@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\ChartOfAccount;
 use App\Models\FundTransfer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -60,7 +59,7 @@ class FundTransferService
                 'updated_by' => Auth::id(),
             ]);
 
-            $this->post($transfer, 1);
+            $this->post($transfer);
 
             return $this->find($transfer);
         });
@@ -72,26 +71,35 @@ class FundTransferService
     public function delete(FundTransfer $transfer): void
     {
         DB::transaction(function () use ($transfer) {
-            $this->post($transfer, -1);
+            $this->ledgerPostingService->reverse($transfer);
             $transfer->delete();
         });
     }
 
     /**
-     * Applies (direction 1) or reverses (direction -1) the transfer's double
-     * entry: credit the sender with the total, debit the receiver with the
-     * amount, and debit Bank Charges with the bank charge plus VAT.
+     * Post the transfer's journal entry, as the payroll module's fund
+     * transfer does: credit the sender with the total, debit the receiver
+     * with the amount, and debit the bank charge account with the bank charge
+     * plus VAT.
      */
-    private function post(FundTransfer $transfer, int $direction): void
+    private function post(FundTransfer $transfer): void
     {
-        $this->ledgerPostingService->credit(ChartOfAccount::findOrFail($transfer->credit_account_id), (float) $transfer->total_amount * $direction);
-        $this->ledgerPostingService->debit(ChartOfAccount::findOrFail($transfer->debit_account_id), (float) $transfer->amount * $direction);
+        $lines = [
+            ['account_id' => $transfer->credit_account_id, 'credit' => (float) $transfer->total_amount, 'particular' => 'F.T Sender'],
+            ['account_id' => $transfer->debit_account_id, 'debit' => (float) $transfer->amount, 'particular' => 'F.T Receiver'],
+        ];
 
         if ($transfer->charges() > 0) {
             $bankCharges = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::BANK_CHARGES_NUMBER)
                 ?? throw new \RuntimeException('Predefined account '.LedgerPostingService::BANK_CHARGES_NUMBER.' is missing.');
 
-            $this->ledgerPostingService->debit($bankCharges, $transfer->charges() * $direction);
+            $lines[] = ['account_id' => $bankCharges->id, 'debit' => $transfer->charges(), 'particular' => 'F.T bank charge'];
         }
+
+        $this->ledgerPostingService->post($transfer, [
+            'tr_no' => $transfer->receipt_no,
+            'date' => $transfer->transfer_date->toDateString(),
+            'general_particular' => 'Fund Transfer',
+        ], $lines);
     }
 }

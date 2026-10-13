@@ -30,6 +30,14 @@ class SupplierTransaction extends Model
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * The journal entry this ledger entry corresponds to.
+     */
+    public function accountTransaction(): BelongsTo
+    {
+        return $this->belongsTo(AccountTransaction::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

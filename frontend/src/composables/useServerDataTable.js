@@ -1,6 +1,8 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { toast } from 'vue3-toastify'
+import { t } from '@/i18n'
+import { usePrintable } from '@/composables/usePrintable'
 
 export function useServerDataTable({
   endpoint,
@@ -47,7 +49,7 @@ export function useServerDataTable({
       total.value = data.total
     } catch (e) {
       console.error(e)
-      toast.error('Failed to load data')
+      toast.error(t('common.failedToLoad'))
     } finally {
       loading.value = false
     }
@@ -76,13 +78,12 @@ export function useServerDataTable({
     fetchData()
   }
 
-  // print
+  // print — printConfig(rows) returns the shared printTable options ({ title, columns, totalRow? })
+  const printable = usePrintable()
   const printTable = () => {
     if (!printConfig || !items.value.length) return
 
-    const win = window.open('', '_blank')
-    win.document.write(printConfig(items.value))
-    win.document.close()
+    printable.printTable({ items: items.value, ...printConfig(items.value) })
   }
 
   return {

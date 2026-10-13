@@ -1,14 +1,14 @@
 <template lang="html">
     <v-card class="dashboard-wrapper">
         <div class="card-header">
-            <h4>Admin Dashboard</h4>
-            <p>Welcome, {{ auth.user.name ?? 'Boss' }}!</p>
+            <h4>{{ $t('common.adminDashboard') }}</h4>
+            <p>{{ $t('Welcome, {name}!', { name: auth.user.name ?? $t('Boss') }) }}</p>
         </div>
 
         <div class="card-body">
             <div class="dashboard-content">
 
-                Dashboard content goes here. You can add your dashboard components, charts, and statistics in this section.
+                {{ $t('Dashboard content goes here. You can add your dashboard components, charts, and statistics in this section.') }}
 
             </div>
         </div>

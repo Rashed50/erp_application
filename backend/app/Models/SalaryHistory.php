@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SalaryHistory extends Model
 {
@@ -45,7 +46,7 @@ class SalaryHistory extends Model
             'overtime_rate', 'basic_salary', 'house_rent', 'medical_allowance', 'transport_allowance',
             'food_allowance', 'other_allowance', 'total_allowance', 'overtime_amount', 'bonus',
             'other_addition', 'gross_salary', 'per_day_rate', 'absence_deduction', 'unpaid_leave_deduction',
-            'other_deduction', 'total_deduction', 'net_salary',
+            'other_deduction', 'advance_deduction', 'total_deduction', 'net_salary',
             'working_days', 'present_days', 'absent_days', 'paid_leave_days', 'unpaid_leave_days', 'overtime_hours',
         ])->mapWithKeys(fn (string $column) => [$column => 'decimal:2'])->all();
 
@@ -72,6 +73,14 @@ class SalaryHistory extends Model
     public function work(): BelongsTo
     {
         return $this->belongsTo(EmployeeWork::class, 'emp_work_id');
+    }
+
+    /**
+     * Advance installments deducted by this salary.
+     */
+    public function advanceRecoveries(): HasMany
+    {
+        return $this->hasMany(EmployeeAdvanceRecovery::class);
     }
 
     public function generator(): BelongsTo

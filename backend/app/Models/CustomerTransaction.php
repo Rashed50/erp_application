@@ -35,6 +35,14 @@ class CustomerTransaction extends Model
         return $this->belongsTo(WorkOrder::class)->withTrashed();
     }
 
+    /**
+     * The journal entry this ledger entry corresponds to.
+     */
+    public function accountTransaction(): BelongsTo
+    {
+        return $this->belongsTo(AccountTransaction::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

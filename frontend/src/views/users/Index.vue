@@ -1,7 +1,8 @@
 <template lang="html">
     <Breadcrumb title="All User" :buttons="[
         { text: 'Add User', link: { name: 'admin_user_add' }, icon: 'fa-solid fa-user-plus' },
-        { text: 'Roles', link: { name: 'admin_roles' }, icon: 'fa-solid fa-user-shield' }
+        { text: 'Roles', link: { name: 'admin_roles' }, icon: 'fa-solid fa-user-shield' },
+        ...(can(['permissions.view']) ? [{ text: 'Permissions', link: { name: 'admin_permissions' }, icon: 'fa-solid fa-key' }] : []),
     ]" />
 
     <div class="main-content-wrapper mt-4">
@@ -15,15 +16,15 @@
                             <div class="col-md-8"></div>
                             <div class="col-md-4">
                                 <div class="search-wrapper d-flex align-center gap-2">
-                                    <v-text-field variant="outlined" density="compact" placeholder="Search..."
+                                    <v-text-field variant="outlined" density="compact" :placeholder="$t('Search...')"
                                         v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
                                     <v-btn type="button" @click="fetchData" class="text-none text-white"
                                         color="blue-darken-3" rounded="0" variant="flat" min-width="100">
-                                        Search
+                                        {{ $t('Search') }}
                                     </v-btn>
                                     <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3"
                                         rounded="0" variant="flat" min-width="100">
-                                        Reload
+                                        {{ $t('Reload') }}
                                     </v-btn>
                                 </div>
                             </div>
@@ -38,16 +39,16 @@
                                     #
                                 </th>
                                 <th class="text-left">
-                                    Name
+                                    {{ $t('Name') }}
                                 </th>
                                 <th class="text-left">
-                                    Email
+                                    {{ $t('Email') }}
                                 </th>
                                 <th class="text-left">
-                                    Role
+                                    {{ $t('Role') }}
                                 </th>
                                 <th class="text-center">
-                                    Action
+                                    {{ $t('Action') }}
                                 </th>
                             </tr>
                         </thead>
@@ -57,14 +58,14 @@
                             <tr v-if="loading">
                                 <td colspan="6" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
-                                    Loading...
+                                    {{ $t('Loading...') }}
                                 </td>
                             </tr>
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
                                 <td colspan="6" class="text-center py-4">
-                                    No records found.
+                                    {{ $t('No records found.') }}
                                 </td>
                             </tr>
 
@@ -92,7 +93,7 @@
                                             <li class="menu-item">
                                                 <router-link :to="{ name: 'admin_user_edit', params: { id: item.id } }"
                                                     class="menu-link">
-                                                    Edit User/Assign
+                                                    {{ $t('Edit User/Assign') }}
                                                 </router-link>
                                             </li>
                                         </ul>
@@ -118,6 +119,9 @@
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
+import { usePermission } from '@/composables/usePermission';
+
+const { can } = usePermission()
 
 const search = ref('');
 

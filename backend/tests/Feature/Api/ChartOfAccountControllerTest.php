@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AccountTransaction;
 use App\Models\AccountType;
 use App\Models\ChartOfAccount;
 use App\Models\IncomeExpenseTransaction;
@@ -160,22 +161,45 @@ describe('store', function () {
 });
 
 describe('store opening balance', function () {
-    it('stores the opening balance as the account balance', function () {
+    it('posts an asset opening balance as a journal entry against Owner equity', function () {
+        $this->seed(ChartOfAccountSeeder::class);
         $actor = adminUser();
 
-        $this->actingAs($actor, 'sanctum')
-            ->postJson('/api/ledger-accounts', ['name' => 'Cash', 'account_type_id' => AccountType::ASSET, 'is_transaction' => true, 'balance' => 500])
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/ledger-accounts', ['name' => 'Petty Cash', 'account_type_id' => AccountType::ASSET, 'is_transaction' => true, 'opening_balance' => 500])
             ->assertStatus(201)
+            ->assertJsonPath('data.opening_balance', 500)
             ->assertJsonPath('data.balance', 500);
+
+        $account = ChartOfAccount::find($response->json('data.id'));
+        $entry = AccountTransaction::query()->whereMorphedTo('source', $account)->sole();
+        $equity = ChartOfAccount::where('account_number', '3000')->first();
+
+        expect($entry->general_particular)->toBe('Initial Ledger account setup')
+            ->and((float) $entry->total_amount)->toBe(500.0)
+            ->and($equity->balance)->toBe(500.0);
+    });
+
+    it('does not post an opening balance on a non-asset account', function () {
+        $this->seed(ChartOfAccountSeeder::class);
+        $actor = adminUser();
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/ledger-accounts', ['name' => 'Bank Loan', 'account_type_id' => AccountType::LIABILITY, 'is_transaction' => true, 'opening_balance' => 500])
+            ->assertStatus(201)
+            ->assertJsonPath('data.opening_balance', 500)
+            ->assertJsonPath('data.balance', 0);
+
+        expect(AccountTransaction::query()->whereMorphedTo('source', ChartOfAccount::find($response->json('data.id')))->exists())->toBeFalse();
     });
 
     it('rejects a negative opening balance', function () {
         $actor = adminUser();
 
         $this->actingAs($actor, 'sanctum')
-            ->postJson('/api/ledger-accounts', ['name' => 'Cash', 'account_type_id' => AccountType::ASSET, 'balance' => -1])
+            ->postJson('/api/ledger-accounts', ['name' => 'Cash', 'account_type_id' => AccountType::ASSET, 'opening_balance' => -1])
             ->assertStatus(422)
-            ->assertJsonStructure(['data' => ['balance']]);
+            ->assertJsonStructure(['data' => ['opening_balance']]);
     });
 });
 
@@ -317,7 +341,7 @@ describe('seeder', function () {
 
         $cash = ChartOfAccount::where('account_number', '1010')->first();
 
-        expect(ChartOfAccount::count())->toBe(32)
+        expect(ChartOfAccount::count())->toBe(31)
             ->and($cash->parent->account_number)->toBe('1000')
             ->and($cash->sibling_level)->toBe(1)
             ->and($cash->is_transaction)->toBeTrue()

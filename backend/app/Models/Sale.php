@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model
@@ -29,7 +30,6 @@ class Sale extends Model
             'vat_amount' => 'decimal:2',
             'net_total' => 'decimal:2',
             'paid_amount' => 'decimal:2',
-            'is_ledger_posted' => 'boolean',
         ];
     }
 
@@ -46,6 +46,24 @@ class Sale extends Model
     public function ledgerTransaction(): BelongsTo
     {
         return $this->belongsTo(CustomerTransaction::class, 'customer_transaction_id');
+    }
+
+    public function debitAccount(): BelongsTo
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'debit_account_id');
+    }
+
+    public function creditAccount(): BelongsTo
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'credit_account_id');
+    }
+
+    /**
+     * The journal entry this sale posted to the general ledger.
+     */
+    public function journalEntry(): MorphOne
+    {
+        return $this->morphOne(AccountTransaction::class, 'source');
     }
 
     public function items(): HasMany

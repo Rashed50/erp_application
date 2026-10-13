@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use App\Models\AccountType;
 use App\Models\Supplier;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class SupplierService
 {
+    public function __construct(private readonly LedgerPostingService $ledgerPostingService) {}
+
     /**
      * @param  bool|null  $active  Filter by active status, or null for all suppliers.
      */
@@ -30,18 +34,24 @@ class SupplierService
      */
     public function create(array $data): Supplier
     {
-        $openingBalance = $data['opening_balance'] ?? 0;
+        return DB::transaction(function () use ($data) {
+            $openingBalance = $data['opening_balance'] ?? 0;
 
-        return Supplier::create([
-            ...$data,
-            // The running balance starts out equal to the opening balance; it only
-            // moves afterwards through ledger transactions and purchases.
-            'opening_balance' => $openingBalance,
-            'current_balance' => $openingBalance,
-            'active_status' => $data['active_status'] ?? true,
-            'created_by' => Auth::id(),
-            'updated_by' => Auth::id(),
-        ]);
+            $supplier = Supplier::create([
+                ...$data,
+                // The running balance starts out equal to the opening balance; it only
+                // moves afterwards through ledger transactions and purchases.
+                'opening_balance' => $openingBalance,
+                'current_balance' => $openingBalance,
+                'active_status' => $data['active_status'] ?? true,
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
+            ]);
+
+            $this->postOpeningBalance($supplier);
+
+            return $supplier;
+        });
     }
 
     /**
@@ -58,5 +68,29 @@ class SupplierService
     public function delete(Supplier $supplier): void
     {
         $supplier->delete();
+    }
+
+    /**
+     * As in the payroll module, a positive opening balance is posted to the
+     * general ledger: debit the Assets group account, credit Accounts
+     * Payable. Skipped when those accounts have not been seeded.
+     */
+    private function postOpeningBalance(Supplier $supplier): void
+    {
+        $amount = (float) $supplier->opening_balance;
+        $assets = $this->ledgerPostingService->rootAccount(AccountType::ASSET);
+        $payable = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER);
+
+        if ($amount <= 0 || ! $assets || ! $payable) {
+            return;
+        }
+
+        $this->ledgerPostingService->post($supplier, [
+            'date' => today()->toDateString(),
+            'general_particular' => 'initialize supplier account',
+        ], [
+            ['account_id' => $assets->id, 'debit' => $amount, 'particular' => "{$amount} amt dr from {$assets->name}"],
+            ['account_id' => $payable->id, 'credit' => $amount, 'particular' => "{$amount} amt cr from {$payable->name}"],
+        ]);
     }
 }

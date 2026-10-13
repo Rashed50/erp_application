@@ -45,13 +45,13 @@ class SupplierPaymentController extends Controller
     {
         $payment = $this->paymentService->create($request->validated());
 
-        return ApiResponse::success(new SupplierPaymentResource($payment), 'Bill payment saved successfully.', 201);
+        return ApiResponse::success(new SupplierPaymentResource($payment), __('Bill payment saved successfully.'), 201);
     }
 
     public function destroy(SupplierPayment $supplier_payment): JsonResponse
     {
         $this->paymentService->delete($supplier_payment);
 
-        return ApiResponse::success(message: 'Bill payment deleted and reversed successfully.');
+        return ApiResponse::success(message: __('Bill payment deleted and reversed successfully.'));
     }
 }

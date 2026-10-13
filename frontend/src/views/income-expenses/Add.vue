@@ -12,10 +12,10 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="type">Type:</label>
+                                        <label for="type">{{ $t('Type:') }}</label>
                                         <select id="type" class="form-control" v-model="form.type" required>
-                                            <option value="expense">Expense</option>
-                                            <option value="income">Income</option>
+                                            <option value="expense">{{ $t('Expense') }}</option>
+                                            <option value="income">{{ $t('Income') }}</option>
                                         </select>
                                         <div v-if="errors.type" class="error-msg">{{ errors.type }}</div>
                                     </div>
@@ -23,7 +23,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="transaction_date">Date:</label>
+                                        <label for="transaction_date">{{ $t('Date:') }}</label>
                                         <input type="date" id="transaction_date" class="form-control"
                                             v-model="form.transaction_date" required />
                                         <div v-if="errors.transaction_date" class="error-msg">{{ errors.transaction_date }}</div>
@@ -33,28 +33,28 @@
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
                                         <label for="income_expense_account_id">
-                                            {{ form.type === 'income' ? 'Income Category' : 'Expense Category' }}:
+                                            {{ $t(form.type === 'income' ? 'Income Category' : 'Expense Category') }}:
                                         </label>
                                         <select id="income_expense_account_id" class="form-control"
                                             v-model="form.income_expense_account_id" required>
-                                            <option value="" disabled>Select a Category</option>
+                                            <option value="" disabled>{{ $t('Select a Category') }}</option>
                                             <option v-for="account in categoryAccounts" :key="account.id" :value="account.id">
                                                 {{ account.account_number }} {{ account.name }}
                                             </option>
                                         </select>
                                         <div v-if="errors.income_expense_account_id" class="error-msg">{{ errors.income_expense_account_id }}</div>
                                         <small v-if="!categoryAccounts.length" class="text-muted">
-                                            No {{ form.type === 'income' ? 'revenue' : 'expense' }} transaction accounts yet — add one under Chart of Accounts first.
+                                            {{ $t(form.type === 'income' ? 'No revenue transaction accounts yet — add one under Chart of Accounts first.' : 'No expense transaction accounts yet — add one under Chart of Accounts first.') }}
                                         </small>
                                     </div>
                                 </div>
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="payment_account_id">Payment Account (Cash/Bank):</label>
+                                        <label for="payment_account_id">{{ $t('Payment Account (Cash/Bank):') }}</label>
                                         <select id="payment_account_id" class="form-control"
                                             v-model="form.payment_account_id" required>
-                                            <option value="" disabled>Select a Payment Account</option>
+                                            <option value="" disabled>{{ $t('Select a Payment Account') }}</option>
                                             <option v-for="account in assetAccounts" :key="account.id" :value="account.id">
                                                 {{ account.account_number }} {{ account.name }}
                                             </option>
@@ -65,7 +65,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="amount">Amount:</label>
+                                        <label for="amount">{{ $t('Amount:') }}</label>
                                         <input type="number" step="0.01" min="0.01" id="amount" class="form-control"
                                             v-model.number="form.amount" required />
                                         <div v-if="errors.amount" class="error-msg">{{ errors.amount }}</div>
@@ -74,7 +74,7 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="reference_no">Reference No:</label>
+                                        <label for="reference_no">{{ $t('Reference No:') }}</label>
                                         <input type="text" id="reference_no" class="form-control"
                                             v-model="form.reference_no" />
                                     </div>
@@ -82,7 +82,7 @@
 
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
-                                        <label for="description">Description:</label>
+                                        <label for="description">{{ $t('Description:') }}</label>
                                         <textarea id="description" class="form-control" rows="2"
                                             v-model="form.description"></textarea>
                                     </div>
@@ -92,7 +92,7 @@
                                 <div class="col-md-12">
                                     <v-btn type="submit" class="text-none text-white mr-2" color="blue-darken-4"
                                         rounded="0" variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
-                                        Submit
+                                        {{ $t('Submit') }}
                                     </v-btn>
                                 </div>
                             </div>

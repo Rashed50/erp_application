@@ -58,7 +58,7 @@ class StorePurchasePaymentRequest extends FormRequest
             $amount = (float) $this->input('amount');
 
             if ($purchase && $amount > $purchase->due_amount) {
-                $validator->errors()->add('amount', "Payment amount cannot exceed the due amount ({$purchase->due_amount}).");
+                $validator->errors()->add('amount', __('Payment amount cannot exceed the due amount (:amount).', ['amount' => $purchase->due_amount]));
             }
         });
     }

@@ -19,10 +19,16 @@ use Illuminate\Validation\ValidationException;
  * again. Approved and Paid salaries are never recalculated; an approved
  * salary is corrected by cancelling it and generating again, a paid one by
  * an adjustment in a later month's work record.
+ *
+ * Advance installments deducted by a salary are recorded as advance
+ * recoveries on generation and given back when the salary is cancelled.
  */
 class PayrollService
 {
-    public function __construct(private readonly SalaryCalculationService $calculator) {}
+    public function __construct(
+        private readonly SalaryCalculationService $calculator,
+        private readonly EmployeeAdvanceService $advanceService,
+    ) {}
 
     /**
      * @param  array{month?: ?string, employee_id?: ?int, department?: ?string, designation?: ?string, status?: ?string, include_cancelled?: bool}  $filters
@@ -96,12 +102,14 @@ class PayrollService
                     ];
 
                     if ($row['existing_salary']) {
-                        $row['existing_salary']->update($attributes);
+                        $salary = tap($row['existing_salary'])->update($attributes);
                         $result['regenerated']++;
                     } else {
-                        SalaryHistory::create($attributes);
+                        $salary = SalaryHistory::create($attributes);
                         $result['created']++;
                     }
+
+                    $this->advanceService->syncSalaryRecoveries($salary, $row['advance_allocations']);
                 }
 
                 return $result;
@@ -109,7 +117,7 @@ class PayrollService
         } catch (UniqueConstraintViolationException) {
             // Another generation for the same month committed first.
             throw ValidationException::withMessages([
-                'month' => 'Salary for this month was generated at the same time by another user. Please reload and try again.',
+                'month' => __('Salary for this month was generated at the same time by another user. Please reload and try again.'),
             ]);
         }
     }
@@ -146,23 +154,27 @@ class PayrollService
     {
         if ($salary->status === SalaryHistory::STATUS_PAID) {
             throw ValidationException::withMessages([
-                'status' => 'A paid salary cannot be cancelled. Record an adjustment in a later month instead.',
+                'status' => __('A paid salary cannot be cancelled. Record an adjustment in a later month instead.'),
             ]);
         }
 
         if ($salary->status === SalaryHistory::STATUS_CANCELLED) {
-            throw ValidationException::withMessages(['status' => 'This salary is already cancelled.']);
+            throw ValidationException::withMessages(['status' => __('This salary is already cancelled.')]);
         }
 
-        $salary->update([
-            'status' => SalaryHistory::STATUS_CANCELLED,
-            'is_active_record' => null,
-            'cancelled_by' => Auth::id(),
-            'cancelled_at' => now(),
-            'cancel_reason' => $reason,
-        ]);
+        return DB::transaction(function () use ($salary, $reason) {
+            $salary->update([
+                'status' => SalaryHistory::STATUS_CANCELLED,
+                'is_active_record' => null,
+                'cancelled_by' => Auth::id(),
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+            ]);
 
-        return $salary;
+            $this->advanceService->removeSalaryRecoveries($salary);
+
+            return $salary;
+        });
     }
 
     /**

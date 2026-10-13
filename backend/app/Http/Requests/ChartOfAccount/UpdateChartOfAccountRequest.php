@@ -61,7 +61,7 @@ class UpdateChartOfAccountRequest extends FormRequest
             $account = $this->route('ledger_account');
 
             if ($account->is_predefined && $this->hasAny(['parent_id', 'is_transaction', 'is_closed'])) {
-                $validator->errors()->add('name', 'A predefined account can only be renamed or activated/deactivated.');
+                $validator->errors()->add('name', __('A predefined account can only be renamed or activated/deactivated.'));
 
                 return;
             }
@@ -70,21 +70,21 @@ class UpdateChartOfAccountRequest extends FormRequest
                 $parent = ChartOfAccount::find($this->input('parent_id'));
 
                 if ($parent->id === $account->id || in_array($parent->id, $account->descendantIds(), true)) {
-                    $validator->errors()->add('parent_id', 'An account cannot be moved under itself or one of its own children.');
+                    $validator->errors()->add('parent_id', __('An account cannot be moved under itself or one of its own children.'));
                 } elseif ($parent->is_transaction || $parent->is_closed) {
-                    $validator->errors()->add('parent_id', 'The parent must be an open group account.');
+                    $validator->errors()->add('parent_id', __('The parent must be an open group account.'));
                 } elseif ($parent->account_type_id !== $account->account_type_id) {
-                    $validator->errors()->add('parent_id', 'A child account must have the same type as its parent.');
+                    $validator->errors()->add('parent_id', __('A child account must have the same type as its parent.'));
                 }
             }
 
             if ($this->boolean('is_transaction') && $account->children()->exists()) {
-                $validator->errors()->add('is_transaction', 'An account with child accounts cannot be a transaction account.');
+                $validator->errors()->add('is_transaction', __('An account with child accounts cannot be a transaction account.'));
             }
 
             if ($this->has('is_transaction') && ! $this->boolean('is_transaction')
                 && ($account->categoryEntries()->exists() || $account->paymentEntries()->exists())) {
-                $validator->errors()->add('is_transaction', 'An account with posted entries must stay a transaction account.');
+                $validator->errors()->add('is_transaction', __('An account with posted entries must stay a transaction account.'));
             }
         });
     }

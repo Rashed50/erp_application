@@ -13,7 +13,7 @@
                             <div v-if="errorMessage" class="error-msg mb-2">{{ errorMessage }}</div>
                             <v-btn type="submit" class="text-none text-white" color="blue-darken-4" rounded="0"
                                 variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
-                                Save Employee
+                                {{ $t('Save Employee') }}
                             </v-btn>
                         </form>
                     </v-card>

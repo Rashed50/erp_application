@@ -52,6 +52,39 @@ class Employee extends Model
         return $this->hasOne(EmployeeDetail::class);
     }
 
+    public function bankDetail(): HasOne
+    {
+        return $this->hasOne(EmployeeBankDetail::class);
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function designation(): BelongsTo
+    {
+        return $this->belongsTo(Designation::class);
+    }
+
+    public function division(): BelongsTo
+    {
+        return $this->belongsTo(Division::class);
+    }
+
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(District::class);
+    }
+
+    /**
+     * The thana of the present address.
+     */
+    public function upazila(): BelongsTo
+    {
+        return $this->belongsTo(Upazila::class);
+    }
+
     public function files(): HasMany
     {
         return $this->hasMany(EmployeeFile::class);
@@ -70,6 +103,11 @@ class Employee extends Model
     public function salaryHistories(): HasMany
     {
         return $this->hasMany(SalaryHistory::class);
+    }
+
+    public function advances(): HasMany
+    {
+        return $this->hasMany(EmployeeAdvance::class);
     }
 
     public function creator(): BelongsTo
@@ -103,6 +141,16 @@ class Employee extends Model
                 ->orWhere('phone', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%");
         });
+    }
+
+    public function scopeInDepartment(Builder $query, string $name): Builder
+    {
+        return $query->whereHas('department', fn (Builder $query) => $query->where('name', $name));
+    }
+
+    public function scopeWithDesignation(Builder $query, string $name): Builder
+    {
+        return $query->whereHas('designation', fn (Builder $query) => $query->where('name', $name));
     }
 
     /**

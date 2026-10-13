@@ -12,22 +12,22 @@
                         <div class="row align-items-center">
                             <div class="col-md-3">
                                 <input type="text" class="form-control" v-model="filters.search"
-                                    placeholder="Search receipt no or remarks" />
+                                    :placeholder="$t('Search receipt no or remarks')" />
                             </div>
                             <div class="col-md-1"></div>
                             <div class="col-md-2">
                                 <select class="form-select" v-model="filters.account_id">
-                                    <option value="">All Accounts</option>
+                                    <option value="">{{ $t('All Accounts') }}</option>
                                     <option v-for="account in assetAccounts" :key="account.id" :value="account.id">
                                         {{ account.account_number }} {{ account.name }}
                                     </option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <input type="date" class="form-control" v-model="filters.from_date" placeholder="From" />
+                                <input type="date" class="form-control" v-model="filters.from_date" :placeholder="$t('From')" />
                             </div>
                             <div class="col-md-3">
-                                <input type="date" class="form-control" v-model="filters.to_date" placeholder="To" />
+                                <input type="date" class="form-control" v-model="filters.to_date" :placeholder="$t('To')" />
                             </div>
                         </div>
                     </div>
@@ -36,35 +36,35 @@
                     <v-table class="custom-bordered">
                         <thead>
                             <tr>
-                                <th class="text-left">S.N</th>
-                                <th class="text-left">Date</th>
-                                <th class="text-left">Receipt No</th>
-                                <th class="text-left">Sender (CR)</th>
-                                <th class="text-left">Receiver (DR)</th>
-                                <th class="text-right">Amount</th>
-                                <th class="text-right">Bank Charge</th>
-                                <th class="text-right">VAT</th>
-                                <th class="text-right">Total</th>
-                                <th class="text-left">Remarks</th>
-                                <th class="text-left">Created</th>
-                                <th class="text-center">Approval</th>
-                                <th class="text-center">Manage</th>
+                                <th class="text-left">{{ $t('S.N') }}</th>
+                                <th class="text-left">{{ $t('Date') }}</th>
+                                <th class="text-left">{{ $t('Receipt No') }}</th>
+                                <th class="text-left">{{ $t('Sender (CR)') }}</th>
+                                <th class="text-left">{{ $t('Receiver (DR)') }}</th>
+                                <th class="text-right">{{ $t('Amount') }}</th>
+                                <th class="text-right">{{ $t('Bank Charge') }}</th>
+                                <th class="text-right">{{ $t('VAT') }}</th>
+                                <th class="text-right">{{ $t('Total') }}</th>
+                                <th class="text-left">{{ $t('Remarks') }}</th>
+                                <th class="text-left">{{ $t('Created') }}</th>
+                                <th class="text-center">{{ $t('Approval') }}</th>
+                                <th class="text-center">{{ $t('Manage') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
                                 <td colspan="13" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
-                                    Loading...
+                                    {{ $t('Loading...') }}
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="13" class="text-center py-4">No data available in table</td>
+                                <td colspan="13" class="text-center py-4">{{ $t('No data available in table') }}</td>
                             </tr>
                             <tr v-else v-for="(item, index) in items" :key="item.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
                                 <td>{{ item.transfer_date }}</td>
-                                <td>{{ item.receipt_no || 'N/A' }}</td>
+                                <td>{{ item.receipt_no || $t('N/A') }}</td>
                                 <td>{{ item.credit_account_number }} {{ item.credit_account_name }}</td>
                                 <td>{{ item.debit_account_number }} {{ item.debit_account_name }}</td>
                                 <td class="text-right">{{ Number(item.amount).toFixed(2) }}</td>
@@ -72,7 +72,7 @@
                                 <td class="text-right">{{ Number(item.vat).toFixed(2) }}</td>
                                 <td class="text-right fw-bold">{{ Number(item.total_amount).toFixed(2) }}</td>
                                 <td>{{ item.remarks }}</td>
-                                <td>{{ item.created_by_name || 'Unknown' }}</td>
+                                <td>{{ item.created_by_name || $t('Unknown') }}</td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
                                 </td>
@@ -87,17 +87,17 @@
                                             <li class="menu-item"
                                                 v-if="!item.approved_by && can(['fund-transfers.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'transfer')">
-                                                    Approve
+                                                    {{ $t('Approve') }}
                                                 </button>
                                             </li>
                                             <li class="menu-item" v-if="item.attachment_url">
                                                 <a :href="item.attachment_url" target="_blank" class="menu-link">
-                                                    Attachment
+                                                    {{ $t('Attachment') }}
                                                 </a>
                                             </li>
                                             <li class="menu-item" v-if="can(['fund-transfers.delete'])">
                                                 <button type="button" class="menu-link" @click="handleDelete(item)">
-                                                    Delete
+                                                    {{ $t('Delete') }}
                                                 </button>
                                             </li>
                                         </ul>
@@ -129,6 +129,7 @@ import { useApproval } from '@/composables/useApproval';
 import { useFetch } from '@/composables/useFetch';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
+import { t } from '@/i18n';
 
 const { can } = usePermission()
 
@@ -162,12 +163,12 @@ const { approve } = useApproval('/api/accounting/internal-fund-transfer', () => 
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: `Delete this transfer of ${Number(item.total_amount).toFixed(2)}? All its postings will be reversed.`,
+        title: t('Are you sure?'),
+        text: t('Delete this transfer of {amount}? All its postings will be reversed.', { amount: Number(item.total_amount).toFixed(2) }),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('Yes, delete'),
+        cancelButtonText: t('Cancel'),
     })
 
     if (!result.isConfirmed) return
@@ -179,7 +180,7 @@ const handleDelete = async (item) => {
             fetchData()
         }
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete transfer.')
+        toast.error(e.response?.data?.message || t('Failed to delete transfer.'))
     }
 }
 
