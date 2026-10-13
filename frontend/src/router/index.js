@@ -17,6 +17,15 @@ const routes = [
         }
     },
 
+          {
+                path: '/attendance',
+                name: 'admin_attendance',
+                component: () => import('@/views/attendance/Add.vue'),
+                meta: {
+                    title: 'New Attendance',
+                }
+            },
+
     {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
@@ -61,6 +70,9 @@ const routes = [
                     permissions: ['roles.view']
                 }
             },
+         
+
+
 
             {
                 path: 'role-add',
