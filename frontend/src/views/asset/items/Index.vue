@@ -208,6 +208,33 @@
                             <div v-if="errors.item_title" class="error-msg">{{ errors.item_title }}</div>
                         </div>
                         <div class="col-md-6 form-group mb-3">
+                            <label for="item_unit">{{ $t('Unit:') }}</label>
+                            <select id="item_unit" class="form-select" v-model="form.unit_id">
+                                <option value="">{{ $t('None') }}</option>
+                                <option v-for="unit in units" :key="unit.id" :value="unit.id">
+                                    {{ unit.name }} ({{ unit.short_name }})
+                                </option>
+                            </select>
+                            <div v-if="errors.unit_id" class="error-msg">{{ errors.unit_id }}</div>
+                        </div>
+                        <div class="col-md-6 form-group mb-3">
+                            <label for="item_track_type">{{ $t('Stock Tracking:') }}</label>
+                            <!-- Asset items are always tracked by serial number (one register entry per unit). -->
+                            <select id="item_track_type" class="form-select" v-model="form.track_type"
+                                :disabled="form.itype_id === ITEM_TYPES[0].id">
+                                <option v-for="type in TRACK_TYPES" :key="type.id" :value="type.id">
+                                    {{ $t(type.name) }}
+                                </option>
+                            </select>
+                            <div v-if="errors.track_type" class="error-msg">{{ errors.track_type }}</div>
+                        </div>
+                        <div class="col-md-6 form-group mb-3">
+                            <label for="item_minimum_stock">{{ $t('Minimum Stock:') }}</label>
+                            <input type="number" id="item_minimum_stock" class="form-control" min="0" step="any"
+                                v-model="form.minimum_stock" />
+                            <div v-if="errors.minimum_stock" class="error-msg">{{ errors.minimum_stock }}</div>
+                        </div>
+                        <div class="col-md-6 form-group mb-3">
                             <label for="item_status">{{ $t('Status:') }}</label>
                             <select id="item_status" class="form-select" v-model="form.item_status">
                                 <option :value="true">{{ $t('Active') }}</option>
@@ -239,7 +266,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { usePermission } from '@/composables/usePermission';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { t } from '@/i18n';
-import { ITEM_TYPES, confirmStatusChange, fillValidationErrors } from '@/views/asset/helpers';
+import { ITEM_TYPES, TRACK_TYPES, confirmStatusChange, fillValidationErrors } from '@/views/asset/helpers';
 
 const {
     items,
@@ -303,8 +330,24 @@ const initialForm = () => ({
     item_name: '',
     item_title: '',
     item_code: '',
+    unit_id: '',
+    track_type: TRACK_TYPES[1].id,
+    minimum_stock: 0,
     item_status: true,
 })
+
+/* ---------- units ---------- */
+const units = ref([])
+
+const fetchUnits = async () => {
+    try {
+        const { data } = await axios.get('/api/asset/units/options')
+        units.value = data.data || []
+    } catch {
+        // The unit list is optional on the form; without access it simply stays empty.
+        units.value = []
+    }
+}
 
 const dialog = ref(false)
 const editingId = ref(null)
@@ -357,6 +400,9 @@ const openEditDialog = async (item) => {
         item_name: item.item_name,
         item_title: item.item_title,
         item_code: item.item_code,
+        unit_id: item.unit_id ?? '',
+        track_type: item.track_type,
+        minimum_stock: Number(item.minimum_stock ?? 0),
         item_status: item.item_status,
     })
     clearErrors()
@@ -376,9 +422,10 @@ const handleSubmit = async () => {
     isSubmitting.value = true
 
     try {
+        const payload = { ...form, unit_id: form.unit_id || null }
         const { data } = editingId.value
-            ? await axios.put(`/api/asset/item-names/${editingId.value}`, form)
-            : await axios.post('/api/asset/item-names', form)
+            ? await axios.put(`/api/asset/item-names/${editingId.value}`, payload)
+            : await axios.post('/api/asset/item-names', payload)
 
         if (data.success) {
             toast.success(data.message)
@@ -401,8 +448,14 @@ const toggleStatus = async (item) => {
     if (changed) fetchData()
 }
 
+// Asset items are always serial-tracked; the backend enforces the same rule.
+watch(() => form.itype_id, (typeId) => {
+    if (typeId === ITEM_TYPES[0].id) form.track_type = 'serial'
+})
+
 onMounted(() => {
     fetchCategories()
+    fetchUnits()
     fetchData()
 })
 

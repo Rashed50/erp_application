@@ -408,7 +408,7 @@
             <!-- Payroll Menu END -->
 
             <!-- Asset Menu START -->
-            <v-list-group value="asset" v-if="canAny(['item-categories.view', 'item-sub-categories.view', 'item-names.view'])">
+            <v-list-group value="asset" v-if="canAny(assetMenuPermissions)">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
                         <div class="custom_dropdown_router_link custom_mb_10">
@@ -439,6 +439,13 @@
                         <span class="ml-5">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
                             {{ $t('nav.itemName') }}
+                        </span>
+                    </router-link>
+                    <router-link v-for="link in visibleAssetMenuLinks" :key="link.name" :to="{ name: link.name }"
+                        class="custom_router_sub_link">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t(link.title) }}
                         </span>
                     </router-link>
                 </div>
@@ -534,6 +541,21 @@ import { t } from '@/i18n';
 const route = useRoute();
 const { can } = usePermission()
 const canAny = (perms) => perms.some((p) => can([p]))
+
+// Asset menu entries after the setup screens (categories, sub categories, items).
+const assetMenuLinks = [
+    { name: 'admin_asset_units', title: 'Units', permission: 'inventory-units.view' },
+    { name: 'admin_asset_warehouses', title: 'Stores / Warehouses', permission: 'warehouses.view' },
+    { name: 'admin_asset_material_requests', title: 'Material Requests', permission: 'material-requests.view' },
+    { name: 'admin_asset_purchase_orders', title: 'Purchase Orders', permission: 'purchase-orders.view' },
+    { name: 'admin_asset_transfers', title: 'Store Transfers', permission: 'inventory-transfers.view' },
+    { name: 'admin_asset_stocks', title: 'Inventory Stock', permission: 'inventory-stocks.view' },
+    { name: 'admin_asset_register', title: 'Asset Register', permission: 'assets.view' },
+    { name: 'admin_asset_employee_issues', title: 'Employee Issues', permission: 'employee-inventory.view' },
+    { name: 'admin_asset_disposals', title: 'Disposals', permission: 'inventory-disposals.view' },
+]
+const visibleAssetMenuLinks = computed(() => assetMenuLinks.filter((link) => can([link.permission])))
+const assetMenuPermissions = ['item-categories.view', 'item-sub-categories.view', 'item-names.view', ...assetMenuLinks.map((link) => link.permission)]
 
 const accountReportLinks = [
     { report: 'general_ledger', label: 'nav.generalLedgerReport' },

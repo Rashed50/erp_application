@@ -104,6 +104,11 @@
                                                 </button>
                                             </li>
                                             <li class="menu-item">
+                                                <button type="button" class="menu-link" @click="handlePrintInvoice(item)">
+                                                    {{ $t('Print Invoice') }}
+                                                </button>
+                                            </li>
+                                            <li class="menu-item">
                                                 <router-link :to="{ name: 'admin_purchase_edit', params: { id: item.id } }"
                                                     class="menu-link">
                                                     {{ $t('Edit') }}
@@ -149,9 +154,11 @@ import PaymentDialog from '@/components/common/PaymentDialog.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';
+import { usePrintable } from '@/composables/usePrintable';
 import { t } from '@/i18n';
 
 const { can } = usePermission()
+const { printInvoice } = usePrintable()
 
 const {
     items,
@@ -179,6 +186,30 @@ const openPaymentDialog = (item) => {
 }
 
 const { approve } = useApproval('/api/purchases', () => fetchData())
+
+// The list rows have no line items, so load the full purchase before printing.
+const handlePrintInvoice = async (item) => {
+    try {
+        const { data } = await axios.get(`/api/purchases/${item.id}`)
+        if (!data.success) return
+        const purchase = data.data
+        printInvoice({
+            title: 'Purchase Invoice',
+            partyLabel: 'Supplier:',
+            partyName: purchase.supplier_name,
+            meta: [
+                { label: 'Invoice No:', value: purchase.invoice_number },
+                { label: 'Issue Date:', value: purchase.issue_date },
+                { label: 'Purchase Date:', value: purchase.purchase_date },
+            ],
+            items: purchase.items ?? [],
+            totals: purchase,
+            notes: purchase.notes,
+        })
+    } catch (e) {
+        toast.error(e.response?.data?.message || t('Failed to load the invoice.'))
+    }
+}
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({

@@ -43,7 +43,7 @@ class ItemNameController extends Controller
 
     public function show(ItemName $itemName): JsonResponse
     {
-        return ApiResponse::success(new ItemNameResource($itemName->load(['category', 'subCategory'])));
+        return ApiResponse::success(new ItemNameResource($itemName->load(['category', 'subCategory', 'unit'])));
     }
 
     public function store(StoreItemNameRequest $request): JsonResponse

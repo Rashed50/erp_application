@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ItemName extends Model
 {
@@ -23,6 +24,15 @@ class ItemName extends Model
         self::TYPE_NON_ASSET => 'Non-Asset',
     ];
 
+    public const TRACK_QUANTITY = 'quantity';
+
+    public const TRACK_SERIAL = 'serial';
+
+    /**
+     * @var array<int, string>
+     */
+    public const TRACK_TYPES = [self::TRACK_QUANTITY, self::TRACK_SERIAL];
+
     protected $primaryKey = 'item_id';
 
     protected $guarded = [];
@@ -36,8 +46,40 @@ class ItemName extends Model
             'icatg_id' => 'integer',
             'iscatg_id' => 'integer',
             'itype_id' => 'integer',
+            'unit_id' => 'integer',
+            'minimum_stock' => 'decimal:3',
             'item_status' => 'boolean',
         ];
+    }
+
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(InventoryUnit::class, 'unit_id');
+    }
+
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(InventoryStock::class, 'item_id');
+    }
+
+    public function serials(): HasMany
+    {
+        return $this->hasMany(InventoryItemSerial::class, 'item_id');
+    }
+
+    public function assets(): HasMany
+    {
+        return $this->hasMany(InventoryAsset::class, 'item_id');
+    }
+
+    public function isAsset(): bool
+    {
+        return $this->itype_id === self::TYPE_ASSET;
+    }
+
+    public function isSerialTracked(): bool
+    {
+        return $this->track_type === self::TRACK_SERIAL;
     }
 
     public function category(): BelongsTo

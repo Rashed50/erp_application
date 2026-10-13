@@ -41,6 +41,9 @@ class StoreItemNameRequest extends FormRequest
                 Rule::unique('item_names', 'item_name')->where('iscatg_id', $this->integer('iscatg_id')),
             ],
             'item_title' => ['required', 'string', 'max:50'],
+            'unit_id' => ['nullable', 'integer', Rule::exists('inventory_units', 'id')],
+            'track_type' => ['nullable', Rule::in(ItemName::TRACK_TYPES)],
+            'minimum_stock' => ['nullable', 'numeric', 'gte:0'],
             'item_code' => ['required', 'string', 'max:10', Rule::unique('item_names', 'item_code')],
             'item_status' => ['nullable', 'boolean'],
         ];

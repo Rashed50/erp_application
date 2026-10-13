@@ -1,4 +1,5 @@
 import { useServerDataTable } from '@/composables/useServerDataTable'
+import { t } from '@/i18n'
 
 export function useReportDeposit() {
     const today = new Date().toISOString().substr(0, 10)
@@ -39,37 +40,17 @@ export function useReportDeposit() {
             name: item.name || 'N/A',
             mobile: item.mobile || 'N/A',
         }),
-        printConfig: (rows) => `
-      <html>
-      <head>
-        <title>Confirm Deposit List</title>
-        <style>
-          table{width:100%;border-collapse:collapse}
-          th,td{border:1px solid #000;padding:6px;font-size:12px}
-        </style>
-      </head>
-      <body onload="window.print();window.onafterprint=()=>window.close()">
-        <h3>Confirm Deposit List</h3>
-        <table>
-          <tr>
-            <th>SL</th><th>M.No</th><th>Name</th><th>Mobile</th>
-            <th>Amount</th><th>Method</th><th>Trnx</th><th>Date</th>
-          </tr>
-          ${rows.map(r => `
-            <tr>
-              <td>${r.DT_RowIndex}</td>
-              <td>${r.member_number}</td>
-              <td>${r.name}</td>
-              <td>${r.mobile}</td>
-              <td>${r.amount}</td>
-              <td>${r.paymentOption}</td>
-              <td>${r.tnx_id ?? ''}</td>
-              <td>${r.created_at_formatted}</td>
-            </tr>
-          `).join('')}
-        </table>
-      </body>
-      </html>
-    `,
+        printConfig: () => ({
+            title: t('Deposit Report'),
+            columns: [
+                { key: 'DT_RowIndex', label: 'ক্রম' },
+                { key: 'created_at', label: 'তারিখ' },
+                { key: 'name', label: 'নাম' },
+                { key: 'member_number', label: 'সদস্য নাম্বার' },
+                { key: 'mobile', label: 'মোবাইল নাম্বার' },
+                { key: 'payment_option', label: 'মাধ্যম' },
+                { key: 'amount', label: 'টাকা', align: 'right' },
+            ],
+        }),
     })
 }
