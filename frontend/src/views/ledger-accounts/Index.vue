@@ -56,9 +56,9 @@
                                 <th class="text-left">{{ $t('Number') }}</th>
                                 <th class="text-left">{{ $t('Parent') }}</th>
                                 <th class="text-left">{{ $t('Opening') }}</th>
+                                <th class="text-right">{{ $t('Amount') }}</th>
                                 <th class="text-center">{{ $t('Predefined') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-center">{{ $t('Is Closed') }}</th>
                                 <th class="text-left">{{ $t('Created') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Manage') }}</th>
@@ -86,18 +86,14 @@
                                 <td>{{ item.account_number || $t('N/A') }}</td>
                                 <td>{{ item.parent_name || $t('N/A') }}</td>
                                 <td>{{ item.opening_date ? new Date(item.opening_date).toLocaleDateString() : 'N/A' }}</td>
+                                <td class="text-right">{{ Number(item.balance ?? 0).toFixed(2) }}</td>
                                 <td class="text-center">{{ $t(item.is_predefined ? 'Yes' : 'No') }}</td>
                                 <td class="text-center">
                                     <span :class="item.active_status ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ $t(item.active_status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
-                                <td class="text-center">
-                                    <span :class="item.is_closed ? 'badge bg-dark' : ''">
-                                        {{ $t(item.is_closed ? 'Yes' : 'No') }}
-                                    </span>
-                                </td>
-                                <td>{{ item.created_by_name || $t('Unknown') }}</td>
+                                <td>{{ item.created_by_name || $t('Default') }}</td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
                                 </td>

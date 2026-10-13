@@ -24,6 +24,7 @@ class ItemNameFactory extends Factory
             // The item's category is always its sub category's category.
             'icatg_id' => fn (array $attributes) => ItemSubCategory::find($attributes['iscatg_id'])->icatg_id,
             'itype_id' => ItemName::TYPE_ASSET,
+            'track_type' => ItemName::TRACK_SERIAL,
             'item_name' => fake()->unique()->words(2, true),
             'item_title' => fake()->words(3, true),
             'item_code' => fake()->unique()->numerify('I-#####'),
@@ -39,6 +40,17 @@ class ItemNameFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'itype_id' => ItemName::TYPE_NON_ASSET,
+            'track_type' => ItemName::TRACK_QUANTITY,
+        ]);
+    }
+
+    /**
+     * Indicate that the (non-asset) item is tracked unit by unit.
+     */
+    public function serialTracked(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'track_type' => ItemName::TRACK_SERIAL,
         ]);
     }
 
