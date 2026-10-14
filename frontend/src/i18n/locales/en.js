@@ -58,6 +58,7 @@ export default {
         itemSubCategory: 'Item Sub Category',
         itemName: 'Item Name',
         reports: 'Reports',
+        attendance: 'Attendance',
         generalLedgerReport: 'General Ledger Report',
         trialBalance: 'Trial Balance',
         profitLoss: 'Profit & Loss',

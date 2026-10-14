@@ -403,6 +403,13 @@
                             {{ $t('nav.reports') }}
                         </span>
                     </router-link>
+                    <router-link :to="{ name: 'admin_hr_attendance' }" class="custom_router_sub_link"
+                        v-if="can(['hr-attendance.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.attendance') }}
+                        </span>
+                    </router-link>
                 </div>
             </v-list-group>
             <!-- Payroll Menu END -->
@@ -502,8 +509,8 @@
                                     </div>
 
 
-                                    <img :src="auth?.user?.image_url || userPlaceholder" :data-placeholder="userPlaceholder"
-                                        alt="Profile" />
+                                    <img :src="auth?.user?.image_url || userPlaceholder"
+                                        :data-placeholder="userPlaceholder" alt="Profile" />
 
                                 </div>
                             </span>
