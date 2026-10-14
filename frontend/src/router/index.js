@@ -340,6 +340,15 @@ const routes = [
                     permissions: ['hr-reports.view']
                 }
             },
+            {
+                path: 'hr/attendance',
+                name: 'admin_hr_attendance',
+                component: () => import('@/views/hr/payroll/attendance/Index.vue'),
+                meta: {
+                    title: 'HR Attendance',
+                    permissions: ['hr-attendance.view']
+                }
+            },
             /* ====================== HR Route END ====================== */
 
             /* ====================== Asset Route START ====================== */
