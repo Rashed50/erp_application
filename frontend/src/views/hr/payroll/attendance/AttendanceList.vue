@@ -1,23 +1,20 @@
 <template>
     <div class="card p-4 shadow-sm border-0">
-        <h4 class="mb-4 text-primary">
-            <i class="fa-solid fa-list me-2"></i> Attendance List & Search Management
-        </h4>
 
-        <!-- Search Form matching Controller Parameters -->
-        <div class="card bg-light p-3 border-0 mb-4">
-            <h6 class="text-muted mb-3">Search Filters ($request)</h6>
-            <div class="row g-3">
-             
+
+        <!-- Search Form in a single row without Reset button -->
+        <div class="card bg-light p-3 border-1 mb-4">
+            <h6 class="text-muted mb-3">Search Filters</h6>
+            <div class="row g-3 align-items-end">
 
                 <!-- Date From -->
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label small fw-bold">Date From</label>
                     <input type="date" class="form-control" v-model="filters.date_from" />
                 </div>
 
                 <!-- Date To -->
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label small fw-bold">Date To</label>
                     <input type="date" class="form-control" v-model="filters.date_to" />
                 </div>
@@ -42,13 +39,16 @@
                 <!-- Employee ID -->
                 <div class="col-md-2">
                     <label class="form-label small fw-bold">Employee ID</label>
-                    <input type="text" class="form-control" v-model="filters.employee_id" placeholder="e.g. EMP001" />
+                    <input type="text" class="form-control" v-model="filters.employee_id" placeholder="e.g. EMP001"
+                        @keyup.enter="fetchAttendances" />
                 </div>
 
-                <!-- Search & Reset Buttons -->
-                <div class="col-md-2 d-flex align-items-end gap-1">
-                    <button class="btn btn-primary w-50" @click="fetchAttendances">Search</button>
-                    <button class="btn btn-secondary w-50" @click="resetFilters">Reset</button>
+                <!-- Search Button -->
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" :disabled="loading" @click="fetchAttendances">
+                        <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="fa-solid fa-search me-1"></i> Search
+                    </button>
                 </div>
             </div>
         </div>
@@ -96,6 +96,10 @@
 </template>
 
 <script>
+
+import axios from 'axios';
+import { toast } from 'vue3-toastify';
+
 export default {
     name: 'AttendanceList',
     data() {
@@ -103,7 +107,6 @@ export default {
             loading: false,
             records: [],
             filters: {
-         
                 date_from: '',
                 date_to: '',
                 status: '',
@@ -118,8 +121,10 @@ export default {
     methods: {
         async fetchAttendances() {
             this.loading = true;
+
+
+
             try {
-                // Building query parameters matching Laravel Controller ($request)
                 const params = new URLSearchParams();
                 if (this.filters.date_from) params.append('date_from', this.filters.date_from);
                 if (this.filters.date_to) params.append('date_to', this.filters.date_to);
@@ -127,26 +132,14 @@ export default {
                 if (this.filters.employee_id) params.append('employee_id', this.filters.employee_id);
                 params.append('per_page', this.filters.per_page);
 
-                // Axios API integration:
-                // const response = await axios.get(`/api/admin/daily-attendances?${params.toString()}`);
-                // this.records = response.data.data || response.data;
-
-                this.records = [];
+                const response = await axios.get(`/api/attendances/search?${params.toString()}`);
+                this.records = response.data.data || response.data;
             } catch (error) {
                 console.error('Error fetching attendance data:', error);
             } finally {
                 this.loading = false;
             }
-        },
-        resetFilters() {
-            this.filters = {
-                date_from: '',
-                date_to: '',
-                status: '',
-                employee_id: '',
-                per_page: 25
-            };
-            this.fetchAttendances();
+
         },
         getStatusBadge(status) {
             switch (status) {

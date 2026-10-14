@@ -1,44 +1,43 @@
 <template>
     <div class="container mt-4">
-       
+        <!-- Header & Navigation Menu aligned in the same row -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="m-0">Attendance Management System</h4>
 
-        <!-- Navigation Menu / Tabs (Aligned to Right) -->
-        <div class="d-flex justify-content-end mb-4">
             <div class="btn-group" role="group">
-                <button class="btn" :class="activeTab === 'list' ? 'btn-primary' : 'btn-outline-primary'"
-                    @click="activeTab = 'list'">
-                    <i class="fa-solid fa-list me-1"></i> Attendance List / Search
+                <button class="btn" :class="activeTab === 1 ? 'btn-primary' : 'btn-outline-primary'"
+                    @click="activeTab = 1">
+                    <i class="fa-solid fa-search me-1"></i> Search
                 </button>
-                <button class="btn" :class="activeTab === 'in' ? 'btn-success' : 'btn-outline-success'"
-                    @click="activeTab = 'in'">
-                    <i class="fa-solid fa-plus me-1"></i> Attendance IN
+                <button class="btn" :class="activeTab === 2 ? 'btn-success' : 'btn-outline-success'"
+                    @click="activeTab = 2">
+                    <i class="fa-solid fa-plus me-1"></i> IN
                 </button>
-                <button class="btn" :class="activeTab === 'out' ? 'btn-danger' : 'btn-outline-danger'"
-                    @click="activeTab = 'out'">
-                    <i class="fa-solid fa-minus me-1"></i> Attendance Out
+                <button class="btn" :class="activeTab === 3 ? 'btn-danger' : 'btn-outline-danger'"
+                    @click="activeTab = 3">
+                    <i class="fa-solid fa-minus me-1"></i> Out
                 </button>
             </div>
         </div>
 
         <!-- Dynamic Components Container -->
         <div class="card p-4 shadow-sm border-0">
-            <!-- List / Search Component -->
-            <AttendanceList v-if="activeTab === 'list'" :records="attendanceList" @delete-record="handleDelete" />
+            <!-- List / Search Component (Tab 1) -->
+            <AttendanceList v-if="activeTab === 1" :records="attendanceList" @delete-record="handleDelete" />
 
-            <!-- Attendance IN Component -->
-            <AttendanceIn v-if="activeTab === 'in'" :employees="attendanceList" @mark-in="handleMarkIn"
-                @cancel="activeTab = 'list'" />
+            <!-- Attendance IN Component (Tab 2) -->
+            <AttendanceIn v-if="activeTab === 2" :employees="attendanceList" @mark-in="handleMarkIn"
+                @cancel="activeTab = 1" />
 
-            <!-- Attendance OUT Component -->
-            <AttendanceOut v-if="activeTab === 'out'" :employees="attendanceList" @mark-out="handleMarkOut"
-                @cancel="activeTab = 'list'" />
+            <!-- Attendance OUT Component (Tab 3) -->
+            <AttendanceOut v-if="activeTab === 3" :employees="attendanceList" @mark-out="handleMarkOut"
+                @cancel="activeTab = 1" />
         </div>
     </div>
 </template>
 
 <script>
 import AttendanceList from './AttendanceList.vue'
-import AddEmployee from './AddEmployee.vue'
 import AttendanceIn from './AttendanceIn.vue'
 import AttendanceOut from './AttendanceOut.vue'
 
@@ -46,16 +45,15 @@ export default {
     name: 'AttendanceMain',
     components: {
         AttendanceList,
-        AddEmployee,
         AttendanceIn,
         AttendanceOut
     },
     data() {
         return {
-            activeTab: 'list',
+            activeTab: 1, // 1 for List/Search, 2 for IN, 3 for OUT
             attendanceList: [
-                { id: 1, name: 'John Doe', code: 'EMP001', date: '2026-10-13', inTime: '09:00 AM', outTime: '05:00 PM', status: 'Present' },
-                { id: 2, name: 'Jane Smith', code: 'EMP002', date: '2026-10-13', inTime: '09:15 AM', outTime: '', status: 'Late' },
+                { id: 1, name: 'John Doe', code: 'EMP001', date: '2026-10-14', inTime: '09:00 AM', outTime: '05:00 PM', status: 'present' },
+                { id: 2, name: 'Jane Smith', code: 'EMP002', date: '2026-10-14', inTime: '09:15 AM', outTime: '', status: 'late' },
             ]
         }
     },
@@ -67,24 +65,24 @@ export default {
                 date: new Date().toISOString().slice(0, 10),
                 inTime: '',
                 outTime: '',
-                status: 'Absent'
+                status: 'absent'
             })
-            this.activeTab = 'list'
+            this.activeTab = 1
         },
         handleMarkIn(data) {
             const emp = this.attendanceList.find(i => i.id === data.id)
             if (emp) {
                 emp.inTime = data.time
-                emp.status = 'Present'
+                emp.status = 'present'
             }
-            this.activeTab = 'list'
+            this.activeTab = 1
         },
         handleMarkOut(data) {
             const emp = this.attendanceList.find(i => i.id === data.id)
             if (emp) {
                 emp.outTime = data.time
             }
-            this.activeTab = 'list'
+            this.activeTab = 1
         },
         handleDelete(id) {
             this.attendanceList = this.attendanceList.filter(i => i.id !== id)
