@@ -2,9 +2,7 @@
     <div class="card p-4 shadow-sm border-0">
 
         <!-- Search Section -->
-        <div class="card bg-light border-success p-3 mb-4">
-            <h6 class="fw-bold mb-3">Search Attendance</h6>
-
+        <div class="bg-light p-3 mb-4 border-bottom">
             <div class="row g-3 align-items-end">
                 <div class="col-md-3 col-sm-6">
                     <label class="form-label small fw-bold">Attendance Date</label>
@@ -14,28 +12,24 @@
                 <div class="col-md-3 col-sm-6">
                     <label class="form-label small fw-bold">Shift</label>
                     <select class="form-select" v-model="filters.shift_id">
-                        <option value="">All Shifts</option>
-                        <option v-for="shift in shifts" :key="shift.id" :value="shift.id">
-                            {{ shift.name }}
-                        </option>
+                        <option value="">Select Shift</option>
+                        <option value="day">Day Shift</option>
+                        <option value="night">Night Shift</option>
                     </select>
                 </div>
 
-                <div class="col-md-3 col-sm-6">
-                    <label class="form-label small fw-bold">Employee ID</label>
+                <div class="col-md-4 col-sm-8">
+                    <label class="form-label small fw-bold">Employee ID / Name</label>
                     <input type="text" class="form-control" v-model.trim="filters.employee_id"
                         placeholder="Enter Employee ID" @keyup.enter="fetchEmployees" />
                 </div>
 
-                <div class="col-md-3 col-sm-6 d-flex gap-2">
+                <!-- Separate Search Button -->
+                <div class="col-md-2 col-sm-4">
                     <button class="btn btn-primary w-100" :disabled="loading" @click="fetchEmployees">
                         <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
                         <i v-else class="fa-solid fa-search me-1"></i>
                         Search
-                    </button>
-
-                    <button class="btn btn-secondary w-100" :disabled="loading" @click="resetFilters">
-                        Reset
                     </button>
                 </div>
             </div>
@@ -44,7 +38,44 @@
         <!-- Show only after search -->
         <template v-if="hasSearched">
 
-            <!-- Search Results -->
+            <!-- Submit Section (above the table) -->
+            <div v-if="employeesList.length > 0" class="card border-success bg-light p-3 mb-3">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold mb-1">First Punch At (IN Time)</label>
+                        <input type="datetime-local" class="form-control" v-model="actionForm.first_punch_at" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold mb-1">Status</label>
+                        <select class="form-select" v-model="actionForm.status">
+                            <option value="present">Present</option>
+                            <option value="late">Late</option>
+                            <option value="absent">Absent</option>
+                            <option value="half_day">Half Day</option>
+                            <option value="leave">On Leave</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 text-center">
+                        <span class="fw-bold text-success small">
+                            Selected: {{ selectedEmployeeIds.length }} / {{ employeesList.length }}
+                        </span>
+                    </div>
+
+                    <div class="col-md-2 text-end">
+                        <!-- Smaller submit button -->
+                        <button class="btn btn-success btn-sm px-4"
+                            :disabled="submitting || loading || selectedEmployeeIds.length === 0"
+                            @click="submitBatchIn">
+                            <span v-if="submitting" class="spinner-border spinner-border-sm me-1"></span>
+                            Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Results Table -->
             <div class="table-responsive mb-3">
                 <table class="table table-bordered table-striped align-middle">
                     <thead class="table-dark">
@@ -77,9 +108,9 @@
 
                         <tr v-for="(emp, index) in employeesList" v-else :key="emp.emp_auto_id">
                             <td>{{ index + 1 }}</td>
-                            <td>{{ emp.employee_id }}</td>
+                            <td>{{ emp.employee_id || '-' }}</td>
                             <td>{{ emp.name || '-' }}</td>
-                            <td>{{ emp.shift?.name || '-' }}</td>
+                            <td>{{ emp.shift?.name || emp.shift_name || '-' }}</td>
                             <td>{{ searchedDate }}</td>
                             <td>{{ emp.attendance?.first_punch_at || '-' }}</td>
                             <td class="text-center">
@@ -89,41 +120,6 @@
                         </tr>
                     </tbody>
                 </table>
-            </div>
-
-            <div v-if="employeesList.length" class="d-flex justify-content-between mb-3">
-                <span class="small text-muted">
-                    Total Employees: {{ employeesList.length }}
-                </span>
-
-                <span class="small fw-bold text-success">
-                    Selected: {{ selectedEmployeeIds.length }}
-                </span>
-            </div>
-
-            <!-- Submit Section -->
-            <div v-if="employeesList.length > 0" class="card border-success p-3 mb-3">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold">First Punch At (IN Time)</label>
-                        <input type="datetime-local" class="form-control" v-model="actionForm.first_punch_at" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <span class="fw-bold text-success">
-                            Selected Employees: {{ selectedEmployeeIds.length }}
-                        </span>
-                    </div>
-
-                    <div class="col-md-4 text-end">
-                        <button class="btn btn-success px-4"
-                            :disabled="submitting || loading || selectedEmployeeIds.length === 0"
-                            @click="submitBatchIn">
-                            <span v-if="submitting" class="spinner-border spinner-border-sm me-1"></span>
-                            Submit
-                        </button>
-                    </div>
-                </div>
             </div>
 
         </template>
@@ -147,7 +143,6 @@ export default {
             hasSearched: false,
 
             employeesList: [],
-            shifts: [],
             selectedEmployeeIds: [],
 
             filters: {
@@ -159,7 +154,8 @@ export default {
             searchedDate: '',
 
             actionForm: {
-                first_punch_at: `${today}T09:00`
+                first_punch_at: `${today}T09:00`,
+                status: 'present'
             }
         };
     },
@@ -168,9 +164,7 @@ export default {
         allSelected() {
             return (
                 this.employeesList.length > 0 &&
-                this.employeesList.every(emp =>
-                    this.selectedEmployeeIds.includes(emp.emp_auto_id)
-                )
+                this.selectedEmployeeIds.length === this.employeesList.length
             );
         }
     },
@@ -197,10 +191,6 @@ export default {
         }
     },
 
-    mounted() {
-        this.fetchShifts();
-    },
-
     methods: {
         localDate() {
             const now = new Date();
@@ -213,15 +203,6 @@ export default {
             this.hasSearched = false;
             this.employeesList = [];
             this.selectedEmployeeIds = [];
-        },
-
-        async fetchShifts() {
-            try {
-                const response = await axios.get('/api/shifts');
-                this.shifts = response.data.data || response.data || [];
-            } catch (error) {
-                console.error('Shift fetch error:', error);
-            }
         },
 
         async fetchEmployees() {
@@ -238,7 +219,7 @@ export default {
             this.employeesList = [];
 
             try {
-                const response = await axios.get('/api/attendances/search', {
+                const response = await axios.get('/api/get-employees-for-attendance-in', {
                     params: {
                         date: this.filters.date,
                         shift_id: this.filters.shift_id,
@@ -246,36 +227,38 @@ export default {
                     }
                 });
 
-                this.employeesList = response.data.data || response.data || [];
+                let list =
+                    response.data.data?.employees ||
+                    response.data.employees ||
+                    response.data.data ||
+                    response.data ||
+                    [];
+
+                if (!Array.isArray(list)) list = list.data || [];
+
+                // Every row MUST have a unique emp_auto_id, otherwise checkboxes
+                // all share the same value (undefined) and select together.
+                // If your API uses a different key, change `emp.id` below.
+                this.employeesList = list.map(emp => ({
+                    ...emp,
+                    emp_auto_id: emp.emp_auto_id ?? emp.id,
+                    employee_id: emp.employee_id ?? emp.emp_id ?? emp.emp_code ?? ''
+                }));
+
                 this.searchedDate = this.filters.date;
             } catch (error) {
-                console.error('Employee search error:', error);
+                console.error('Employee search API error:', error);
                 toast.error(
-                    error.response?.data?.message || 'Failed to search employees.'
+                    error.response?.data?.message || 'Failed to fetch employee records.'
                 );
             } finally {
                 this.loading = false;
             }
         },
 
-        resetFilters() {
-            const today = this.localDate();
-
-            this.filters = {
-                date: today,
-                shift_id: '',
-                employee_id: ''
-            };
-
-            this.actionForm.first_punch_at = `${today}T09:00`;
-            this.clearResults();
-        },
-
         toggleSelectAll(event) {
             if (event.target.checked) {
-                this.selectedEmployeeIds = [
-                    ...new Set(this.employeesList.map(emp => emp.emp_auto_id))
-                ];
+                this.selectedEmployeeIds = this.employeesList.map(emp => emp.emp_auto_id);
             } else {
                 this.selectedEmployeeIds = [];
             }
@@ -315,15 +298,15 @@ export default {
                     attendance_date: this.searchedDate,
                     shift_id: this.filters.shift_id || null,
                     first_punch_at: formattedPunch,
-                    status: 'present'
+                    status: this.actionForm.status
                 };
 
-                const response = await axios.post('/api/attendance/manual', payload);
+                const response = await axios.post('/api/attendance/check-in', payload);
 
-                toast.success(response.data?.message || 'Successfully In');
-                this.clearResults();
+                toast.success(response.data?.message || 'Attendance IN saved successfully!');
+                await this.fetchEmployees();
             } catch (error) {
-                console.error('Attendance IN error:', error);
+                console.error('Attendance IN API Error:', error);
 
                 const validationErrors = error.response?.data?.errors;
 

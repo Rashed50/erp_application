@@ -1,8 +1,7 @@
 <template>
     <div class="card p-4 shadow-sm border-0">
 
-
-        <!-- Search Form in a single row without Reset button -->
+        <!-- Search Form -->
         <div class="card bg-light p-3 border-1 mb-4">
             <h6 class="text-muted mb-3">Search Filters</h6>
             <div class="row g-3 align-items-end">
@@ -75,9 +74,9 @@
                     <tr v-else-if="records.length === 0">
                         <td colspan="8" class="text-center text-muted py-4">No attendance records found.</td>
                     </tr>
-                    <tr v-for="(item, index) in records" :key="item.id">
+                    <tr v-for="(item, index) in records" :key="item.id || index">
                         <td>{{ index + 1 }}</td>
-                        <td>{{ item.employee ? item.employee.employee_id : item.employee_auto_id }}</td>
+                        <td>{{ item.employee ? item.employee.employee_id : (item.employee_id || '-') }}</td>
                         <td>{{ item.employee ? item.employee.name : 'N/A' }}</td>
                         <td>{{ item.attendance_date }}</td>
                         <td><span :class="getStatusBadge(item.status)">{{ item.status }}</span></td>
@@ -96,7 +95,6 @@
 </template>
 
 <script>
-
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 
@@ -120,26 +118,31 @@ export default {
     },
     methods: {
         async fetchAttendances() {
+            if (this.loading) return;
             this.loading = true;
 
-
-
             try {
-                const params = new URLSearchParams();
-                if (this.filters.date_from) params.append('date_from', this.filters.date_from);
-                if (this.filters.date_to) params.append('date_to', this.filters.date_to);
-                if (this.filters.status) params.append('status', this.filters.status);
-                if (this.filters.employee_id) params.append('employee_id', this.filters.employee_id);
-                params.append('per_page', this.filters.per_page);
+                // লারাভেল কন্ট্রোলারের ইনডেক্স রাউট অনুযায়ী এখানে রুট সেট করা হয়েছে (যেমন: /api/attendance)
+                const response = await axios.get('/api/attendance', {
+                    params: {
+                        date_from: this.filters.date_from || undefined,
+                        date_to: this.filters.date_to || undefined,
+                        status: this.filters.status || undefined,
+                        employee_id: this.filters.employee_id || undefined,
+                        per_page: this.filters.per_page
+                    }
+                });
 
-                const response = await axios.get(`/api/attendances/search?${params.toString()}`);
-                this.records = response.data.data || response.data;
+                // লারাভেলের paginate() রেসপন্স স্ট্রাকচার হলো response.data.data
+                const resData = response.data;
+                this.records = resData.data || resData || [];
+
             } catch (error) {
                 console.error('Error fetching attendance data:', error);
+                toast.error(error.response?.data?.message || 'Failed to load attendance records.');
             } finally {
                 this.loading = false;
             }
-
         },
         getStatusBadge(status) {
             switch (status) {
