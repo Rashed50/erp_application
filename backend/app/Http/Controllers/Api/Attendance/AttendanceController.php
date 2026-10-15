@@ -70,20 +70,36 @@ class AttendanceController extends Controller
     }
 
 
-    public function checkIn(\Illuminate\Http\Request $request, AttendanceCalculationService $service)
+    public function checkIn(Request $request, AttendanceCalculationService $service): JsonResponse
     {
-        // $data = $request->validate([
-        //     'employee_id' => ['required', 'integer'],
-        //     'attendance_date' => ['required', 'date_format:Y-m-d'],
-        //     'in_time' => ['required', 'date'],
-        // ]);
+        $data = $request->validate([
+            'ids'             => ['required', 'array', 'min:1'],
+            'ids.*'           => ['required', 'integer'],
+            'attendance_date' => ['required', 'date_format:Y-m-d'],
+            'first_punch_at'  => ['required', 'date_format:Y-m-d H:i:s'],
+            'shift_id'        => ['nullable'],
+            'status'          => ['nullable', 'string'],
+        ]);
 
-        $emplist = $request->employees;
-        foreach ($emplist as $data) {
-            $record = $service->manualCheckIn($data['employee_id'], $data['attendance_date'], $data['in_time'], $request->user()?->id);
+        // IN time must belong to the selected attendance date
+        if (substr($data['first_punch_at'], 0, 10) !== $data['attendance_date']) {
+            return response()->json([
+                'message' => 'IN time date must match attendance date.',
+            ], 422);
         }
 
-        return response()->json(['message' => 'IN recorded. OUT is pending.', 'data' => $record->load('employee')], 201);
+        foreach ($data['ids'] as $employeeId) {
+            $service->manualCheckIn(
+                $employeeId,
+                $data['attendance_date'],
+                $data['first_punch_at'],
+                $request->user()?->id
+            );
+        }
+
+        return response()->json([
+            'message' => count($data['ids']) . ' employee(s) IN recorded. OUT is pending.',
+        ], 201);
     }
 
     public function checkOut(\Illuminate\Http\Request $request, AttendanceCalculationService $service)

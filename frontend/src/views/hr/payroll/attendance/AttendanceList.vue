@@ -38,13 +38,13 @@
                 <!-- Employee ID -->
                 <div class="col-md-2">
                     <label class="form-label small fw-bold">Employee ID</label>
-                    <input type="text" class="form-control" v-model="filters.employee_id" placeholder="e.g. EMP001"
-                        @keyup.enter="fetchAttendances" />
+                    <input type="text" class="form-control" v-model.trim="filters.employee_id" placeholder="e.g. EMP001"
+                        @keyup.enter="search" />
                 </div>
 
                 <!-- Search Button -->
                 <div class="col-md-2">
-                    <button class="btn btn-primary w-100" :disabled="loading" @click="fetchAttendances">
+                    <button class="btn btn-primary w-100" :disabled="loading" @click="search">
                         <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
                         <i v-else class="fa-solid fa-search me-1"></i> Search
                     </button>
@@ -57,7 +57,7 @@
             <table class="table table-bordered table-striped align-middle">
                 <thead class="table-dark">
                     <tr>
-                        <th>#</th>
+                        <th width="60">SL</th>
                         <th>Employee ID</th>
                         <th>Name</th>
                         <th>Date</th>
@@ -71,15 +71,21 @@
                     <tr v-if="loading">
                         <td colspan="8" class="text-center text-muted py-4">Loading records...</td>
                     </tr>
+
                     <tr v-else-if="records.length === 0">
                         <td colspan="8" class="text-center text-muted py-4">No attendance records found.</td>
                     </tr>
-                    <tr v-for="(item, index) in records" :key="item.id || index">
-                        <td>{{ index + 1 }}</td>
-                        <td>{{ item.employee ? item.employee.employee_id : (item.employee_id || '-') }}</td>
-                        <td>{{ item.employee ? item.employee.name : 'N/A' }}</td>
+
+                    <tr v-for="(item, index) in records" v-else :key="item.id">
+                        <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
+                        <td>{{ item.employee?.employee_id || '-' }}</td>
+                        <td>{{ item.employee?.name || 'N/A' }}</td>
                         <td>{{ item.attendance_date }}</td>
-                        <td><span :class="getStatusBadge(item.status)">{{ item.status }}</span></td>
+                        <td>
+                            <span :class="getStatusBadge(item.status)" class="text-capitalize">
+                                {{ item.status ? item.status.replace('_', ' ') : '-' }}
+                            </span>
+                        </td>
                         <td>{{ item.first_punch_at || '-' }}</td>
                         <td>{{ item.last_punch_at || '-' }}</td>
                         <td class="text-center">
@@ -91,6 +97,26 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        <div v-if="records.length > 0" class="d-flex justify-content-between align-items-center mt-3">
+            <span class="small text-muted">
+                Page {{ pagination.current_page }} of {{ pagination.last_page }}
+                &middot; Total: {{ pagination.total }}
+            </span>
+
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-secondary" :disabled="loading || pagination.current_page <= 1"
+                    @click="fetchAttendances(pagination.current_page - 1)">
+                    Previous
+                </button>
+                <button class="btn btn-sm btn-outline-secondary"
+                    :disabled="loading || pagination.current_page >= pagination.last_page"
+                    @click="fetchAttendances(pagination.current_page + 1)">
+                    Next
+                </button>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -100,10 +126,20 @@ import { toast } from 'vue3-toastify';
 
 export default {
     name: 'AttendanceList',
+    emits: ['delete-record'],
+
     data() {
         return {
             loading: false,
             records: [],
+
+            pagination: {
+                current_page: 1,
+                last_page: 1,
+                per_page: 25,
+                total: 0
+            },
+
             filters: {
                 date_from: '',
                 date_to: '',
@@ -111,20 +147,35 @@ export default {
                 employee_id: '',
                 per_page: 25
             }
-        }
+        };
     },
+
     mounted() {
-        this.fetchAttendances();
+        this.fetchAttendances(1);
     },
+
     methods: {
-        async fetchAttendances() {
+        // Search / Enter always starts from page 1
+        search() {
+            this.fetchAttendances(1);
+        },
+
+        async fetchAttendances(page = 1) {
             if (this.loading) return;
+
+            if (this.filters.date_from && this.filters.date_to &&
+                this.filters.date_from > this.filters.date_to) {
+                toast.error('Date From cannot be after Date To.');
+                return;
+            }
+
             this.loading = true;
 
             try {
-                // লারাভেল কন্ট্রোলারের ইনডেক্স রাউট অনুযায়ী এখানে রুট সেট করা হয়েছে (যেমন: /api/attendance)
+                // Laravel paginate() response: { current_page, data: [...], last_page, per_page, total, ... }
                 const response = await axios.get('/api/attendance', {
                     params: {
+                        page,
                         date_from: this.filters.date_from || undefined,
                         date_to: this.filters.date_to || undefined,
                         status: this.filters.status || undefined,
@@ -133,17 +184,31 @@ export default {
                     }
                 });
 
-                // লারাভেলের paginate() রেসপন্স স্ট্রাকচার হলো response.data.data
-                const resData = response.data;
-                this.records = resData.data || resData || [];
+                const res = response.data;
 
+                this.records = Array.isArray(res.data) ? res.data : [];
+
+                this.pagination = {
+                    current_page: res.current_page ?? 1,
+                    last_page: res.last_page ?? 1,
+                    per_page: res.per_page ?? this.filters.per_page,
+                    total: res.total ?? this.records.length
+                };
+
+                // Backend sends { data: [], message: 'Employee not found.' } for unknown employee
+                if (this.records.length === 0 && res.message) {
+                    toast.info(res.message);
+                }
             } catch (error) {
                 console.error('Error fetching attendance data:', error);
-                toast.error(error.response?.data?.message || 'Failed to load attendance records.');
+                toast.error(
+                    error.response?.data?.message || 'Failed to load attendance records.'
+                );
             } finally {
                 this.loading = false;
             }
         },
+
         getStatusBadge(status) {
             switch (status) {
                 case 'present': return 'badge bg-success';
@@ -155,5 +220,5 @@ export default {
             }
         }
     }
-}
+};
 </script>
