@@ -30,6 +30,7 @@ class EmployeeService
             ->orderBy('employee_code')
             ->paginate($perPage);
     }
+  
 
     public function find(Employee $employee): Employee
     {

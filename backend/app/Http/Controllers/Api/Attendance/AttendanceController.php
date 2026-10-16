@@ -7,10 +7,18 @@ use App\Http\Requests\Attendance\StoreManualAttendanceRequest;
 use App\Models\DailyAttendance;
 use App\Models\EmployeeInfo;
 use App\Services\Attendance\AttendanceCalculationService;
+use App\Http\Resources\EmployeeResource;
+use App\Services\EmployeeService;
 use Illuminate\Http\Request;
+ 
+
+
 
 class AttendanceController extends Controller
 {
+
+    public function __construct(private readonly EmployeeService $employeeService) {}
+
     public function index(Request $request)
     {
         $query = DailyAttendance::query()->with('employee');
@@ -28,6 +36,8 @@ class AttendanceController extends Controller
         return $query->orderByDesc('attendance_date')
             ->paginate(min(max((int) $request->input('per_page', 25), 1), 200));
     }
+
+ 
 
     public function show(DailyAttendance $dailyAttendance)
     {

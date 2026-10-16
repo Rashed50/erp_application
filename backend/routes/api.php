@@ -62,9 +62,12 @@ use App\Http\Controllers\Api\Attendance\AttendancePeriodController;
 // Device endpoint: add a dedicated ADMS authentication middleware before production.
 Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
 
+
+
 Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     // Register fixed paths before /{dailyAttendance} so they are not treated as IDs.
     Route::post('/manual', [AttendanceController::class, 'manual']);
+
     Route::post('/process-logs', [AttendanceController::class, 'processLogs']);
     Route::get('/logs', [AttendanceLogController::class, 'index']);
     Route::get('/reports/monthly', [AttendanceReportController::class, 'monthly']);
