@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Attendance;
 
 use App\Http\Controllers\Controller;
 use App\Models\DailyAttendance;
-use App\Models\EmployeeInfo;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 
 class AttendanceReportController extends Controller
@@ -24,8 +24,8 @@ class AttendanceReportController extends Controller
             ->whereBetween('attendance_date', [$start, $end]);
 
         if (!empty($validated['employee_id'])) {
-            $employee = EmployeeInfo::query()->where('employee_id', $validated['employee_id'])->firstOrFail();
-            $query->where('employee_auto_id', $employee->emp_auto_id);
+            $employee = Employee::query()->where('employee_id', $validated['employee_id'])->firstOrFail();
+            $query->where('employee_auto_id', $employee->id);
         }
 
         $records = $query->orderBy('employee_auto_id')->orderBy('attendance_date')->get();
@@ -34,7 +34,7 @@ class AttendanceReportController extends Controller
             $employee = $rows->first()->employee;
             return [
                 'employee_auto_id' => $employee?->emp_auto_id,
-                'employee_id' => $employee?->employee_id,
+                'employee_id' => $employee?->id,
                 'employee_name' => $employee?->name ?? $employee?->employee_name ?? null,
                 'present_days' => round($rows->sum('payable_day_fraction'), 2),
                 'absent_days' => $rows->where('status', 'absent')->count(),

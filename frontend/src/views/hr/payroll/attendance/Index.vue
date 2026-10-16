@@ -1,94 +1,56 @@
 <template>
-    <div class="container mt-4">
-       
+    <div class="main-content-wrapper mt-4">
+        <div class="container-fluid">
 
-        <!-- Navigation Menu / Tabs (Aligned to Right) -->
-        <div class="d-flex justify-content-end mb-4">
-            <div class="btn-group" role="group">
-                <button class="btn" :class="activeTab === 'list' ? 'btn-primary' : 'btn-outline-primary'"
-                    @click="activeTab = 'list'">
-                    <i class="fa-solid fa-list me-1"></i> Attendance List / Search
-                </button>
-                <button class="btn" :class="activeTab === 'in' ? 'btn-success' : 'btn-outline-success'"
-                    @click="activeTab = 'in'">
-                    <i class="fa-solid fa-plus me-1"></i> Attendance IN
-                </button>
-                <button class="btn" :class="activeTab === 'out' ? 'btn-danger' : 'btn-outline-danger'"
-                    @click="activeTab = 'out'">
-                    <i class="fa-solid fa-minus me-1"></i> Attendance Out
-                </button>
+            <!-- Header & tab buttons -->
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="m-0">{{ $t('Attendance Management') }}</h5>
+
+                <div class="d-flex gap-2">
+                    <v-btn v-for="tab in tabs" :key="tab.id" class="text-none"
+                        :class="{ 'text-white': activeTab === tab.id }" :color="tab.color"
+                        :variant="activeTab === tab.id ? 'flat' : 'outlined'" rounded="0" @click="activeTab = tab.id">
+                        <i class="fa-solid me-1" :class="tab.icon"></i> {{ $t(tab.label) }}
+                    </v-btn>
+                </div>
             </div>
-        </div>
 
-        <!-- Dynamic Components Container -->
-        <div class="card p-4 shadow-sm border-0">
-            <!-- List / Search Component -->
-            <AttendanceList v-if="activeTab === 'list'" :records="attendanceList" @delete-record="handleDelete" />
-
-            <!-- Attendance IN Component -->
-            <AttendanceIn v-if="activeTab === 'in'" :employees="attendanceList" @mark-in="handleMarkIn"
-                @cancel="activeTab = 'list'" />
-
-            <!-- Attendance OUT Component -->
-            <AttendanceOut v-if="activeTab === 'out'" :employees="attendanceList" @mark-out="handleMarkOut"
-                @cancel="activeTab = 'list'" />
+            <!-- Each child loads its own data from the API -->
+            <AttendanceList v-if="activeTab === 1" />
+            <AttendanceIn v-else-if="activeTab === 2" @cancel="activeTab = 1" />
+            <AttendanceOut v-else-if="activeTab === 3" @cancel="activeTab = 1" />
+            <Process v-else-if="activeTab === 4" @cancel="activeTab = 1" />
         </div>
     </div>
 </template>
 
 <script>
-import AttendanceList from './AttendanceList.vue'
-import AddEmployee from './AddEmployee.vue'
-import AttendanceIn from './AttendanceIn.vue'
-import AttendanceOut from './AttendanceOut.vue'
+import AttendanceList from './AttendanceList.vue';
+import AttendanceIn from './AttendanceIn.vue';
+import AttendanceOut from './AttendanceOut.vue';
+import Process from './Process.vue';
 
 export default {
     name: 'AttendanceMain',
+
     components: {
         AttendanceList,
-        AddEmployee,
         AttendanceIn,
-        AttendanceOut
+        AttendanceOut,
+        Process
     },
+
     data() {
         return {
-            activeTab: 'list',
-            attendanceList: [
-                { id: 1, name: 'John Doe', code: 'EMP001', date: '2026-10-13', inTime: '09:00 AM', outTime: '05:00 PM', status: 'Present' },
-                { id: 2, name: 'Jane Smith', code: 'EMP002', date: '2026-10-13', inTime: '09:15 AM', outTime: '', status: 'Late' },
+            activeTab: 1, // 1 = List/Search, 2 = IN, 3 = OUT, 4 = Process
+
+            tabs: [
+                { id: 1, label: 'Search', icon: 'fa-search', color: 'blue-darken-3' },
+                { id: 2, label: 'IN', icon: 'fa-plus', color: 'green-darken-3' },
+                { id: 3, label: 'Out', icon: 'fa-minus', color: 'red-darken-3' },
+                { id: 4, label: 'Process', icon: 'fa-gears', color: 'orange-darken-3' }
             ]
-        }
-    },
-    methods: {
-        handleAddEmployee(newEmp) {
-            this.attendanceList.unshift({
-                id: Date.now(),
-                ...newEmp,
-                date: new Date().toISOString().slice(0, 10),
-                inTime: '',
-                outTime: '',
-                status: 'Absent'
-            })
-            this.activeTab = 'list'
-        },
-        handleMarkIn(data) {
-            const emp = this.attendanceList.find(i => i.id === data.id)
-            if (emp) {
-                emp.inTime = data.time
-                emp.status = 'Present'
-            }
-            this.activeTab = 'list'
-        },
-        handleMarkOut(data) {
-            const emp = this.attendanceList.find(i => i.id === data.id)
-            if (emp) {
-                emp.outTime = data.time
-            }
-            this.activeTab = 'list'
-        },
-        handleDelete(id) {
-            this.attendanceList = this.attendanceList.filter(i => i.id !== id)
-        }
+        };
     }
-}
+};
 </script>

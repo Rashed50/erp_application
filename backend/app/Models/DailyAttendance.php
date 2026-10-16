@@ -16,7 +16,7 @@ class DailyAttendance extends Model
         'payable_day_fraction' => 'float', 'is_late' => 'boolean', 'is_early_leave' => 'boolean',
         'approved_at' => 'datetime', 'locked_at' => 'datetime',
     ];
-    public function employee(): BelongsTo { return $this->belongsTo(EmployeeInfo::class, 'employee_auto_id', 'emp_auto_id'); }
+    public function employee(): BelongsTo { return $this->belongsTo(Employee::class, 'employee_auto_id', 'id'); }
     public function shift(): BelongsTo { return $this->belongsTo(AttendanceShift::class, 'attendance_shift_id'); }
     public function adjustments(): HasMany { return $this->hasMany(AttendanceAdjustment::class, 'daily_attendance_id'); }
 }
