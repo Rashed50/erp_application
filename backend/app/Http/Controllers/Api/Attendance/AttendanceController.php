@@ -15,9 +15,10 @@ use App\Services\Attendance\AttendanceCalculationService;
 use App\Http\Resources\EmployeeResource;
 use App\Services\EmployeeService;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;   // ✅ Correct import
+use Illuminate\Http\JsonResponse;
 use App\Http\Responses\ApiResponse;
 
+use Illuminate\Validation\Rule;
 
 
 class AttendanceController extends Controller
@@ -33,7 +34,8 @@ class AttendanceController extends Controller
         if ($request->filled('date_to')) $query->whereDate('attendance_date', '<=', $request->date_to);
         if ($request->filled('status')) $query->where('status', $request->status);
         if ($request->filled('employee_id')) {
-            $employee = Employee::query()->where('employee_id', $request->employee_id)->first();
+
+            $employee = Employee::query()->where('employee_code', $request->employee_id)->first();
             if (!$employee) return response()->json(['data' => [], 'message' => 'Employee not found.']);
             $query->where('employee_auto_id', $employee->id);
         }
@@ -69,7 +71,6 @@ class AttendanceController extends Controller
         return $dailyAttendance->load('employee', 'shift', 'adjustments');
     }
 
-
     public function checkIn(Request $request, AttendanceCalculationService $service): JsonResponse
     {
         $data = $request->validate([
@@ -78,22 +79,22 @@ class AttendanceController extends Controller
             'attendance_date' => ['required', 'date_format:Y-m-d'],
             'first_punch_at'  => ['required', 'date_format:Y-m-d H:i:s'],
             'shift_id'        => ['nullable'],
-            'status'          => ['nullable', 'string'],
+            'status' => [
+                'required',
+                'string',
+                'in:present,absent,late,half_day,leave,holiday,weekly_off,incomplete,offsite'
+            ],
         ]);
 
-        // IN time must belong to the selected attendance date
-        if (substr($data['first_punch_at'], 0, 10) !== $data['attendance_date']) {
-            return response()->json([
-                'message' => 'IN time date must match attendance date.',
-            ], 422);
-        }
+
 
         foreach ($data['ids'] as $employeeId) {
             $service->manualCheckIn(
                 $employeeId,
                 $data['attendance_date'],
                 $data['first_punch_at'],
-                $request->user()?->id
+                $request->user()?->id,
+                $data['status']
             );
         }
 
@@ -102,25 +103,89 @@ class AttendanceController extends Controller
         ], 201);
     }
 
-    public function checkOut(\Illuminate\Http\Request $request, AttendanceCalculationService $service)
+
+
+    public function checkOut(Request $request, AttendanceCalculationService $service): JsonResponse
     {
+
+        // return response()->json(['status' => 200, 'success' => true, 'dd' => $request->all()]);
+
         $data = $request->validate([
-            'employee_id' => ['required', 'integer'],
+            'ids'             => ['required', 'array', 'min:1'],
+            'ids.*'           => ['required', 'integer'],
             'attendance_date' => ['required', 'date_format:Y-m-d'],
-            'out_time' => ['required', 'date'],
-            'break_minutes' => ['nullable', 'integer', 'min:0', 'max:720'],
+            'last_punch_at'   => ['required', 'date_format:Y-m-d H:i:s'],
+            'shift_id'        => ['nullable'],
+            'status' => [
+                'required',
+                'string',
+                'in:present,absent,late,half_day,leave,holiday,weekly_off,incomplete,offsite'
+            ],
+            'break_minutes'   => ['nullable', 'integer', 'min:0', 'max:720'],
         ]);
 
-        $record = $service->manualCheckOut(
-            $data['employee_id'],
-            $data['attendance_date'],
-            $data['out_time'],
-            $request->user()?->id,
-            isset($data['break_minutes']) ? (int) $data['break_minutes'] : null
-        );
-        return response()->json(['message' => 'OUT recorded; hours and overtime calculated.', 'data' => $record->load('employee')]);
+
+
+        foreach ($data['ids'] as $employeeId) {
+            $service->manualCheckOut(
+                $employeeId,
+                $data['attendance_date'],
+                $data['last_punch_at'],
+                $request->user()?->id,
+                isset($data['break_minutes']) ? (int) $data['break_minutes'] : null
+            );
+        }
+
+        return response()->json([
+            'message' => count($data['ids']) . ' employee(s) OUT recorded; hours and overtime calculated.',
+        ]);
     }
 
+
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $attendance = DailyAttendance::findOrFail($id);
+
+        $data = $request->validate([
+            'status' => ['required', 'string', Rule::in([
+                'present',
+                'absent',
+                'late',
+                'half_day',
+                'leave',
+                'holiday',
+                'weekly_off',
+                'incomplete',
+                'offsite',
+            ])],
+            'first_punch_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'last_punch_at'  => ['nullable', 'date_format:Y-m-d H:i:s'],
+        ]);
+
+        if (
+            $data['first_punch_at'] && $data['last_punch_at']
+            && $data['last_punch_at'] < $data['first_punch_at']
+        ) {
+            return response()->json([
+                'message' => 'Last punch cannot be before first punch.',
+            ], 422);
+        }
+
+        $attendance->update($data);
+
+        return response()->json([
+            'message' => 'Attendance updated successfully.',
+            'data'    => $attendance->load('employee'),
+        ]);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        DailyAttendance::findOrFail($id)->delete();
+
+        return response()->json(['message' => 'Attendance deleted successfully.']);
+    }
     public function processLogs(
         \App\Http\Requests\Attendance\ProcessAttendanceLogsRequest $request,
         AttendanceCalculationService $service

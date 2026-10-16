@@ -1,130 +1,133 @@
 <template>
-    <div class="card p-4 shadow-sm border-0">
-
-        <!-- Search Section -->
-        <div class="bg-light p-3 mb-4 border-bottom">
+    <div>
+        <!-- Step 1: search -->
+        <v-card style="padding: 15px; margin-top: 15px;">
             <div class="row g-3 align-items-end">
-                <div class="col-md-3 col-sm-6">
-                    <label class="form-label small fw-bold">Attendance Date</label>
+                <div class="col-md-3">
+                    <label>{{ $t('Attendance Date:') }}</label>
                     <input type="date" class="form-control" v-model="filters.date" />
                 </div>
 
-                <div class="col-md-3 col-sm-6">
-                    <label class="form-label small fw-bold">Shift</label>
+                <div class="col-md-3">
+                    <label>{{ $t('Shift:') }}</label>
                     <select class="form-select" v-model="filters.shift_id">
-                        <option value="">Select Shift</option>
-                        <option value="day">Day Shift</option>
-                        <option value="night">Night Shift</option>
+                        <option value="">{{ $t('Select Shift') }}</option>
+                        <option value="day">{{ $t('Day Shift') }}</option>
+                        <option value="night">{{ $t('Night Shift') }}</option>
                     </select>
                 </div>
 
-                <div class="col-md-4 col-sm-8">
-                    <label class="form-label small fw-bold">Employee ID / Name</label>
+                <div class="col-md-4">
+                    <label>{{ $t('Employee ID / Name:') }}</label>
                     <input type="text" class="form-control" v-model.trim="filters.employee_id"
-                        placeholder="Enter Employee ID" @keyup.enter="fetchEmployees" />
+                        :placeholder="$t('Enter Employee ID')" @keyup.enter="fetchEmployees" />
                 </div>
 
-                <!-- Separate Search Button -->
-                <div class="col-md-2 col-sm-4">
-                    <button class="btn btn-primary w-100" :disabled="loading" @click="fetchEmployees">
-                        <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
-                        <i v-else class="fa-solid fa-search me-1"></i>
-                        Search
-                    </button>
+                <div class="col-md-2">
+                    <v-btn class="text-none text-white w-100" color="blue-darken-3" rounded="0" variant="flat"
+                        :loading="loading" @click="fetchEmployees">
+                        <i class="fa-solid fa-search me-1"></i> {{ $t('Search') }}
+                    </v-btn>
                 </div>
             </div>
-        </div>
+        </v-card>
 
-        <!-- Show only after search -->
-        <template v-if="hasSearched">
-
-            <!-- Submit Section (above the table) -->
-            <div v-if="employeesList.length > 0" class="card border-danger bg-light p-3 mb-3">
-                <div class="row g-3 align-items-center">
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold mb-1">Last Punch At (OUT Time)</label>
-                        <input type="datetime-local" class="form-control" v-model="actionForm.last_punch_at" />
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label small fw-bold mb-1">Status</label>
-                        <select class="form-select" v-model="actionForm.status">
-                            <option value="present">Present</option>
-                            <option value="early_leave">Early Leave</option>
-                            <option value="overtime">Overtime</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3 text-center">
-                        <span class="fw-bold text-danger small">
-                            Selected: {{ selectedEmployeeIds.length }} / {{ employeesList.length }}
-                        </span>
-                    </div>
-
-                    <div class="col-md-2 text-end">
-                        <!-- Smaller submit button -->
-                        <button class="btn btn-danger btn-sm px-4"
-                            :disabled="submitting || loading || selectedEmployeeIds.length === 0"
-                            @click="submitBatchOut">
-                            <span v-if="submitting" class="spinner-border spinner-border-sm me-1"></span>
-                            Submit
-                        </button>
-                    </div>
+        <!-- Step 2: results & submit -->
+        <v-card v-if="hasSearched" style="padding: 10px; margin-top: 15px;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0"></h6>
+                <!-- <h6 class="mb-0">{{ $t('Attendance OUT - {date}', { date: searchedDate }) }}</h6> -->
+                <div class="text-muted small">
+                    {{ $t('Total {count} employees', { count: employeesList.length }) }} ·
+                    <strong>{{ $t('{count} selected', { count: selectedEmployeeIds.length }) }}</strong>
                 </div>
             </div>
 
-            <!-- Search Results Table -->
-            <div class="table-responsive mb-3">
-                <table class="table table-bordered table-striped align-middle">
-                    <thead class="table-dark">
+            <!-- Submit section (above the table) -->
+            <div v-if="employeesList.length" class="row g-3 align-items-end mb-3">
+                <div class="col-md-4">
+                    <label>{{ $t('Last Punch At (OUT Time):') }}</label>
+                    <input type="datetime-local" class="form-control" v-model="actionForm.last_punch_at" />
+                </div>
+
+                <div class="col-md-3">
+                    <label>{{ $t('Status:') }}</label>
+                    <select class="form-select" v-model="actionForm.status">
+                        <option value="present">{{ $t('Present') }}</option>
+                        <option value="early_leave">{{ $t('Early Leave') }}</option>
+                        <option value="overtime">{{ $t('Overtime') }}</option>
+                    </select>
+                </div>
+
+                <div class="col-md-5 d-flex justify-content-end">
+                    <v-btn class="text-none text-white" color="red-darken-3" rounded="0" variant="flat" size="small"
+                        :disabled="!selectedEmployeeIds.length" :loading="submitting" @click="submitBatchOut">
+                        <i class="fa-solid fa-check me-1"></i> {{ $t('Submit') }} ({{ selectedEmployeeIds.length }})
+                    </v-btn>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <v-table class="custom-bordered" density="compact">
+                    <thead>
                         <tr>
-                            <th width="60">SL</th>
-                            <th>Employee ID</th>
-                            <th>Name</th>
-                            <th>Shift</th>
-                            <th>Attendance Date</th>
-                            <th width="80" class="text-center">
+                            <th class="text-center" width="60">{{ $t('SL') }}</th>
+                            <th>{{ $t('Employee ID') }}</th>
+                            <th>{{ $t('Name') }}</th>
+                            <th>{{ $t('Shift') }}</th>
+                            <th>{{ $t('Attendance Date') }}</th>
+                            <th>{{ $t('Status') }}</th>
+                            <th>{{ $t('Last Punch At') }}</th>
+                            <th class="text-center" width="80">
                                 <input type="checkbox" class="form-check-input" :checked="allSelected"
-                                    :disabled="!employeesList.length || loading" @change="toggleSelectAll" />
+                                    :disabled="!employeesList.length || loading"
+                                    @change="toggleSelectAll($event.target.checked)" />
                             </th>
                         </tr>
                     </thead>
 
                     <tbody>
                         <tr v-if="loading">
-                            <td colspan="6" class="text-center py-4">
-                                Loading employees...
-                            </td>
+                            <td colspan="8" class="text-center py-3">{{ $t('Loading employees...') }}</td>
                         </tr>
 
-                        <tr v-else-if="employeesList.length === 0">
-                            <td colspan="6" class="text-center text-muted py-4">
-                                No attendance records found.
+                        <tr v-else-if="!employeesList.length">
+                            <td colspan="8" class="text-center text-muted py-3">
+                                {{ $t('No attendance records found.') }}
                             </td>
                         </tr>
 
                         <tr v-for="(emp, index) in employeesList" v-else :key="emp.emp_auto_id">
-                            <td>{{ index + 1 }}</td>
-                            <td>{{ emp.employee_id || '-' }}</td>
+                            <td class="text-center">{{ index + 1 }}</td>
+                            <td>{{ emp.employee_id || emp.id || '-' }}</td>
                             <td>{{ emp.name || '-' }}</td>
                             <td>{{ emp.shift?.name || emp.shift_name || '-' }}</td>
                             <td>{{ searchedDate }}</td>
+                            <td>
+                                <span v-if="emp.attendance?.status" :class="statusClass(emp.attendance.status)"
+                                    class="text-capitalize">
+                                    {{ emp.attendance.status.replace('_', ' ') }}
+                                </span>
+                                <span v-else>-</span>
+                            </td>
+                            <td>{{ emp.attendance?.last_punch_at || '-' }}</td>
                             <td class="text-center">
                                 <input type="checkbox" class="form-check-input" :value="emp.emp_auto_id"
                                     v-model="selectedEmployeeIds" />
                             </td>
                         </tr>
                     </tbody>
-                </table>
+                </v-table>
             </div>
-
-        </template>
+        </v-card>
     </div>
 </template>
 
 <script>
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
+import { t } from '@/i18n';
 
 export default {
     name: 'AttendanceOut',
@@ -140,14 +143,13 @@ export default {
 
             employeesList: [],
             selectedEmployeeIds: [],
+            searchedDate: '',
 
             filters: {
                 date: today,
                 shift_id: '',
                 employee_id: ''
             },
-
-            searchedDate: '',
 
             actionForm: {
                 last_punch_at: `${today}T18:00`,
@@ -197,6 +199,19 @@ export default {
             ).toISOString().slice(0, 10);
         },
 
+        statusClass(status) {
+            switch (status) {
+                case 'present': return 'badge bg-success';
+                case 'late': return 'badge bg-warning text-dark';
+                case 'early_leave': return 'badge bg-info text-dark';
+                case 'overtime': return 'badge bg-primary';
+                case 'half_day': return 'badge bg-info text-dark';
+                case 'leave': return 'badge bg-secondary';
+                case 'absent': return 'badge bg-danger';
+                default: return 'badge bg-light text-dark border';
+            }
+        },
+
         clearResults() {
             this.hasSearched = false;
             this.employeesList = [];
@@ -207,7 +222,7 @@ export default {
             if (this.loading) return;
 
             if (!this.filters.date) {
-                toast.error('Please select attendance date.');
+                toast.error(t('Please select attendance date.'));
                 return;
             }
 
@@ -225,13 +240,12 @@ export default {
                     }
                 });
 
-                console.log('OUT response:', response.data);
-
+                // Works for { data: { employees: [...] } }, { employees: [...] }, { data: [...] } and [...]
                 const payload = response.data?.data ?? response.data;
-                let list = payload?.employees ?? [];
+                let list = payload?.employees ?? payload ?? [];
+                if (!Array.isArray(list)) list = list?.data ?? [];
 
-                if (!Array.isArray(list)) list = list.data || [];
-
+                // Every row MUST have a unique emp_auto_id, otherwise checkboxes share one value.
                 this.employeesList = list.map(emp => ({
                     ...emp,
                     emp_auto_id: emp.emp_auto_id ?? emp.id,
@@ -243,42 +257,46 @@ export default {
                 console.error('Attendance OUT search API error:', error);
                 toast.error(
                     error.response?.data?.message ||
-                    `Failed to fetch attendance records (${error.response?.status || error.message})`
+                    `${t('Failed to fetch attendance records')} (${error.response?.status || error.message})`
                 );
             } finally {
                 this.loading = false;
             }
         },
 
-        toggleSelectAll(event) {
-            if (event.target.checked) {
-                this.selectedEmployeeIds = this.employeesList.map(emp => emp.emp_auto_id);
-            } else {
-                this.selectedEmployeeIds = [];
-            }
+        toggleSelectAll(checked) {
+            this.selectedEmployeeIds = checked
+                ? this.employeesList.map(emp => emp.emp_auto_id)
+                : [];
         },
 
         async submitBatchOut() {
             if (this.selectedEmployeeIds.length === 0) {
-                toast.error('Please select at least one employee.');
+                toast.error(t('Please select at least one employee.'));
                 return;
             }
 
             if (!this.actionForm.last_punch_at) {
-                toast.error('Please select Last Punch At.');
+                toast.error(t('Please select Last Punch At.'));
                 return;
             }
 
-            const outDate = this.actionForm.last_punch_at.slice(0, 10);
-
-            if (outDate !== this.searchedDate) {
-                toast.error('OUT Time date must match attendance date.');
+            if (this.actionForm.last_punch_at.slice(0, 10) !== this.searchedDate) {
+                toast.error(t('OUT Time date must match attendance date.'));
                 return;
             }
 
-            if (!confirm(`Submit Attendance OUT for ${this.selectedEmployeeIds.length} employee(s)?`)) {
-                return;
-            }
+            const confirm = await Swal.fire({
+                title: t('Submit Attendance OUT?'),
+                text: t('{count} employee(s) on {date}', {
+                    count: this.selectedEmployeeIds.length,
+                    date: this.searchedDate
+                }),
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: t('Yes, submit')
+            });
+            if (!confirm.isConfirmed) return;
 
             this.submitting = true;
 
@@ -287,30 +305,25 @@ export default {
                 const formattedPunch =
                     punch.replace('T', ' ') + (punch.length === 16 ? ':00' : '');
 
-                const payload = {
+                const response = await axios.post('/api/attendance/check-out', {
                     ids: this.selectedEmployeeIds,
                     attendance_date: this.searchedDate,
                     shift_id: this.filters.shift_id || null,
                     last_punch_at: formattedPunch,
                     status: this.actionForm.status
-                };
+                });
 
-                const response = await axios.post('/api/check-out', payload);
-
-                toast.success(response.data?.message || 'Attendance OUT saved successfully!');
+                toast.success(response.data?.message || t('Attendance OUT saved successfully!'));
                 await this.fetchEmployees();
             } catch (error) {
                 console.error('Attendance OUT API Error:', error);
 
-                const validationErrors = error.response?.data?.errors;
-
-                if (validationErrors) {
-                    toast.error(Object.values(validationErrors).flat().join('\n'));
-                } else {
-                    toast.error(
-                        error.response?.data?.message || 'Failed to save Attendance OUT.'
-                    );
-                }
+                const errors = error.response?.data?.errors;
+                toast.error(
+                    errors
+                        ? Object.values(errors).flat().join(' ')
+                        : (error.response?.data?.message || t('Failed to save Attendance OUT.'))
+                );
             } finally {
                 this.submitting = false;
             }

@@ -28,7 +28,7 @@ class AttendanceCalculationService
         }
 
         $logs = $query->orderBy('event_time')->get();
-        $groups = $logs->groupBy(fn ($log) => trim((string) $log->pin));
+        $groups = $logs->groupBy(fn($log) => trim((string) $log->pin));
 
         $processed = 0;
         $unmapped = 0;
@@ -45,7 +45,7 @@ class AttendanceCalculationService
             }
 
             $tz = $device?->timezone ?: $employeeLogs->first()?->device?->timezone ?: config('app.timezone');
-            $dayLogs = $employeeLogs->filter(fn ($log) => Carbon::parse($log->event_time, $tz)->toDateString() === $date);
+            $dayLogs = $employeeLogs->filter(fn($log) => Carbon::parse($log->event_time, $tz)->toDateString() === $date);
             if ($dayLogs->isEmpty()) {
                 continue;
             }
@@ -75,9 +75,19 @@ class AttendanceCalculationService
             $overtimeHours = max(0, $workedHours - $overtimeThreshold);
 
             DB::transaction(function () use (
-                $employee, $date, $firstAt, $lastAt, $breakMinutes, $grossHours,
-                $workedHours, $standardHours, $overtimeThreshold, $overtimeHours,
-                $status, $dayLogs, &$processed
+                $employee,
+                $date,
+                $firstAt,
+                $lastAt,
+                $breakMinutes,
+                $grossHours,
+                $workedHours,
+                $standardHours,
+                $overtimeThreshold,
+                $overtimeHours,
+                $status,
+                $dayLogs,
+                &$processed
             ) {
                 $attendance = DailyAttendance::query()->updateOrCreate(
                     ['employee_auto_id' => $employee->id, 'attendance_date' => $date],
@@ -118,12 +128,12 @@ class AttendanceCalculationService
     }
 
 
-    public function manualCheckIn(string $employeeId, string $date, string $inTime, ?int $actorId = null): DailyAttendance
+    public function manualCheckIn(string $employeeId, string $date, string $inTime, ?int $actorId = null, string $status = 'present'): DailyAttendance
     {
         $employee = Employee::query()->where('id', $employeeId)->firstOrFail();
         $settings = AttendanceSetting::query()->where('name', 'default')->first();
 
-        return DB::transaction(function () use ($employee, $date, $inTime, $actorId, $settings) {
+        return DB::transaction(function () use ($employee, $date, $inTime, $actorId, $settings, $status) {
             $row = DailyAttendance::query()->where('employee_auto_id', $employee->id)
                 ->whereDate('attendance_date', $date)->lockForUpdate()->first();
 
@@ -135,7 +145,7 @@ class AttendanceCalculationService
                 ['employee_auto_id' => $employee->id, 'attendance_date' => $date],
                 [
                     'source' => 'manual',
-                    'status' => 'incomplete',
+                    'status' => $status,
                     'first_punch_at' => Carbon::parse($inTime),
                     'last_punch_at' => null,
                     'break_minutes' => $settings?->default_break_minutes ?? 60,
@@ -211,8 +221,18 @@ class AttendanceCalculationService
         $status = $data['status'] ?? (($first && $last && !$first->equalTo($last)) ? 'present' : 'incomplete');
 
         return DB::transaction(function () use (
-            $data, $employeeAutoId, $actorEmployeeAutoId, $date, $first, $last,
-            $breakMinutes, $standardHours, $threshold, $gross, $worked, $status
+            $data,
+            $employeeAutoId,
+            $actorEmployeeAutoId,
+            $date,
+            $first,
+            $last,
+            $breakMinutes,
+            $standardHours,
+            $threshold,
+            $gross,
+            $worked,
+            $status
         ) {
             $existing = DailyAttendance::query()
                 ->where('employee_auto_id', $employeeAutoId)
@@ -246,8 +266,14 @@ class AttendanceCalculationService
                     'daily_attendance_id' => $existing->id,
                     'requested_by_employee_auto_id' => $actorEmployeeAutoId,
                     'old_values' => $existing->only([
-                        'status', 'first_punch_at', 'last_punch_at', 'break_minutes',
-                        'worked_hours', 'overtime_hours', 'approved_overtime_hours', 'notes',
+                        'status',
+                        'first_punch_at',
+                        'last_punch_at',
+                        'break_minutes',
+                        'worked_hours',
+                        'overtime_hours',
+                        'approved_overtime_hours',
+                        'notes',
                     ]),
                     'requested_values' => $values,
                     'reason' => $data['adjustment_reason'] ?? 'Manual attendance update',

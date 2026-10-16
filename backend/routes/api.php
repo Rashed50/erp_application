@@ -71,12 +71,14 @@ Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     Route::post('/check-out', [AttendanceController::class, 'checkOut']);
     Route::post('/process-logs', [AttendanceController::class, 'processLogs']);
     Route::get('/logs', [AttendanceLogController::class, 'index']);
-   // Route::get('/reports/monthly', [AttendanceReportController::class, 'monthly']);
+    // Route::get('/reports/monthly', [AttendanceReportController::class, 'monthly']);
     Route::get('/periods', [AttendancePeriodController::class, 'index']);
     Route::post('/periods/submit', [AttendancePeriodController::class, 'submit']);
     Route::post('/periods/approve', [AttendancePeriodController::class, 'approve']);
     Route::post('/periods/lock', [AttendancePeriodController::class, 'lock']);
     Route::get('/', [AttendanceController::class, 'index']);
+    Route::put('/{id}', [AttendanceController::class, 'update']);
+    Route::delete('/{id}', [AttendanceController::class, 'destroy']);
     Route::get('/{dailyAttendance}', [AttendanceController::class, 'show'])->whereNumber('dailyAttendance');
 });
 

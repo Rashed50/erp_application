@@ -1,137 +1,201 @@
 <template>
-    <div class="card p-4 shadow-sm border-0">
-
-        <!-- Search Form -->
-        <div class="card bg-light p-3 border-1 mb-4">
-            <h6 class="text-muted mb-3">Search Filters</h6>
+    <div>
+        <!-- Search filters -->
+        <v-card style="padding: 15px; margin-top: 15px;">
             <div class="row g-3 align-items-end">
-
-                <!-- Date From -->
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold">Date From</label>
+                    <label>{{ $t('Date From:') }}</label>
                     <input type="date" class="form-control" v-model="filters.date_from" />
                 </div>
 
-                <!-- Date To -->
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold">Date To</label>
+                    <label>{{ $t('Date To:') }}</label>
                     <input type="date" class="form-control" v-model="filters.date_to" />
                 </div>
 
-                <!-- Status -->
                 <div class="col-md-2">
-                    <label class="form-label small fw-bold">Status</label>
+                    <label>{{ $t('Status:') }}</label>
                     <select class="form-select" v-model="filters.status">
-                        <option value="">All Status</option>
-                        <option value="present">Present</option>
-                        <option value="absent">Absent</option>
-                        <option value="late">Late</option>
-                        <option value="half_day">Half Day</option>
-                        <option value="leave">Leave</option>
-                        <option value="holiday">Holiday</option>
-                        <option value="weekly_off">Weekly Off</option>
-                        <option value="incomplete">Incomplete</option>
-                        <option value="offsite">Offsite</option>
+                        <option value="">{{ $t('All Status') }}</option>
+                        <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ $t(s.label) }}</option>
                     </select>
                 </div>
 
-                <!-- Employee ID -->
                 <div class="col-md-2">
-                    <label class="form-label small fw-bold">Employee ID</label>
+                    <label>{{ $t('Employee ID:') }}</label>
                     <input type="text" class="form-control" v-model.trim="filters.employee_id" placeholder="e.g. EMP001"
                         @keyup.enter="search" />
                 </div>
 
-                <!-- Search Button -->
                 <div class="col-md-2">
-                    <button class="btn btn-primary w-100" :disabled="loading" @click="search">
-                        <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
-                        <i v-else class="fa-solid fa-search me-1"></i> Search
-                    </button>
+                    <v-btn class="text-none text-white w-100" color="blue-darken-3" rounded="0" variant="flat"
+                        :loading="loading" @click="search">
+                        <i class="fa-solid fa-search me-1"></i> {{ $t('Search') }}
+                    </v-btn>
                 </div>
             </div>
-        </div>
+        </v-card>
 
-        <!-- Data Table -->
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th width="60">SL</th>
-                        <th>Employee ID</th>
-                        <th>Name</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>First Punch (IN)</th>
-                        <th>Last Punch (OUT)</th>
-                        <th class="text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-if="loading">
-                        <td colspan="8" class="text-center text-muted py-4">Loading records...</td>
-                    </tr>
+        <!-- Data table -->
+        <v-card style="padding: 10px; margin-top: 15px;">
+            <div class="table-responsive">
+                <v-table class="custom-bordered" density="compact">
+                    <thead>
+                        <tr>
+                            <th class="text-center" width="60">{{ $t('SL') }}</th>
+                            <th>{{ $t('Employee ID') }}</th>
+                            <th>{{ $t('Name') }}</th>
+                            <th>{{ $t('Date') }}</th>
+                            <th>{{ $t('Status') }}</th>
+                            <th>{{ $t('First Punch (IN)') }}</th>
+                            <th>{{ $t('Last Punch (OUT)') }}</th>
+                            <th class="text-center" width="120">{{ $t('Action') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-if="loading">
+                            <td colspan="8" class="text-center text-muted py-3">{{ $t('Loading records...') }}</td>
+                        </tr>
 
-                    <tr v-else-if="records.length === 0">
-                        <td colspan="8" class="text-center text-muted py-4">No attendance records found.</td>
-                    </tr>
+                        <tr v-else-if="!records.length">
+                            <td colspan="8" class="text-center text-muted py-3">
+                                {{ $t('No attendance records found.') }}
+                            </td>
+                        </tr>
 
-                    <tr v-for="(item, index) in records" v-else :key="item.id">
-                        <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
-                        <td>{{ item.employee?.employee_id || '-' }}</td>
-                        <td>{{ item.employee?.name || 'N/A' }}</td>
-                        <td>{{ item.attendance_date }}</td>
-                        <td>
-                            <span :class="getStatusBadge(item.status)" class="text-capitalize">
-                                {{ item.status ? item.status.replace('_', ' ') : '-' }}
-                            </span>
-                        </td>
-                        <td>{{ item.first_punch_at || '-' }}</td>
-                        <td>{{ item.last_punch_at || '-' }}</td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-danger" @click="$emit('delete-record', item.id)">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        <div v-if="records.length > 0" class="d-flex justify-content-between align-items-center mt-3">
-            <span class="small text-muted">
-                Page {{ pagination.current_page }} of {{ pagination.last_page }}
-                &middot; Total: {{ pagination.total }}
-            </span>
-
-            <div class="btn-group">
-                <button class="btn btn-sm btn-outline-secondary" :disabled="loading || pagination.current_page <= 1"
-                    @click="fetchAttendances(pagination.current_page - 1)">
-                    Previous
-                </button>
-                <button class="btn btn-sm btn-outline-secondary"
-                    :disabled="loading || pagination.current_page >= pagination.last_page"
-                    @click="fetchAttendances(pagination.current_page + 1)">
-                    Next
-                </button>
+                        <tr v-for="(item, index) in records" v-else :key="item.id">
+                            <td class="text-center">
+                                {{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}
+                            </td>
+                            <td>{{ item.employee?.employee_id || item.employee_auto_id || '-' }}</td>
+                            <td>{{ item.employee?.name || 'N/A' }}</td>
+                            <td>{{ item.attendance_date }}</td>
+                            <td>
+                                <span :class="getStatusBadge(item.status)" class="text-capitalize">
+                                    {{ item.status ? item.status.replace('_', ' ') : '-' }}
+                                </span>
+                            </td>
+                            <td>{{ item.first_punch_at || '-' }}</td>
+                            <td>{{ item.last_punch_at || '-' }}</td>
+                            <td class="text-center">
+                                <v-btn class="me-1" color="blue-darken-3" icon size="x-small" variant="tonal"
+                                    :title="$t('Edit')" @click="openEdit(item)">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </v-btn>
+                                <v-btn color="red-darken-3" icon size="x-small" variant="tonal" :title="$t('Delete')"
+                                    @click="deleteRecord(item)">
+                                    <i class="fa-solid fa-trash"></i>
+                                </v-btn>
+                            </td>
+                        </tr>
+                    </tbody>
+                </v-table>
             </div>
-        </div>
+
+            <!-- Pagination -->
+            <div v-if="records.length" class="d-flex justify-content-between align-items-center mt-3">
+                <span class="small text-muted">
+                    {{ $t('Page {current} of {last}', { current: pagination.current_page, last: pagination.last_page })
+                    }}
+                    · {{ $t('Total: {count}', { count: pagination.total }) }}
+                </span>
+
+                <div class="d-flex gap-2">
+                    <v-btn class="text-none" size="small" rounded="0" variant="outlined"
+                        :disabled="loading || pagination.current_page <= 1"
+                        @click="fetchAttendances(pagination.current_page - 1)">
+                        {{ $t('Previous') }}
+                    </v-btn>
+                    <v-btn class="text-none" size="small" rounded="0" variant="outlined"
+                        :disabled="loading || pagination.current_page >= pagination.last_page"
+                        @click="fetchAttendances(pagination.current_page + 1)">
+                        {{ $t('Next') }}
+                    </v-btn>
+                </div>
+            </div>
+        </v-card>
+
+        <!-- Edit modal -->
+        <v-dialog v-model="editDialog" max-width="600" persistent>
+            <v-card style="padding: 20px;">
+                <h6 class="mb-3">{{ $t('Edit Attendance') }}</h6>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label>{{ $t('Employee ID:') }}</label>
+                        <input type="text" class="form-control" :value="editForm.employee_code" disabled />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label>{{ $t('Name:') }}</label>
+                        <input type="text" class="form-control" :value="editForm.name" disabled />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label>{{ $t('Attendance Date:') }}</label>
+                        <input type="text" class="form-control" :value="editForm.attendance_date" disabled />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label>{{ $t('Status:') }}</label>
+                        <select class="form-select" v-model="editForm.status">
+                            <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ $t(s.label) }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label>{{ $t('First Punch (IN):') }}</label>
+                        <input type="datetime-local" class="form-control" v-model="editForm.first_punch_at" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label>{{ $t('Last Punch (OUT):') }}</label>
+                        <input type="datetime-local" class="form-control" v-model="editForm.last_punch_at" />
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <v-btn class="text-none" color="grey-lighten-3" rounded="0" variant="flat" :disabled="saving"
+                        @click="closeEdit">
+                        {{ $t('Cancel') }}
+                    </v-btn>
+                    <v-btn class="text-none text-white" color="blue-darken-4" rounded="0" variant="flat"
+                        :loading="saving" @click="updateRecord">
+                        <i class="fa-solid fa-check me-1"></i> {{ $t('Update') }}
+                    </v-btn>
+                </div>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
 <script>
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
+import { t } from '@/i18n';
 
 export default {
     name: 'AttendanceList',
-    emits: ['delete-record'],
 
     data() {
         return {
             loading: false,
+            saving: false,
             records: [],
+
+            statusOptions: [
+                { value: 'present', label: 'Present' },
+                { value: 'absent', label: 'Absent' },
+                { value: 'late', label: 'Late' },
+                { value: 'half_day', label: 'Half Day' },
+                { value: 'leave', label: 'Leave' },
+                { value: 'holiday', label: 'Holiday' },
+                { value: 'weekly_off', label: 'Weekly Off' },
+                { value: 'incomplete', label: 'Incomplete' },
+                { value: 'offsite', label: 'Offsite' }
+            ],
 
             pagination: {
                 current_page: 1,
@@ -146,6 +210,17 @@ export default {
                 status: '',
                 employee_id: '',
                 per_page: 25
+            },
+
+            editDialog: false,
+            editForm: {
+                id: null,
+                employee_code: '',
+                name: '',
+                attendance_date: '',
+                status: 'present',
+                first_punch_at: '',
+                last_punch_at: ''
             }
         };
     },
@@ -155,6 +230,28 @@ export default {
     },
 
     methods: {
+        // "2026-10-15 09:00:00" -> "2026-10-15T09:00" (for datetime-local)
+        toInput(value) {
+            return value ? String(value).replace(' ', 'T').slice(0, 16) : '';
+        },
+
+        // "2026-10-15T09:00" -> "2026-10-15 09:00:00" (for API), empty -> null
+        toApi(value) {
+            if (!value) return null;
+            return value.replace('T', ' ') + (value.length === 16 ? ':00' : '');
+        },
+
+        getStatusBadge(status) {
+            switch (status) {
+                case 'present': return 'badge bg-success';
+                case 'late': return 'badge bg-warning text-dark';
+                case 'half_day': return 'badge bg-info text-dark';
+                case 'leave': return 'badge bg-secondary';
+                case 'absent': return 'badge bg-danger';
+                default: return 'badge bg-light text-dark border';
+            }
+        },
+
         // Search / Enter always starts from page 1
         search() {
             this.fetchAttendances(1);
@@ -165,14 +262,14 @@ export default {
 
             if (this.filters.date_from && this.filters.date_to &&
                 this.filters.date_from > this.filters.date_to) {
-                toast.error('Date From cannot be after Date To.');
+                toast.error(t('Date From cannot be after Date To.'));
                 return;
             }
 
             this.loading = true;
 
             try {
-                // Laravel paginate() response: { current_page, data: [...], last_page, per_page, total, ... }
+                // Laravel paginate() response: { current_page, data: [...], last_page, per_page, total }
                 const response = await axios.get('/api/attendance', {
                     params: {
                         page,
@@ -196,27 +293,94 @@ export default {
                 };
 
                 // Backend sends { data: [], message: 'Employee not found.' } for unknown employee
-                if (this.records.length === 0 && res.message) {
+                if (!this.records.length && res.message) {
                     toast.info(res.message);
                 }
             } catch (error) {
                 console.error('Error fetching attendance data:', error);
                 toast.error(
-                    error.response?.data?.message || 'Failed to load attendance records.'
+                    error.response?.data?.message || t('Failed to load attendance records.')
                 );
             } finally {
                 this.loading = false;
             }
         },
 
-        getStatusBadge(status) {
-            switch (status) {
-                case 'present': return 'badge bg-success';
-                case 'late': return 'badge bg-warning text-dark';
-                case 'half_day': return 'badge bg-info text-dark';
-                case 'leave': return 'badge bg-secondary';
-                case 'absent': return 'badge bg-danger';
-                default: return 'badge bg-light text-dark border';
+        openEdit(item) {
+            this.editForm = {
+                id: item.id,
+                employee_code: item.employee?.employee_id || item.employee_auto_id || '',
+                name: item.employee?.name || '',
+                attendance_date: item.attendance_date,
+                status: item.status || 'present',
+                first_punch_at: this.toInput(item.first_punch_at),
+                last_punch_at: this.toInput(item.last_punch_at)
+            };
+            this.editDialog = true;
+        },
+
+        closeEdit() {
+            this.editDialog = false;
+        },
+
+        async updateRecord() {
+            const { first_punch_at, last_punch_at } = this.editForm;
+
+            if (first_punch_at && last_punch_at && last_punch_at < first_punch_at) {
+                toast.error(t('Last Punch (OUT) cannot be before First Punch (IN).'));
+                return;
+            }
+
+            this.saving = true;
+
+            try {
+                const response = await axios.put(`/api/attendance/${this.editForm.id}`, {
+                    status: this.editForm.status,
+                    first_punch_at: this.toApi(first_punch_at),
+                    last_punch_at: this.toApi(last_punch_at)
+                });
+
+                toast.success(response.data?.message || t('Attendance updated successfully.'));
+                this.closeEdit();
+                await this.fetchAttendances(this.pagination.current_page);
+            } catch (error) {
+                console.error('Attendance update error:', error);
+
+                const errors = error.response?.data?.errors;
+                toast.error(
+                    errors
+                        ? Object.values(errors).flat().join(' ')
+                        : (error.response?.data?.message || t('Failed to update attendance.'))
+                );
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async deleteRecord(item) {
+            const confirm = await Swal.fire({
+                title: t('Delete this attendance record?'),
+                text: `${item.employee?.name || ''} - ${item.attendance_date}`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: t('Yes, delete')
+            });
+            if (!confirm.isConfirmed) return;
+
+            try {
+                const response = await axios.delete(`/api/attendance/${item.id}`);
+                toast.success(response.data?.message || t('Attendance deleted successfully.'));
+
+                // If the last row of a page was deleted, go back one page
+                const page = this.records.length === 1 && this.pagination.current_page > 1
+                    ? this.pagination.current_page - 1
+                    : this.pagination.current_page;
+                await this.fetchAttendances(page);
+            } catch (error) {
+                console.error('Attendance delete error:', error);
+                toast.error(
+                    error.response?.data?.message || t('Failed to delete attendance.')
+                );
             }
         }
     }
