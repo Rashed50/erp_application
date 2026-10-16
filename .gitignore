@@ -44,3 +44,7 @@ __screenshots__/
 
 test-results/
 playwright-report/
+
+
+/backend/vendor/*
+/backend/node_modules

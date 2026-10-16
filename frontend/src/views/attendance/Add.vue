@@ -1,0 +1,3 @@
+<template>
+    Attendance Add
+</template>
