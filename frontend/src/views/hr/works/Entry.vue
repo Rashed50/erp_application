@@ -125,8 +125,8 @@ const dayFields = [
 const amountFields = [
     { key: 'overtime_hours', label: t('Overtime Hours') },
     { key: 'bonus', label: t('Bonus') },
-    { key: 'other_addition', label: t('Other Addition') },
-    { key: 'other_deduction', label: t('Other Deduction') },
+    // Other addition / other deduction are hidden for now; the form still
+    // sends them (0, or the record's saved value) so the API keeps working.
 ]
 
 const blank = () => ({

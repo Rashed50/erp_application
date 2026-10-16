@@ -23,13 +23,20 @@ class PayrollController extends Controller
     ) {}
 
     /**
-     * Calculate the month's salaries without saving anything.
+     * Calculate the month's salaries without saving anything, for every
+     * eligible employee or only the one given by `employee_id`.
      */
     public function preview(Request $request): JsonResponse
     {
-        $request->validate(['month' => ['required', 'date_format:Y-m']]);
+        $request->validate([
+            'month' => ['required', 'date_format:Y-m'],
+            'employee_id' => ['nullable', 'integer'],
+        ]);
 
-        $rows = $this->calculator->previewMonth(CarbonImmutable::createFromFormat('Y-m-d', $request->string('month')->value().'-01'));
+        $rows = $this->calculator->previewMonth(
+            CarbonImmutable::createFromFormat('Y-m-d', $request->string('month')->value().'-01'),
+            $request->filled('employee_id') ? [$request->integer('employee_id')] : null,
+        );
 
         return ApiResponse::success([
             'month' => $request->string('month')->value(),

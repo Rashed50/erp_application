@@ -31,32 +31,44 @@ it('adds basic and allowances for a full month with perfect attendance', functio
         ->and($salary['employed_days'])->toBe(31);
 });
 
-it('deducts absence and unpaid leave at basic / working days', function () {
+it('pays basic for the paid days at basic / working days and adds allowances in full', function () {
+    $config = SalaryDetail::factory()->for($this->employee)->create(['effective_date' => '2025-06-01', 'basic_salary' => 12000]);
+
+    $salary = calculateSalary($this->employee, '2026-01', ['working_days' => 30, 'present_days' => 20], $config);
+
+    // 12,000 / 30 = 400 per day x 20 days.
+    expect($salary['per_day_rate'])->toBe(400.0)
+        ->and($salary['basic_salary'])->toBe(8000.0)
+        ->and($salary['total_allowance'])->toBe(14000.0)
+        ->and($salary['gross_salary'])->toBe(22000.0)
+        ->and($salary['net_salary'])->toBe(22000.0);
+});
+
+it('pays paid leave but not absence or unpaid leave', function () {
     $salary = calculateSalary($this->employee, '2026-01', [
-        'present_days' => 23, 'absent_days' => 2, 'unpaid_leave_days' => 1,
+        'present_days' => 21, 'paid_leave_days' => 2, 'absent_days' => 2, 'unpaid_leave_days' => 1,
     ]);
 
-    // 30,000 / 26 = 1,153.846 per day.
-    expect($salary['per_day_rate'])->toBe(1153.85)
-        ->and($salary['absence_deduction'])->toBe(2307.69)
-        ->and($salary['unpaid_leave_deduction'])->toBe(1153.85)
-        ->and($salary['total_deduction'])->toBe(3461.54)
+    // 30,000 x 23 / 26.
+    expect($salary['basic_salary'])->toBe(26538.46)
+        ->and($salary['absence_deduction'])->toBe(0.0)
+        ->and($salary['total_deduction'])->toBe(0.0)
         ->and($salary['net_salary'])->toBe(40538.46);
 });
 
-it('uses basic + allowances as the day rate when configured on gross', function () {
+it('pays allowances by the paid days too when configured on gross', function () {
     $config = SalaryDetail::factory()->for($this->employee)->create(['effective_date' => '2025-06-01', 'deduction_basis' => 'gross']);
 
-    $salary = calculateSalary($this->employee, '2026-01', ['present_days' => 25, 'absent_days' => 1], $config);
+    $salary = calculateSalary($this->employee, '2026-01', ['present_days' => 13], $config);
 
-    // 44,000 / 26 = 1,692.31.
-    expect($salary['absence_deduction'])->toBe(1692.31);
+    expect($salary['basic_salary'])->toBe(15000.0)
+        ->and($salary['total_allowance'])->toBe(7000.0);
 });
 
-it('deducts exactly the base when absent every working day', function () {
+it('pays no basic when not present on any working day', function () {
     $salary = calculateSalary($this->employee, '2026-01', ['present_days' => 0, 'absent_days' => 26]);
 
-    expect($salary['absence_deduction'])->toBe(30000.0)
+    expect($salary['basic_salary'])->toBe(0.0)
         ->and($salary['net_salary'])->toBe(14000.0);
 });
 
