@@ -1,6 +1,5 @@
 <template>
     <div>
-        <!-- Step 1: search (label and field side by side) -->
         <v-card style="padding: 15px; margin-top: 15px;">
             <div class="row g-3 align-items-center">
                 <div class="col-md-3">
@@ -23,8 +22,8 @@
 
                 <div class="col-md-4">
                     <div class="d-flex align-items-center gap-2">
-                        <label class="mb-0 text-nowrap">{{ $t('Employee ID / Name:') }}</label>
-                        <input type="text" class="form-control" v-model.trim="filters.employee_id"
+                        <label class="mb-0 text-nowrap">{{ $t('Employee ID :') }}</label>
+                        <input type="text" class="form-control" v-model.trim="filters.employee_code"
                             :placeholder="$t('Enter Employee ID')" @keyup.enter="fetchEmployees" />
                     </div>
                 </div>
@@ -41,7 +40,6 @@
         <!-- Step 2: results & submit -->
         <v-card v-if="hasSearched" style="padding: 10px; margin-top: 15px;">
 
-            <!-- Submit section (above the table) -->
             <div v-if="employeesList.length" class="row g-3 align-items-center mb-3">
                 <div class="col-md-4">
                     <div class="d-flex align-items-center gap-2">
@@ -112,7 +110,7 @@
 
                         <tr v-for="(emp, index) in employeesList" v-else :key="emp.emp_auto_id">
                             <td class="text-center">{{ index + 1 }}</td>
-                            <td>{{ emp.employee_id || emp.id || '-' }}</td>
+                            <td>{{ emp.employee_code || emp.id || '-' }}</td>
                             <td>{{ emp.name || '-' }}</td>
                             <td>{{ emp.shift?.name || emp.shift_name || '-' }}</td>
                             <td>{{ searchedDate }}</td>
@@ -160,7 +158,7 @@ export default {
             filters: {
                 date: today,
                 shift_id: '',
-                employee_id: ''
+                employee_code: ''
             },
 
             actionForm: {
@@ -196,7 +194,7 @@ export default {
             this.clearResults();
         },
 
-        'filters.employee_id'() {
+        'filters.employee_code'() {
             this.clearResults();
         }
     },
@@ -244,7 +242,7 @@ export default {
                     params: {
                         date: this.filters.date,
                         shift_id: this.filters.shift_id,
-                        employee_id: this.filters.employee_id
+                        employee_code: this.filters.employee_code
                     }
                 });
 
@@ -256,7 +254,7 @@ export default {
                 this.employeesList = list.map(emp => ({
                     ...emp,
                     emp_auto_id: emp.emp_auto_id ?? emp.id,
-                    employee_id: emp.employee_id ?? emp.emp_id ?? emp.emp_code ?? ''
+                    employee_code: emp.employee_code ?? emp.emp_id ?? emp.emp_code ?? ''
                 }));
 
                 this.searchedDate = this.filters.date;

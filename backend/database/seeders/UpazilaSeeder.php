@@ -512,6 +512,15 @@ class UpazilaSeeder extends Seeder
             ['id' => '495', 'district_id' => '38', 'name' => 'Shayestaganj', 'bn_name' => 'শায়েস্তাগঞ্জ', 'url' => 'shayestaganj.habiganj.gov.bd'],
         ];
 
-        DB::table('upazilas')->insert($upazilas);
+        DB::table('upazilas')->upsert(
+            $upazilas,
+            ['id'],
+            [
+                'district_id',
+                'name',
+                'bn_name',
+                'url'
+            ]
+        );
     }
 }
