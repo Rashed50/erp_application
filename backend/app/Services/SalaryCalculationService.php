@@ -15,13 +15,18 @@ use Illuminate\Support\Collection;
  * preview, salary generation and reports.
  *
  * Rules:
- * - Basic and allowances are prorated by the calendar days the employee was
- *   employed in the month (joining date / last working date).
+ * - Basic and allowances are first prorated by the calendar days the employee
+ *   was employed in the month (joining date / last working date).
+ * - Per-day rate = that basic / the month's working days
+ *   (e.g. 12,000 basic, 30 working days = 400 per day).
+ * - Basic is paid only for the paid days (present + paid leave):
+ *   per-day rate x paid days. Absent and unpaid leave days are simply not paid.
+ * - Allowances are added in full. When the salary is configured on gross
+ *   (deduction_basis = gross), allowances are paid by the paid days too.
  * - Overtime = overtime hours x the configured overtime rate.
- * - Gross = basic + allowances + overtime + bonus + other additions.
- * - Per-day rate = deduction basis (basic, or basic + allowances) / working days.
- * - Absence and unpaid leave are deducted at the per-day rate; the configured
- *   fixed deduction and the month's other deduction are added on top.
+ * - Gross = earned basic + allowances + overtime + bonus + other additions.
+ * - The configured fixed deduction and the month's other deduction are
+ *   deducted from gross.
  * - Advance salary installments due for the month are deducted last, only as
  *   far as the remaining salary allows; the rest stays outstanding.
  * - Net = gross - total deductions.
@@ -52,10 +57,23 @@ class SalaryCalculationService
         $employedDays = $employedTo->lt($employedFrom) ? 0 : (int) $employedFrom->diffInDays($employedTo) + 1;
         $factor = $employedDays / $daysInMonth;
 
-        $prorate = fn ($amount): float => round((float) $amount * $factor, 2);
+        $prorate = fn ($amount): float => (float) $amount * $factor;
 
-        $basicSalary = $prorate($config->basic_salary);
-        $allowances = collect(SalaryDetail::ALLOWANCES)->mapWithKeys(fn (string $column) => [$column => $prorate($config->{$column})])->all();
+        $workingDays = (float) $work->working_days;
+        $paidDays = min((float) $work->present_days + (float) $work->paid_leave_days, $workingDays);
+        // Share of the month's working days that is paid; amounts are
+        // multiplied by it (not by a rounded day rate) so a full month pays
+        // exactly the full salary.
+        $paidRatio = $workingDays > 0 ? $paidDays / $workingDays : 0.0;
+
+        $monthlyBasic = $prorate($config->basic_salary);
+        $perDayRate = $workingDays > 0 ? $monthlyBasic / $workingDays : 0.0;
+        $basicSalary = round($monthlyBasic * $paidRatio, 2);
+
+        $allowanceRatio = $config->deduction_basis === 'gross' ? $paidRatio : 1.0;
+        $allowances = collect(SalaryDetail::ALLOWANCES)
+            ->mapWithKeys(fn (string $column) => [$column => round($prorate($config->{$column}) * $allowanceRatio, 2)])
+            ->all();
         $totalAllowance = round(array_sum($allowances), 2);
 
         $overtimeAmount = round((float) $work->overtime_hours * (float) $config->overtime_rate, 2);
@@ -63,16 +81,12 @@ class SalaryCalculationService
         $otherAddition = round((float) $work->other_addition, 2);
         $grossSalary = round($basicSalary + $totalAllowance + $overtimeAmount + $bonus + $otherAddition, 2);
 
-        $deductionBase = $config->deduction_basis === 'gross' ? $basicSalary + $totalAllowance : $basicSalary;
-        $workingDays = (float) $work->working_days;
-        // Kept unrounded for the deductions so absence on every working day
-        // deducts exactly the base, not a rounding cent more.
-        $perDayRate = $workingDays > 0 ? $deductionBase / $workingDays : 0.0;
-
-        $absenceDeduction = round($perDayRate * (float) $work->absent_days, 2);
-        $unpaidLeaveDeduction = round($perDayRate * (float) $work->unpaid_leave_days, 2);
+        // Unpaid days are already left out of the earned basic, so nothing
+        // more is deducted for absence or unpaid leave.
+        $absenceDeduction = 0.0;
+        $unpaidLeaveDeduction = 0.0;
         $otherDeduction = round((float) $config->other_deduction + (float) $work->other_deduction, 2);
-        $deductionBeforeAdvance = $absenceDeduction + $unpaidLeaveDeduction + $otherDeduction;
+        $deductionBeforeAdvance = $otherDeduction;
         $advanceDeduction = round(min($advanceDue, max(0, $grossSalary - $deductionBeforeAdvance)), 2);
         $totalDeduction = round($deductionBeforeAdvance + $advanceDeduction, 2);
 
@@ -120,15 +134,18 @@ class SalaryCalculationService
      * Calculate the month's salary for every payroll-eligible employee,
      * flagging anyone who cannot be generated (missing configuration or work
      * record, deductions above gross, or a salary already approved/paid).
+     * `$employeeIds` limits the calculation to those employees.
      *
+     * @param  array<int, int>|null  $employeeIds
      * @return Collection<int, array{employee: Employee, existing_salary: ?SalaryHistory, calculation: ?array<string, mixed>, advance_allocations: array<int, array{employee_advance_id: int, amount: float}>, issues: array<int, string>, can_generate: bool}>
      */
-    public function previewMonth(CarbonInterface $month): Collection
+    public function previewMonth(CarbonInterface $month, ?array $employeeIds = null): Collection
     {
         $monthStart = CarbonImmutable::parse($month)->startOfMonth();
 
         $employees = Employee::query()
             ->payrollEligible($monthStart)
+            ->when($employeeIds !== null, fn ($query) => $query->whereIn('id', $employeeIds))
             ->with([
                 'department',
                 'designation',

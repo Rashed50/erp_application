@@ -53,6 +53,17 @@ describe('preview', function () {
             ->and(SalaryHistory::count())->toBe(0);
     });
 
+    it('previews a single employee when employee_id is given', function () {
+        $employee = payrollEmployee();
+        payrollEmployee();
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/hr/payroll/preview?month=2026-01&employee_id={$employee->id}")
+            ->assertOk()
+            ->assertJsonPath('data.totals.employees', 1)
+            ->assertJsonPath('data.rows.0.employee_id', $employee->id);
+    });
+
     it('includes only employees employed during the month', function () {
         $active = payrollEmployee();
         $leftDuringMonth = payrollEmployee(['status' => 'Resigned', 'last_working_date' => '2026-01-20']);
@@ -101,7 +112,8 @@ describe('generate', function () {
             ->assertJsonPath('data.regenerated', 1);
 
         expect(SalaryHistory::count())->toBe(1)
-            ->and((float) SalaryHistory::sole()->absence_deduction)->toBe(2307.69);
+            // 30,000 x 24 / 26 working days.
+            ->and((float) SalaryHistory::sole()->basic_salary)->toBe(27692.31);
     });
 
     it('generates only the selected employees', function () {

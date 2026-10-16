@@ -4,21 +4,34 @@
 
     <div class="main-content-wrapper mt-4">
         <div class="container-fluid">
-            <!-- Step 1: month -->
+            <!-- Step 1: month + all employees or one -->
             <v-card style="padding: 15px; margin-top: 15px;">
                 <div class="row align-items-end">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label>{{ $t('Salary Month:') }}</label>
                         <input type="month" class="form-control" v-model="month" />
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <label>{{ $t('Generate For:') }}</label>
+                        <select class="form-select" v-model="scope">
+                            <option value="all">{{ $t('All Employees') }}</option>
+                            <option value="single">{{ $t('Single Employee') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3" v-if="scope === 'single'">
+                        <label>{{ $t('Employee:') }}</label>
+                        <SearchSelect v-model="employeeId" :items="employees"
+                            :item-title="(e) => `${e.employee_code} - ${e.name}`"
+                            :placeholder="$t('Employee ID or name...')" />
+                    </div>
+                    <div class="col-md-2">
                         <v-btn class="text-none text-white" color="blue-darken-3" rounded="0" variant="flat"
                             :loading="loading" @click="loadPreview">
                             <i class="fa-solid fa-eye me-1"></i> {{ $t('Preview Salary') }}
                         </v-btn>
                     </div>
-                    <div class="col-md-6 text-muted small">
-                        {{ $t('Loads active employees on the month\'s payroll, their salary configuration for the month and their work record, and calculates the salary. Nothing is saved until you confirm.') }}
+                    <div class="col text-muted small">
+                        {{ $t('Basic is paid per day: basic / working days x paid days (present + paid leave). Allowances are added on top. Nothing is saved until you confirm.') }}
                     </div>
                 </div>
             </v-card>
@@ -48,7 +61,6 @@
                                 <th class="text-right">{{ $t('Overtime') }}</th>
                                 <th class="text-right">{{ $t('Bonus / Other') }}</th>
                                 <th class="text-right">{{ $t('Gross') }}</th>
-                                <th class="text-right">{{ $t('Absence / Unpaid') }}</th>
                                 <th class="text-right">{{ $t('Other Ded.') }}</th>
                                 <th class="text-right">{{ $t('Advance') }}</th>
                                 <th class="text-right">{{ $t('Net') }}</th>
@@ -57,7 +69,7 @@
                         </thead>
                         <tbody>
                             <tr v-if="!preview.rows.length">
-                                <td colspan="13" class="text-center py-3">{{ $t('No employees on payroll for this month.') }}</td>
+                                <td colspan="12" class="text-center py-3">{{ $t('No employees on payroll for this month.') }}</td>
                             </tr>
                             <tr v-for="row in preview.rows" :key="row.employee_id"
                                 :class="{ 'table-warning': !row.can_generate }">
@@ -71,24 +83,26 @@
                                 </td>
                                 <template v-if="row.calculation">
                                     <td class="text-right">
-                                        {{ row.calculation.employed_days }}/{{ row.calculation.days_in_month }}
-                                        <div class="small text-muted" :title="$t('present / working')">
-                                            {{ row.calculation.present_days }}/{{ row.calculation.working_days }} {{ $t('present') }}
+                                        {{ paidDays(row.calculation) }}/{{ row.calculation.working_days }}
+                                        <div class="small text-muted" :title="$t('paid days (present + paid leave) / working days')">
+                                            {{ $t('paid days') }}
                                         </div>
                                     </td>
-                                    <td class="text-right">{{ money(row.calculation.basic_salary) }}</td>
+                                    <td class="text-right">
+                                        {{ money(row.calculation.basic_salary) }}
+                                        <div class="small text-muted">
+                                            {{ paidDays(row.calculation) }} × {{ money(row.calculation.per_day_rate) }}
+                                        </div>
+                                    </td>
                                     <td class="text-right">{{ money(row.calculation.total_allowance) }}</td>
                                     <td class="text-right">{{ money(row.calculation.overtime_amount) }}</td>
                                     <td class="text-right">{{ money(row.calculation.bonus + row.calculation.other_addition) }}</td>
                                     <td class="text-right"><strong>{{ money(row.calculation.gross_salary) }}</strong></td>
-                                    <td class="text-right">
-                                        {{ money(row.calculation.absence_deduction + row.calculation.unpaid_leave_deduction) }}
-                                    </td>
                                     <td class="text-right">{{ money(row.calculation.other_deduction) }}</td>
                                     <td class="text-right">{{ money(row.calculation.advance_deduction) }}</td>
                                     <td class="text-right"><strong>{{ money(row.calculation.net_salary) }}</strong></td>
                                 </template>
-                                <td v-else colspan="10" class="text-muted">-</td>
+                                <td v-else colspan="9" class="text-muted">-</td>
                                 <td>
                                     <span v-if="row.existing_salary" :class="salaryStatusClass(row.existing_salary.status)">
                                         {{ $t(row.existing_salary.status) }}
@@ -105,7 +119,7 @@
                             <tr class="fw-bold">
                                 <td colspan="7" class="text-right">{{ $t('Total (all ready employees)') }}</td>
                                 <td class="text-right">{{ money(preview.totals.gross_salary) }}</td>
-                                <td colspan="3" class="text-right">{{ money(preview.totals.total_deduction) }}</td>
+                                <td colspan="2" class="text-right">{{ money(preview.totals.total_deduction) }}</td>
                                 <td class="text-right">{{ money(preview.totals.net_salary) }}</td>
                                 <td></td>
                             </tr>
@@ -150,10 +164,15 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
 import { currentMonth, money, monthLabel, salaryStatusClass } from '../helpers';
 import { t } from '@/i18n';
 
 const month = ref(currentMonth())
+// 'all' previews every employee on the month's payroll, 'single' only `employeeId`.
+const scope = ref('all')
+const employeeId = ref('')
+const employees = ref([])
 const preview = ref(null)
 const selected = ref([])
 const result = ref(null)
@@ -166,16 +185,24 @@ const selectedNetTotal = computed(() => (preview.value?.rows ?? [])
     .filter((r) => selected.value.includes(r.employee_id))
     .reduce((sum, r) => sum + (r.calculation?.net_salary ?? 0), 0))
 
+const paidDays = (calc) => Number(calc.present_days) + Number(calc.paid_leave_days)
+
 const toggleAll = (checked) => {
     selected.value = checked ? [...generatableIds.value] : []
 }
 
 const loadPreview = async () => {
     if (!month.value) return
+    if (scope.value === 'single' && !employeeId.value) {
+        toast.error(t('Select an employee'))
+        return
+    }
     loading.value = true
     result.value = null
     try {
-        const { data } = await axios.get('/api/hr/payroll/preview', { params: { month: month.value } })
+        const params = { month: month.value }
+        if (scope.value === 'single') params.employee_id = employeeId.value
+        const { data } = await axios.get('/api/hr/payroll/preview', { params })
         preview.value = data.data
         selected.value = [...generatableIds.value]
     } catch (e) {
@@ -209,10 +236,23 @@ const generate = async () => {
     }
 }
 
-watch(month, () => {
+watch([month, scope, employeeId], () => {
     preview.value = null
     result.value = null
+    if (scope.value === 'single' && employeeId.value) loadPreview()
 })
 
-onMounted(loadPreview)
+const loadEmployees = async () => {
+    try {
+        const { data } = await axios.get('/api/hr/employees', { params: { per_page: 1000 } })
+        employees.value = data.data?.employees ?? []
+    } catch {
+        toast.error(t('Failed to load employees.'))
+    }
+}
+
+onMounted(() => {
+    loadEmployees()
+    loadPreview()
+})
 </script>
