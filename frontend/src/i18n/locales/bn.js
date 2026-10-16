@@ -575,6 +575,7 @@ export default {
         'New Password': 'নতুন পাসওয়ার্ড',
         'Confirm New Password': 'নতুন পাসওয়ার্ড নিশ্চিত করুন',
         'Please upload a valid image (JPEG, PNG, JPG, GIF)': 'অনুগ্রহ করে একটি সঠিক ছবি আপলোড করুন (JPEG, PNG, JPG, GIF)',
+        'Please upload a valid image (JPEG, PNG, JPG, GIF, WEBP)': 'অনুগ্রহ করে একটি সঠিক ছবি আপলোড করুন (JPEG, PNG, JPG, GIF, WEBP)',
         'Image size should be less than 2MB': 'ছবির আকার ২ মেগাবাইটের কম হতে হবে',
         'Failed to load profile data': 'প্রোফাইলের তথ্য লোড করা যায়নি',
         'Failed to update profile': 'প্রোফাইল আপডেট করা যায়নি',

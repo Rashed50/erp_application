@@ -157,5 +157,8 @@
     "Deduction cannot start before the month the advance was given.": "অগ্রিম দেওয়ার মাসের আগে কর্তন শুরু হতে পারবে না।",
     "Some of the selected lines do not belong to this account.": "নির্বাচিত কিছু লাইন এই অ্যাকাউন্টের নয়।",
     "A line cannot be cleared before its entry date.": "এন্ট্রির তারিখের আগে কোনো লাইন ক্লিয়ার করা যাবে না।",
-    "Reconciliation updated.": "রিকনসিলিয়েশন হালনাগাদ হয়েছে।"
+    "Reconciliation updated.": "রিকনসিলিয়েশন হালনাগাদ হয়েছে।",
+    "Profile updated successfully.": "প্রোফাইল সফলভাবে আপডেট হয়েছে।",
+    "Password changed successfully. Other devices have been signed out.": "পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে। অন্য সব ডিভাইস থেকে লগআউট করা হয়েছে।",
+    "The current password is incorrect.": "বর্তমান পাসওয়ার্ড সঠিক নয়।"
 }

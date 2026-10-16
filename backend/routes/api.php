@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Asset\ItemSubCategoryController;
 use App\Http\Controllers\Api\Asset\MaterialRequestController;
 use App\Http\Controllers\Api\Asset\PurchaseOrderController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ChartOfAccountController;
 use App\Http\Controllers\Api\CompanySettingController;
 use App\Http\Controllers\Api\CustomerController;
@@ -61,6 +62,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return ApiResponse::success(new UserResource($request->user()->load('roles')));
     });
+
+    // The signed-in user's own profile; no permission needed.
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // Address dropdowns: any signed-in user may read the location lists.
     Route::prefix('/locations')->name('locations.')->group(function () {
