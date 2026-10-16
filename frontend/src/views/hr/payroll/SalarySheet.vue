@@ -125,7 +125,10 @@
                         <h6>{{ $t('Earnings') }}</h6>
                         <table class="table table-sm">
                             <tbody>
-                                <tr><td>{{ $t('Basic') }}</td><td class="text-end">{{ money(detail.basic_salary) }}</td></tr>
+                                <tr>
+                                    <td>{{ $t('Basic') }} ({{ Number(detail.present_days) + Number(detail.paid_leave_days) }} {{ $t('days') }} × {{ money(detail.per_day_rate) }})</td>
+                                    <td class="text-end">{{ money(detail.basic_salary) }}</td>
+                                </tr>
                                 <tr><td>{{ $t('House Rent') }}</td><td class="text-end">{{ money(detail.house_rent) }}</td></tr>
                                 <tr><td>{{ $t('Medical') }}</td><td class="text-end">{{ money(detail.medical_allowance) }}</td></tr>
                                 <tr><td>{{ $t('Transport') }}</td><td class="text-end">{{ money(detail.transport_allowance) }}</td></tr>
@@ -145,11 +148,12 @@
                         <h6>{{ $t('Deductions') }}</h6>
                         <table class="table table-sm">
                             <tbody>
-                                <tr>
+                                <!-- Only salaries generated before per-day pay deducted absence. -->
+                                <tr v-if="Number(detail.absence_deduction)">
                                     <td>{{ $t('Absence') }} ({{ detail.absent_days }} × {{ money(detail.per_day_rate) }})</td>
                                     <td class="text-end">{{ money(detail.absence_deduction) }}</td>
                                 </tr>
-                                <tr>
+                                <tr v-if="Number(detail.unpaid_leave_deduction)">
                                     <td>{{ $t('Unpaid Leave') }} ({{ detail.unpaid_leave_days }} × {{ money(detail.per_day_rate) }})</td>
                                     <td class="text-end">{{ money(detail.unpaid_leave_deduction) }}</td>
                                 </tr>

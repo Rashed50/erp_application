@@ -76,12 +76,8 @@ class PayrollService
             return DB::transaction(function () use ($monthStart, $employeeIds) {
                 $result = ['created' => 0, 'regenerated' => 0, 'skipped' => []];
 
-                foreach ($this->calculator->previewMonth($monthStart) as $row) {
+                foreach ($this->calculator->previewMonth($monthStart, $employeeIds) as $row) {
                     $employee = $row['employee'];
-
-                    if ($employeeIds !== null && ! in_array($employee->id, $employeeIds, true)) {
-                        continue;
-                    }
 
                     if (! $row['can_generate']) {
                         $result['skipped'][] = [

@@ -789,6 +789,15 @@ export default {
         // HR: payroll
         'Salary Month:': 'বেতনের মাস:',
         'Preview Salary': 'বেতনের প্রিভিউ',
+        'Generate For:': 'কার জন্য তৈরি:',
+        'All Employees': 'সকল কর্মচারী',
+        'Single Employee': 'একজন কর্মচারী',
+        'Employee:': 'কর্মচারী:',
+        'Basic is paid per day: basic / working days x paid days (present + paid leave). Allowances are added on top. Nothing is saved until you confirm.': 'মূল বেতন দৈনিক হিসাবে: মূল বেতন / কর্মদিবস x বেতনযোগ্য দিন (উপস্থিত + সবেতন ছুটি)। এর সাথে ভাতা যোগ হয়। আপনি নিশ্চিত না করা পর্যন্ত কিছুই সংরক্ষিত হয় না।',
+        'paid days': 'বেতনযোগ্য দিন',
+        'paid days (present + paid leave) / working days': 'বেতনযোগ্য দিন (উপস্থিত + সবেতন ছুটি) / কর্মদিবস',
+        'days': 'দিন',
+        'Failed to load employees.': 'কর্মচারী লোড করা যায়নি।',
         "Loads active employees on the month's payroll, their salary configuration for the month and their work record, and calculates the salary. Nothing is saved until you confirm.": 'মাসের পেরোলে থাকা সক্রিয় কর্মচারী, ওই মাসের বেতন কাঠামো ও কাজের রেকর্ড লোড করে বেতন হিসাব করে। আপনি নিশ্চিত না করা পর্যন্ত কিছুই সংরক্ষিত হয় না।',
         'Salary preview - {month}': 'বেতনের প্রিভিউ - {month}',
         '{ready} of {total} employees ready': '{total} জন কর্মচারীর মধ্যে {ready} জন প্রস্তুত',
@@ -1187,6 +1196,11 @@ export default {
         'Receive Qty': 'গ্রহণের পরিমাণ',
         'Serial Numbers': 'সিরিয়াল নম্বর',
         'One serial number per line': 'প্রতি লাইনে একটি সিরিয়াল নম্বর',
+        'Comma separated, e.g. SN001, SN002, SN003': 'কমা দিয়ে আলাদা করুন, যেমন SN001, SN002, SN003',
+        '{count} serial(s) = {count} unit(s) will be received': '{count}টি সিরিয়াল = {count}টি পণ্য রিসিভ হবে',
+        '{item}: {count} serial numbers entered but only {remaining} remaining.': '{item}: {count}টি সিরিয়াল দেওয়া হয়েছে কিন্তু বাকি আছে মাত্র {remaining}টি।',
+        '{item}: the same serial number is entered twice.': '{item}: একই সিরিয়াল নম্বর দুইবার দেওয়া হয়েছে।',
+        'Enter a quantity or serial numbers to receive.': 'রিসিভ করতে পরিমাণ বা সিরিয়াল নম্বর দিন।',
         'Received By': 'গ্রহণকারী',
 
         // Asset inventory: transfers and stock
