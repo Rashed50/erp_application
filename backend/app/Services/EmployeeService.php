@@ -7,7 +7,7 @@ use App\Models\Designation;
 use App\Models\Employee;
 use App\Models\EmployeeBankDetail;
 use App\Models\EmployeeDetail;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\{Collection,Builder};
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +29,15 @@ class EmployeeService
             ->when($filters['employment_type'] ?? null, fn (Builder $query, string $type) => $query->where('employment_type', $type))
             ->orderBy('employee_code')
             ->paginate($perPage);
+    }
+
+        public function getActiveEmployees():Collection
+    {
+        return Employee::
+        //    with(['department', 'designation'])
+           // ->where('status', 'active')
+            orderBy('employee_code')
+             ->get();
     }
 
     public function find(Employee $employee): Employee
