@@ -1195,6 +1195,11 @@ export default {
         'Receive Qty': 'গ্রহণের পরিমাণ',
         'Serial Numbers': 'সিরিয়াল নম্বর',
         'One serial number per line': 'প্রতি লাইনে একটি সিরিয়াল নম্বর',
+        'Comma separated, e.g. SN001, SN002, SN003': 'কমা দিয়ে আলাদা করুন, যেমন SN001, SN002, SN003',
+        '{count} serial(s) = {count} unit(s) will be received': '{count}টি সিরিয়াল = {count}টি পণ্য রিসিভ হবে',
+        '{item}: {count} serial numbers entered but only {remaining} remaining.': '{item}: {count}টি সিরিয়াল দেওয়া হয়েছে কিন্তু বাকি আছে মাত্র {remaining}টি।',
+        '{item}: the same serial number is entered twice.': '{item}: একই সিরিয়াল নম্বর দুইবার দেওয়া হয়েছে।',
+        'Enter a quantity or serial numbers to receive.': 'রিসিভ করতে পরিমাণ বা সিরিয়াল নম্বর দিন।',
         'Received By': 'গ্রহণকারী',
 
         // Asset inventory: transfers and stock

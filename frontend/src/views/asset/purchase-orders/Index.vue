@@ -259,12 +259,20 @@
                             <td>{{ line.label }}</td>
                             <td class="text-right">{{ line.remaining }}</td>
                             <td>
-                                <input type="number" min="0" :max="line.remaining" step="any"
+                                <!-- Serial-tracked: one unit received per serial number entered. -->
+                                <input v-if="line.serialTracked" type="number" class="form-control text-end"
+                                    :value="serialList(line).length" readonly />
+                                <input v-else type="number" min="0" :max="line.remaining" step="any"
                                     class="form-control text-end" v-model="line.quantity" />
                             </td>
                             <td>
-                                <textarea v-if="line.serialTracked" class="form-control form-control-sm" rows="2"
-                                    v-model="line.serials" :placeholder="$t('One serial number per line')"></textarea>
+                                <template v-if="line.serialTracked">
+                                    <textarea class="form-control form-control-sm" rows="2" v-model="line.serials"
+                                        :placeholder="$t('Comma separated, e.g. SN001, SN002, SN003')"></textarea>
+                                    <small :class="serialList(line).length > line.remaining ? 'text-danger' : 'text-muted'">
+                                        {{ $t('{count} serial(s) = {count} unit(s) will be received', { count: serialList(line).length }) }}
+                                    </small>
+                                </template>
                                 <span v-else class="text-muted">-</span>
                             </td>
                         </tr>
@@ -449,20 +457,37 @@ const openReceive = () => {
     receiveDialog.value = true
 }
 
+// Serial numbers are comma separated (new lines are accepted too).
+const serialList = (line) => line.serials.split(/[,\n]/).map(s => s.trim()).filter(Boolean)
+
 const submitReceive = async () => {
     clearErrors(receiveErrors)
     if (!receiveForm.warehouse_id) receiveErrors.warehouse_id = t('Please select a store.')
+    receiveForm.lines.filter(line => line.serialTracked).forEach((line) => {
+        const serials = serialList(line)
+        if (serials.length > line.remaining) {
+            receiveErrors[`serials_${line.purchase_order_item_id}`] = t('{item}: {count} serial numbers entered but only {remaining} remaining.', { item: line.label, count: serials.length, remaining: line.remaining })
+        } else if (new Set(serials).size !== serials.length) {
+            receiveErrors[`serials_${line.purchase_order_item_id}`] = t('{item}: the same serial number is entered twice.', { item: line.label })
+        }
+    })
     if (Object.keys(receiveErrors).length) return
 
     const lines = receiveForm.lines
-        .filter(line => Number(line.quantity) > 0)
-        .map(line => ({
-            purchase_order_item_id: line.purchase_order_item_id,
-            quantity: Number(line.quantity),
-            serials: line.serialTracked
-                ? line.serials.split('\n').map(s => s.trim()).filter(Boolean).map(serial_number => ({ serial_number }))
-                : [],
-        }))
+        .map(line => {
+            const serials = line.serialTracked ? serialList(line) : []
+            return {
+                purchase_order_item_id: line.purchase_order_item_id,
+                quantity: line.serialTracked ? serials.length : Number(line.quantity),
+                serials: serials.map(serial_number => ({ serial_number })),
+            }
+        })
+        .filter(line => line.quantity > 0)
+
+    if (!lines.length) {
+        receiveErrors.items = t('Enter a quantity or serial numbers to receive.')
+        return
+    }
 
     isReceiving.value = true
     try {
