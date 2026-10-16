@@ -4565,6 +4565,10 @@ class UnionSeeder extends Seeder
             ['id' => '4540', 'upazila_id' => '491', 'name' => 'Kaliara Gabragati', 'bn_name' => 'কালিয়ারা গাবরাগাতি', 'url' => 'kaliaragabragatiup.netrokona.gov.bd'],
             ['id' => '4541', 'upazila_id' => '495', 'name' => 'Brahmandura', 'bn_name' => 'ব্রাহ্মণডুরা', 'url' => 'brahmanduraup.habiganj.gov.bd'],
         ];
-        DB::table('unions')->insert($unions);
+        DB::table('unions')->upsert(
+            $unions,
+            ['id'],
+            ['upazila_id', 'name', 'bn_name', 'url']
+        );
     }
 }

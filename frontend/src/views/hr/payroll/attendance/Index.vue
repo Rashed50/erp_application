@@ -4,7 +4,7 @@
 
             <!-- Header & tab buttons -->
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="m-0">{{ $t('Attendance Management') }}</h5>
+                <h6 class="m-0">{{ $t('Attendance Management') }}</h6>
 
                 <div class="d-flex gap-2">
                     <v-btn v-for="tab in tabs" :key="tab.id" class="text-none"
