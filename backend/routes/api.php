@@ -52,6 +52,32 @@ use App\Http\Responses\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+
+use App\Http\Controllers\Api\Attendance\AdmsController;
+use App\Http\Controllers\Api\Attendance\AttendanceController;
+use App\Http\Controllers\Api\Attendance\AttendanceLogController;
+use AppHttp\Controllers\Api\Attendance\AttendanceReportController;
+use App\Http\Controllers\Api\Attendance\AttendancePeriodController;
+
+// Device endpoint: add a dedicated ADMS authentication middleware before production.
+Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
+
+Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
+    // Register fixed paths before /{dailyAttendance} so they are not treated as IDs.
+    Route::post('/manual', [AttendanceController::class, 'manual']);
+    Route::post('/process-logs', [AttendanceController::class, 'processLogs']);
+    Route::get('/logs', [AttendanceLogController::class, 'index']);
+    Route::get('/reports/monthly', [AttendanceReportController::class, 'monthly']);
+    Route::get('/periods', [AttendancePeriodController::class, 'index']);
+    Route::post('/periods/submit', [AttendancePeriodController::class, 'submit']);
+    Route::post('/periods/approve', [AttendancePeriodController::class, 'approve']);
+    Route::post('/periods/lock', [AttendancePeriodController::class, 'lock']);
+
+    Route::get('/search', [AttendanceController::class, 'index']);
+    Route::get('/{dailyAttendance}', [AttendanceController::class, 'show'])->whereNumber('dailyAttendance');
+});
+
+
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/branding', [CompanySettingController::class, 'branding'])->name('branding');
 

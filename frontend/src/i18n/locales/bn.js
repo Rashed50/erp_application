@@ -58,6 +58,7 @@ export default {
         itemSubCategory: 'আইটেম সাব ক্যাটাগরি',
         itemName: 'আইটেমের নাম',
         reports: 'রিপোর্ট',
+        attendance: 'উপস্থিতি',
         generalLedgerReport: 'জেনারেল লেজার রিপোর্ট',
         trialBalance: 'ট্রায়াল ব্যালেন্স',
         profitLoss: 'লাভ-ক্ষতি',

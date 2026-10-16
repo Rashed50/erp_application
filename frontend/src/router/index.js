@@ -19,6 +19,15 @@ const routes = [
         }
     },
 
+          {
+                path: '/attendance',
+                name: 'admin_attendance',
+                component: () => import('@/views/attendance/Add.vue'),
+                meta: {
+                    title: 'New Attendance',
+                }
+            },
+
     {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
@@ -63,6 +72,9 @@ const routes = [
                     permissions: ['roles.view']
                 }
             },
+         
+
+
 
             {
                 path: 'role-add',
@@ -326,6 +338,15 @@ const routes = [
                 meta: {
                     title: 'HR Reports',
                     permissions: ['hr-reports.view']
+                }
+            },
+            {
+                path: 'hr/attendance',
+                name: 'admin_hr_attendance',
+                component: () => import('@/views/hr/payroll/attendance/Index.vue'),
+                meta: {
+                    title: 'HR Attendance',
+                    permissions: ['hr-attendance.view']
                 }
             },
             /* ====================== HR Route END ====================== */
