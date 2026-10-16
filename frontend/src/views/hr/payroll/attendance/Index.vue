@@ -4,7 +4,7 @@
 
             <!-- Header & tab buttons -->
             <div class="d-flex justify-content-between align-items-center">
-                <h4 class="m-0">{{ $t('Attendance Management') }}</h4>
+                <h5 class="m-0">{{ $t('Attendance Management') }}</h5>
 
                 <div class="d-flex gap-2">
                     <v-btn v-for="tab in tabs" :key="tab.id" class="text-none"
@@ -19,6 +19,7 @@
             <AttendanceList v-if="activeTab === 1" />
             <AttendanceIn v-else-if="activeTab === 2" @cancel="activeTab = 1" />
             <AttendanceOut v-else-if="activeTab === 3" @cancel="activeTab = 1" />
+            <Process v-else-if="activeTab === 4" @cancel="activeTab = 1" />
         </div>
     </div>
 </template>
@@ -27,6 +28,7 @@
 import AttendanceList from './AttendanceList.vue';
 import AttendanceIn from './AttendanceIn.vue';
 import AttendanceOut from './AttendanceOut.vue';
+import Process from './Process.vue';
 
 export default {
     name: 'AttendanceMain',
@@ -34,17 +36,19 @@ export default {
     components: {
         AttendanceList,
         AttendanceIn,
-        AttendanceOut
+        AttendanceOut,
+        Process
     },
 
     data() {
         return {
-            activeTab: 1, // 1 = List/Search, 2 = IN, 3 = OUT
+            activeTab: 1, // 1 = List/Search, 2 = IN, 3 = OUT, 4 = Process
 
             tabs: [
                 { id: 1, label: 'Search', icon: 'fa-search', color: 'blue-darken-3' },
                 { id: 2, label: 'IN', icon: 'fa-plus', color: 'green-darken-3' },
-                { id: 3, label: 'Out', icon: 'fa-minus', color: 'red-darken-3' }
+                { id: 3, label: 'Out', icon: 'fa-minus', color: 'red-darken-3' },
+                { id: 4, label: 'Process', icon: 'fa-gears', color: 'orange-darken-3' }
             ]
         };
     }

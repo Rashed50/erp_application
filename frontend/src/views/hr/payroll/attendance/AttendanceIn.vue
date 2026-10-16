@@ -1,26 +1,32 @@
 <template>
     <div>
-        <!-- Step 1: search -->
+        <!-- Step 1: search (label and field side by side) -->
         <v-card style="padding: 15px; margin-top: 15px;">
-            <div class="row g-3 align-items-end">
+            <div class="row g-3 align-items-center">
                 <div class="col-md-3">
-                    <label>{{ $t('Attendance Date:') }}</label>
-                    <input type="date" class="form-control" v-model="filters.date" />
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="mb-0 text-nowrap">{{ $t('Attendance Date:') }}</label>
+                        <input type="date" class="form-control" v-model="filters.date" />
+                    </div>
                 </div>
 
                 <div class="col-md-3">
-                    <label>{{ $t('Shift:') }}</label>
-                    <select class="form-select" v-model="filters.shift_id">
-                        <option value="">{{ $t('Select Shift') }}</option>
-                        <option value="day">{{ $t('Day Shift') }}</option>
-                        <option value="night">{{ $t('Night Shift') }}</option>
-                    </select>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="mb-0 text-nowrap">{{ $t('Shift:') }}</label>
+                        <select class="form-select" v-model="filters.shift_id">
+                            <option value="">{{ $t('Select Shift') }}</option>
+                            <option value="day">{{ $t('Day Shift') }}</option>
+                            <option value="night">{{ $t('Night Shift') }}</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="col-md-4">
-                    <label>{{ $t('Employee ID / Name:') }}</label>
-                    <input type="text" class="form-control" v-model.trim="filters.employee_id"
-                        :placeholder="$t('Enter Employee ID')" @keyup.enter="fetchEmployees" />
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="mb-0 text-nowrap">{{ $t('Employee ID / Name:') }}</label>
+                        <input type="text" class="form-control" v-model.trim="filters.employee_id"
+                            :placeholder="$t('Enter Employee ID')" @keyup.enter="fetchEmployees" />
+                    </div>
                 </div>
 
                 <div class="col-md-2">
@@ -34,37 +40,40 @@
 
         <!-- Step 2: results & submit -->
         <v-card v-if="hasSearched" style="padding: 10px; margin-top: 15px;">
-            <div class="d-flex justify-content-between align-items-end mb-2">
-                <h6 class="mb-0"></h6>
-                <div class="text-muted small">
-                    {{ $t('Total {count} employees', { count: employeesList.length }) }} ·
-                    <strong>{{ $t('{count} selected', { count: selectedEmployeeIds.length }) }}</strong>
-                </div>
-            </div>
 
             <!-- Submit section (above the table) -->
-            <div v-if="employeesList.length" class="row g-3 align-items-end mb-3">
+            <div v-if="employeesList.length" class="row g-3 align-items-center mb-3">
                 <div class="col-md-4">
-                    <label>{{ $t('First Punch At (IN Time):') }}</label>
-                    <input type="datetime-local" class="form-control" v-model="actionForm.first_punch_at" />
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="mb-0 text-nowrap">{{ $t('IN Time:') }}</label>
+                        <input type="datetime-local" class="form-control" v-model="actionForm.first_punch_at" />
+                    </div>
                 </div>
 
                 <div class="col-md-3">
-                    <label>{{ $t('Status:') }}</label>
-                    <select class="form-select" v-model="actionForm.status">
-                        <option value="present">{{ $t('Present') }}</option>
-                        <option value="late">{{ $t('Late') }}</option>
-                        <option value="absent">{{ $t('Absent') }}</option>
-                        <option value="half_day">{{ $t('Half Day') }}</option>
-                        <option value="leave">{{ $t('On Leave') }}</option>
-                        <option value="holiday">{{ $t('Holiday') }}</option>
-                        <option value="weekly_off">{{ $t('Weekly Off') }}</option>
-                        <option value="incomplete">{{ $t('Incomplete') }}</option>
-                        <option value="offsite">{{ $t('Offsite') }}</option>
-                    </select>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="mb-0 text-nowrap">{{ $t('Status:') }}</label>
+                        <select class="form-select" v-model="actionForm.status">
+                            <option value="present">{{ $t('Present') }}</option>
+                            <option value="late">{{ $t('Late') }}</option>
+                            <option value="absent">{{ $t('Absent') }}</option>
+                            <option value="half_day">{{ $t('Half Day') }}</option>
+                            <option value="leave">{{ $t('On Leave') }}</option>
+                            <option value="holiday">{{ $t('Holiday') }}</option>
+                            <option value="weekly_off">{{ $t('Weekly Off') }}</option>
+                            <option value="incomplete">{{ $t('Incomplete') }}</option>
+                            <option value="offsite">{{ $t('Offsite') }}</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="col-md-5 d-flex justify-content-end">
+                <!-- Total / selected sits right beside the Submit button -->
+                <div class="col-md-5 d-flex justify-content-end align-items-center gap-3">
+                    <span class="text-muted small">
+                        {{ $t('Total {count} employees', { count: employeesList.length }) }} ·
+                        <!-- <strong>{{ $t('{count} selected', { count: selectedEmployeeIds.length }) }}</strong> -->
+                    </span>
+
                     <v-btn class="text-none text-white" color="green-darken-3" rounded="0" variant="flat" size="small"
                         :disabled="!selectedEmployeeIds.length" :loading="submitting" @click="submitBatchIn">
                         <i class="fa-solid fa-check me-1"></i> {{ $t('Submit') }} ({{ selectedEmployeeIds.length }})
@@ -81,7 +90,6 @@
                             <th>{{ $t('Name') }}</th>
                             <th>{{ $t('Shift') }}</th>
                             <th>{{ $t('Attendance Date') }}</th>
-                            <th>{{ $t('First Punch At') }}</th>
                             <th>{{ $t('Status') }}</th>
                             <th class="text-center" width="80">
                                 <input type="checkbox" class="form-check-input" :checked="allSelected"
@@ -93,11 +101,11 @@
 
                     <tbody>
                         <tr v-if="loading">
-                            <td colspan="8" class="text-center py-3">{{ $t('Loading employees...') }}</td>
+                            <td colspan="7" class="text-center py-3">{{ $t('Loading employees...') }}</td>
                         </tr>
 
                         <tr v-else-if="!employeesList.length">
-                            <td colspan="8" class="text-center text-muted py-3">
+                            <td colspan="7" class="text-center text-muted py-3">
                                 {{ $t('No employee records found.') }}
                             </td>
                         </tr>
@@ -108,7 +116,6 @@
                             <td>{{ emp.name || '-' }}</td>
                             <td>{{ emp.shift?.name || emp.shift_name || '-' }}</td>
                             <td>{{ searchedDate }}</td>
-                            <td>{{ emp.attendance?.first_punch_at || '-' }}</td>
                             <td>
                                 <span v-if="emp.attendance?.status" :class="statusClass(emp.attendance.status)"
                                     class="text-capitalize">
@@ -243,7 +250,9 @@ export default {
 
                 const payload = response.data?.data ?? response.data;
                 let list = payload?.employees ?? payload ?? [];
+                if (!Array.isArray(list)) list = list?.data ?? [];
 
+                // Every row MUST have a unique emp_auto_id, otherwise checkboxes share one value.
                 this.employeesList = list.map(emp => ({
                     ...emp,
                     emp_auto_id: emp.emp_auto_id ?? emp.id,
@@ -274,7 +283,7 @@ export default {
             }
 
             if (!this.actionForm.first_punch_at) {
-                toast.error(t('Please select First Punch At.'));
+                toast.error(t('Please select IN Time.'));
                 return;
             }
 

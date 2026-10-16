@@ -1,38 +1,39 @@
 <template>
     <div>
-        <!-- Search filters -->
+        <!-- Search filters (label and field side by side) -->
         <v-card style="padding: 15px; margin-top: 15px;">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label>{{ $t('Date From:') }}</label>
-                    <input type="date" class="form-control" v-model="filters.date_from" />
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <!-- Fixed widths for the date fields, so the calendar icon never overlaps the next label -->
+                <div class="d-flex align-items-center gap-2">
+                    <label class="mb-0 text-nowrap">{{ $t('From:') }}</label>
+                    <input type="date" class="form-control" style="width: 170px;" v-model="filters.date_from" />
                 </div>
 
-                <div class="col-md-3">
-                    <label>{{ $t('Date To:') }}</label>
-                    <input type="date" class="form-control" v-model="filters.date_to" />
+                <div class="d-flex align-items-center gap-2">
+                    <label class="mb-0 text-nowrap">{{ $t('To:') }}</label>
+                    <input type="date" class="form-control" style="width: 170px;" v-model="filters.date_to" />
                 </div>
 
-                <div class="col-md-2">
-                    <label>{{ $t('Status:') }}</label>
-                    <select class="form-select" v-model="filters.status">
-                        <option value="">{{ $t('All Status') }}</option>
-                        <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ $t(s.label) }}</option>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="mb-0 text-nowrap">{{ $t('Status:') }}</label>
+                    <select class="form-select" style="width: 140px;" v-model="filters.status">
+                        <option value="">{{ $t('Select') }}</option>
+                        <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ $t(s.label) }}
+                        </option>
                     </select>
                 </div>
 
-                <div class="col-md-2">
-                    <label>{{ $t('Employee ID:') }}</label>
+                <!-- Takes all the remaining width -->
+                <div class="d-flex align-items-center gap-2" style="flex: 1 1 240px;">
+                    <label class="mb-0 text-nowrap">{{ $t('Employee ID:') }}</label>
                     <input type="text" class="form-control" v-model.trim="filters.employee_id" placeholder="e.g. EMP001"
                         @keyup.enter="search" />
                 </div>
 
-                <div class="col-md-2">
-                    <v-btn class="text-none text-white w-100" color="blue-darken-3" rounded="0" variant="flat"
-                        :loading="loading" @click="search">
-                        <i class="fa-solid fa-search me-1"></i> {{ $t('Search') }}
-                    </v-btn>
-                </div>
+                <v-btn class="text-none text-white" color="blue-darken-3" rounded="0" variant="flat" height="36"
+                    min-width="110" :loading="loading" @click="search">
+                    <i class="fa-solid fa-search me-1"></i> {{ $t('Search') }}
+                </v-btn>
             </div>
         </v-card>
 
@@ -43,12 +44,12 @@
                     <thead>
                         <tr>
                             <th class="text-center" width="60">{{ $t('SL') }}</th>
-                            <th>{{ $t('Employee ID') }}</th>
+                            <th>{{ $t('ID') }}</th>
                             <th>{{ $t('Name') }}</th>
                             <th>{{ $t('Date') }}</th>
                             <th>{{ $t('Status') }}</th>
-                            <th>{{ $t('First Punch (IN)') }}</th>
-                            <th>{{ $t('Last Punch (OUT)') }}</th>
+                            <th>{{ $t('IN Time') }}</th>
+                            <th>{{ $t('OUT Time') }}</th>
                             <th class="text-center" width="120">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
@@ -69,14 +70,14 @@
                             </td>
                             <td>{{ item.employee?.employee_id || item.employee_auto_id || '-' }}</td>
                             <td>{{ item.employee?.name || 'N/A' }}</td>
-                            <td>{{ item.attendance_date }}</td>
+                            <td>{{ dateOnly(item.attendance_date) }}</td>
                             <td>
                                 <span :class="getStatusBadge(item.status)" class="text-capitalize">
                                     {{ item.status ? item.status.replace('_', ' ') : '-' }}
                                 </span>
                             </td>
-                            <td>{{ item.first_punch_at || '-' }}</td>
-                            <td>{{ item.last_punch_at || '-' }}</td>
+                            <td>{{ timeOnly(item.first_punch_at) }}</td>
+                            <td>{{ timeOnly(item.last_punch_at) }}</td>
                             <td class="text-center">
                                 <v-btn class="me-1" color="blue-darken-3" icon size="x-small" variant="tonal"
                                     :title="$t('Edit')" @click="openEdit(item)">
@@ -180,6 +181,8 @@ export default {
     name: 'AttendanceList',
 
     data() {
+        const today = this.localDate();
+
         return {
             loading: false,
             saving: false,
@@ -204,9 +207,10 @@ export default {
                 total: 0
             },
 
+            // Date From / Date To default to today
             filters: {
-                date_from: '',
-                date_to: '',
+                date_from: today,
+                date_to: today,
                 status: '',
                 employee_id: '',
                 per_page: 25
@@ -230,7 +234,35 @@ export default {
     },
 
     methods: {
-        // "2026-10-15 09:00:00" -> "2026-10-15T09:00" (for datetime-local)
+        // Today's date in local time (YYYY-MM-DD)
+        localDate() {
+            const now = new Date();
+            return new Date(
+                now.getTime() - now.getTimezoneOffset() * 60000
+            ).toISOString().slice(0, 10);
+        },
+
+        // "2026-10-16T00:00:00.000000Z" -> "2026-10-16"
+        dateOnly(value) {
+            return value ? String(value).slice(0, 10) : '-';
+        },
+
+        // "2026-10-15T14:46:00.000000Z" -> "02:46 PM"
+        // Read straight from the string (no Date object) so no timezone shift happens.
+        timeOnly(value) {
+            if (!value) return '-';
+
+            const match = String(value).match(/(\d{2}):(\d{2})/);
+            if (!match) return '-';
+
+            let hour = parseInt(match[1], 10);
+            const period = hour >= 12 ? 'PM' : 'AM';
+            hour = hour % 12 || 12;
+
+            return `${String(hour).padStart(2, '0')}:${match[2]} ${period}`;
+        },
+
+        // "2026-10-15T09:00:00.000000Z" or "2026-10-15 09:00:00" -> "2026-10-15T09:00" (for datetime-local)
         toInput(value) {
             return value ? String(value).replace(' ', 'T').slice(0, 16) : '';
         },
@@ -311,7 +343,7 @@ export default {
                 id: item.id,
                 employee_code: item.employee?.employee_id || item.employee_auto_id || '',
                 name: item.employee?.name || '',
-                attendance_date: item.attendance_date,
+                attendance_date: this.dateOnly(item.attendance_date),
                 status: item.status || 'present',
                 first_punch_at: this.toInput(item.first_punch_at),
                 last_punch_at: this.toInput(item.last_punch_at)
@@ -360,7 +392,7 @@ export default {
         async deleteRecord(item) {
             const confirm = await Swal.fire({
                 title: t('Delete this attendance record?'),
-                text: `${item.employee?.name || ''} - ${item.attendance_date}`,
+                text: `${item.employee?.name || ''} - ${this.dateOnly(item.attendance_date)}`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: t('Yes, delete')
