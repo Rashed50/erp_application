@@ -571,6 +571,8 @@ const accountReportLinks = [
     { report: 'balance_sheet', label: 'nav.balanceSheet' },
     { report: 'bank_reconciliation', label: 'nav.bankReconciliation' },
     { report: 'work_order_collections', label: 'nav.workOrderCollections' },
+    { report: 'work_order_profitability', label: 'nav.workOrderProfitability' },
+    { report: 'work_order_details', label: 'nav.workOrderDetails' },
     { report: 'customer_collections', label: 'nav.customerCollections' },
     { report: 'cash_transactions', label: 'nav.otherReports' },
 ]

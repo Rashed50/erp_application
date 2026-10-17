@@ -16,8 +16,12 @@ use App\Http\Controllers\Api\Asset\ItemNameController;
 use App\Http\Controllers\Api\Asset\ItemSubCategoryController;
 use App\Http\Controllers\Api\Asset\MaterialRequestController;
 use App\Http\Controllers\Api\Asset\PurchaseOrderController;
+use App\Http\Controllers\Api\Attendance\AdmsController;
+use App\Http\Controllers\Api\Attendance\AttendanceController;
+use App\Http\Controllers\Api\Attendance\AttendanceLogController;
+use App\Http\Controllers\Api\Attendance\AttendancePeriodController;
+use App\Http\Controllers\Api\Attendance\AttendanceReportController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ChartOfAccountController;
 use App\Http\Controllers\Api\CompanySettingController;
 use App\Http\Controllers\Api\CustomerController;
@@ -37,6 +41,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PermissionCategoryController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\PurchasePaymentController;
 use App\Http\Controllers\Api\RoleController;
@@ -52,13 +57,6 @@ use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-
-use App\Http\Controllers\Api\Attendance\AdmsController;
-use App\Http\Controllers\Api\Attendance\AttendanceController;
-use App\Http\Controllers\Api\Attendance\AttendanceLogController;
-use AppHttp\Controllers\Api\Attendance\AttendanceReportController;
-use App\Http\Controllers\Api\Attendance\AttendancePeriodController;
 
 // Device endpoint: add a dedicated ADMS authentication middleware before production.
 Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
@@ -77,7 +75,6 @@ Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     Route::get('/search', [AttendanceController::class, 'index']);
     Route::get('/{dailyAttendance}', [AttendanceController::class, 'show'])->whereNumber('dailyAttendance');
 });
-
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/branding', [CompanySettingController::class, 'branding'])->name('branding');
@@ -155,6 +152,11 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('store', 'permission:customers.create')
         ->middlewareFor('update', 'permission:customers.update')
         ->middlewareFor('destroy', 'permission:customers.delete');
+
+    // The purchase and income/expense forms tag entries with any work order.
+    Route::get('/work-orders/options', [WorkOrderController::class, 'options'])
+        ->name('work-orders.options')
+        ->middleware('permission:work-orders.view|purchases.create|purchases.update|income-expenses.create|income-expenses.update|account-reports.view');
 
     Route::apiResource('work-orders', WorkOrderController::class)
         ->middlewareFor(['index', 'show'], 'permission:work-orders.view')
@@ -286,6 +288,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/sales-purchase-summary', [AccountReportController::class, 'salesPurchaseSummary'])->name('sales-purchase-summary');
         Route::get('/sales', [AccountReportController::class, 'salesRegister'])->name('sales');
         Route::get('/work-order-collections', [AccountReportController::class, 'workOrderCollections'])->name('work-order-collections');
+        Route::get('/work-order-profitability', [AccountReportController::class, 'workOrderProfitability'])->name('work-order-profitability');
+        Route::get('/work-order-details', [AccountReportController::class, 'workOrderDetails'])->name('work-order-details');
         Route::get('/customer-collections', [AccountReportController::class, 'customerCollections'])->name('customer-collections');
         Route::get('/bank-reconciliation', [AccountReportController::class, 'bankReconciliation'])->name('bank-reconciliation');
         Route::patch('/bank-reconciliation/cleared', [AccountReportController::class, 'markCleared'])

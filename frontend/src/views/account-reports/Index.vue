@@ -73,6 +73,15 @@
                             </option>
                         </select>
                     </div>
+                    <div class="col-md-3" v-if="has('workOrder')">
+                        <label>{{ $t('Work Order:') }}</label>
+                        <select class="form-select" v-model="filters.work_order_id">
+                            <option value="">{{ $t('Select a work order') }}</option>
+                            <option v-for="workOrder in workOrders" :key="workOrder.id" :value="workOrder.id">
+                                {{ workOrder.work_order_no }} - {{ workOrder.work_title }}
+                            </option>
+                        </select>
+                    </div>
                     <div class="col-md-2" v-if="has('workOrderStatus')">
                         <label>{{ $t('Status:') }}</label>
                         <select class="form-select" v-model="filters.status">
@@ -403,6 +412,47 @@ const reports = {
         rows: (data) => data.rows,
         totals: (data) => labelRow('customer_name', 'Total', data.totals),
     },
+    work_order_profitability: {
+        title: 'Work Order Sales & Expense',
+        endpoint: `${BASE}/work-order-profitability`,
+        filters: ['customer', 'workOrderStatus', 'fromDate', 'toDate'],
+        columns: () => [
+            column('work_order_no', 'Work Order No'),
+            column('work_title', 'Work Title'),
+            column('customer_name', 'Customer'),
+            column('status', 'Status', { format: text }),
+            moneyColumn('total_amount', 'Work Order Amount'),
+            moneyColumn('sales_amount', 'Sales'),
+            moneyColumn('other_income_amount', 'Other Income'),
+            moneyColumn('purchase_amount', 'Purchase'),
+            moneyColumn('expense_amount', 'Expense'),
+            moneyColumn('total_cost', 'Total Cost'),
+            moneyColumn('profit_amount', 'Profit / Loss'),
+        ],
+        rows: (data) => data.rows,
+        totals: (data) => labelRow('customer_name', 'Total', data.totals),
+    },
+    work_order_details: {
+        title: 'Work Order Sales & Expense Details',
+        endpoint: `${BASE}/work-order-details`,
+        filters: ['workOrder', 'fromDate', 'toDate'],
+        required: ['work_order_id'],
+        missingMessage: 'Select a work order to see its sales, purchases and expenses.',
+        columns: () => [
+            column('date', 'Date'),
+            column('type', 'Type', { format: text }),
+            column('reference', 'Reference No'),
+            column('party_name', 'Customer / Supplier / Account'),
+            column('description', 'Description'),
+            moneyColumn('income', 'Income'),
+            moneyColumn('cost', 'Cost'),
+        ],
+        rows: (data) => data.rows,
+        totals: (data) => labelRow('description', 'Total', { income: data.total_income, cost: data.total_cost }),
+        note: (data) => data.profit_amount >= 0
+            ? { text: '{number} - {title}: Profit {amount}', params: { number: data.work_order.work_order_no, title: data.work_order.work_title, amount: money(data.profit_amount) }, class: 'text-success' }
+            : { text: '{number} - {title}: Loss {amount}', params: { number: data.work_order.work_order_no, title: data.work_order.work_title, amount: money(Math.abs(data.profit_amount)) }, class: 'text-danger' },
+    },
     customer_collections: {
         title: 'Customer Collection & Due',
         endpoint: `${BASE}/customer-collections`,
@@ -481,6 +531,7 @@ const filters = reactive({
     supplier_ids: [],
     customer_ids: [],
     customer_id: '',
+    work_order_id: '',
     statement_balance: '',
     period: 'monthly',
     status: '',
@@ -498,6 +549,16 @@ const note = computed(() => (data.value && report.value.note ? report.value.note
 const { items: accounts, fetchData: loadAccounts } = useFetch('/api/ledger-accounts', { per_page: ALL })
 const { items: suppliers, fetchData: loadSuppliers } = useFetch('/api/suppliers', { per_page: ALL })
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: ALL })
+
+const workOrders = ref([])
+const loadWorkOrders = async () => {
+    try {
+        const response = await axios.get('/api/work-orders/options')
+        workOrders.value = response.data.data ?? []
+    } catch (e) {
+        console.error(e)
+    }
+}
 
 // Reports reconciling against a statement only offer accounts of their type (cash/bank assets).
 const accountOptions = computed(() => (report.value.accountTypeId
@@ -521,6 +582,7 @@ const params = () => {
     if (current.filters.includes('toDate') && filters.to_date) result.to_date = filters.to_date
     if (current.filters.includes('account') && filters.account_id) result.account_id = filters.account_id
     if (current.filters.includes('customer') && filters.customer_id) result.customer_id = filters.customer_id
+    if (current.filters.includes('workOrder') && filters.work_order_id) result.work_order_id = filters.work_order_id
     if (current.filters.includes('period')) result.period = filters.period
     if (current.filters.includes('workOrderStatus') && filters.status) result.status = filters.status
     if (current.filters.includes('statementBalance') && filters.statement_balance !== '') result.statement_balance = filters.statement_balance
@@ -605,6 +667,7 @@ onMounted(() => {
     loadAccounts()
     loadSuppliers()
     loadCustomers()
+    loadWorkOrders()
     run()
 })
 </script>

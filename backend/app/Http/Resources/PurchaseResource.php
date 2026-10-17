@@ -18,6 +18,8 @@ class PurchaseResource extends JsonResource
             'id' => $this->id,
             'supplier_id' => $this->supplier_id,
             'supplier_name' => $this->whenLoaded('supplier', fn () => $this->supplier->name),
+            'work_order_id' => $this->work_order_id,
+            'work_order_no' => $this->whenLoaded('workOrder', fn () => $this->workOrder?->work_order_no),
             'purchase_type' => $this->purchase_type,
             'invoice_number' => $this->invoice_number,
             'description' => $this->description,

@@ -33,6 +33,7 @@ class UpdateIncomeExpenseTransactionRequest extends FormRequest
             'type' => ['sometimes', 'required', Rule::in(['income', 'expense'])],
             'income_expense_account_id' => ['sometimes', 'required', 'different:payment_account_id', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
             'payment_account_id' => ['sometimes', 'required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
+            'work_order_id' => ['sometimes', 'nullable', 'integer', Rule::exists('work_orders', 'id')->withoutTrashed()],
             'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'],
             'transaction_date' => ['sometimes', 'required', 'date'],
             'reference_no' => ['sometimes', 'nullable', 'string', 'max:255'],

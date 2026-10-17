@@ -33,6 +33,7 @@ class UpdatePurchaseRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'work_order_id' => ['sometimes', 'nullable', 'integer', Rule::exists('work_orders', 'id')->withoutTrashed()],
             'purchase_type' => ['sometimes', 'required', 'string', Rule::in(['product', 'service'])],
             'invoice_number' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('purchases', 'invoice_number')->ignore($this->route('purchase'))],
             'description' => ['sometimes', 'nullable', 'string'],

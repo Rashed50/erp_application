@@ -44,6 +44,21 @@ class WorkOrderService
     }
 
     /**
+     * Every work order, newest first, for tagging a purchase or an expense
+     * with the work order it was spent on.
+     *
+     * @return Collection<int, WorkOrder>
+     */
+    public function options(): Collection
+    {
+        return WorkOrder::query()
+            ->with('customer:id,name')
+            ->latest('issue_date')
+            ->latest('id')
+            ->get(['id', 'customer_id', 'work_order_no', 'work_title', 'issue_date', 'total_amount', 'retention_percent', 'status']);
+    }
+
+    /**
      * @param  array{customer_id: int, work_title: string, work_order_no: string, issue_date: string, total_amount: float, retention_percent?: ?float, deliver_date?: ?string, status?: ?string}  $data
      */
     public function create(array $data): WorkOrder

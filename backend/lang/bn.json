@@ -93,6 +93,7 @@
     "This supplier has ledger transactions or purchases and cannot be deleted.": "এই সরবরাহকারীর লেজার লেনদেন বা ক্রয় আছে, তাই মুছে ফেলা যাবে না।",
     "This transaction has already been reversed.": "এই লেনদেনটি ইতিমধ্যে রিভার্স করা হয়েছে।",
     "This work order has sales or payments and cannot be deleted.": "এই ওয়ার্ক অর্ডারে বিক্রয় বা পেমেন্ট আছে, তাই মুছে ফেলা যাবে না।",
+    "This work order has purchases or expenses and cannot be deleted.": "এই ওয়ার্ক অর্ডারে ক্রয় বা খরচ আছে, তাই মুছে ফেলা যাবে না।",
     "Transaction deleted successfully.": "লেনদেন সফলভাবে মুছে ফেলা হয়েছে।",
     "Transaction not found for this customer.": "এই গ্রাহকের জন্য লেনদেন পাওয়া যায়নি।",
     "Transaction not found for this supplier.": "এই সরবরাহকারীর জন্য লেনদেন পাওয়া যায়নি।",
