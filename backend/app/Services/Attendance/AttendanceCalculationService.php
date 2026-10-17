@@ -289,4 +289,115 @@ class AttendanceCalculationService
             );
         });
     }
+
+    public function generateMonthlyWorkRecords(int $year, int $month): array
+    {
+        $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = $startDate->copy()->endOfMonth();
+        $salaryMonth = $startDate->toDateString();
+
+        return DB::transaction(function () use (
+            $startDate,
+            $endDate,
+            $salaryMonth
+        ) {
+            // Find employees who have attendance records for this month.
+            $employeeIds = DB::table('daily_attendances')
+                ->whereBetween('attendance_date', [
+                    $startDate->toDateString(),
+                    $endDate->toDateString(),
+                ])
+                ->distinct()
+                ->pluck('employee_auto_id');
+
+            $processed = 0;
+
+            foreach ($employeeIds as $employeeId) {
+                $records = DB::table('daily_attendances')
+                    ->where('employee_auto_id', $employeeId)
+                    ->whereBetween('attendance_date', [
+                        $startDate->toDateString(),
+                        $endDate->toDateString(),
+                    ])
+                    ->get();
+
+                $workingDays = 0;
+                $presentDays = 0;
+                $absentDays = 0;
+                $paidLeaveDays = 0;
+                $unpaidLeaveDays = 0;
+                $totalWorkingHours = 0;
+                $overtimeHours = 0;
+
+                foreach ($records as $record) {
+                    $status = $record->status;
+
+                    // Exclude holidays and weekly off days from scheduled
+                    // working days. Incomplete records remain reviewable.
+                    if (!in_array($status, ['holiday', 'weekly_off'])) {
+                        $workingDays++;
+                    }
+
+                    // Use payable day fractions for present-day totals.
+                    if (in_array($status, ['present', 'late', 'offsite'])) {
+                        $presentDays += (float) $record->payable_day_fraction;
+                    } elseif ($status === 'half_day') {
+                        $presentDays += (float) $record->payable_day_fraction;
+                    } elseif ($status === 'absent') {
+                        $absentDays++;
+                    }
+
+                    // Sum recorded working hours.
+                    $totalWorkingHours += (float) $record->worked_hours;
+
+                    // Only approved overtime is included in payroll-ready totals.
+                    $overtimeHours += (float) $record->approved_overtime_hours;
+                }
+
+                // Count approved leave by its leave type.
+                $leaves = DB::table('attendance_leaves')
+                    ->where('employee_auto_id', $employeeId)
+                    ->whereBetween('leave_date', [
+                        $startDate->toDateString(),
+                        $endDate->toDateString(),
+                    ])
+                    ->where('status', 'approved')
+                    ->get(['leave_type', 'day_fraction']);
+
+                foreach ($leaves as $leave) {
+                    if ($leave->leave_type === 'unpaid') {
+                        $unpaidLeaveDays += (float) $leave->day_fraction;
+                    } else {
+                        $paidLeaveDays += (float) $leave->day_fraction;
+                    }
+                }
+
+                // Create or update one monthly summary per employee.
+                DB::table('emp_works')->updateOrInsert(
+                    [
+                        'employee_id' => $employeeId,
+                        'salary_month' => $salaryMonth,
+                    ],
+                    [
+                        'working_days' => $workingDays,
+                        'present_days' => round($presentDays, 2),
+                        'absent_days' => $absentDays,
+                        'paid_leave_days' => round($paidLeaveDays, 2),
+                        'unpaid_leave_days' => round($unpaidLeaveDays, 2),
+                        'total_working_hours' => round($totalWorkingHours, 2),
+                        'overtime_hours' => round($overtimeHours, 2),
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ]
+                );
+
+                $processed++;
+            }
+
+            return [
+                'salary_month' => $salaryMonth,
+                'employees_processed' => $processed,
+            ];
+        });
+    }
 }

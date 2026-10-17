@@ -61,7 +61,7 @@ use Illuminate\Support\Facades\Route;
 // Device endpoint: add a dedicated ADMS authentication middleware before production.
 Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
 
- 
+
 Route::get('/get-employees-for-attendance-in', [AttendanceController::class, 'getEmployeesForAttendanceIN']);
 Route::get('/get-employees-for-attendance-out', [AttendanceController::class, 'getEmployeesForAttendanceOUT']);
 
@@ -69,7 +69,7 @@ Route::get('/get-employees-for-attendance-out', [AttendanceController::class, 'g
 Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     Route::post('/check-in', [AttendanceController::class, 'checkIn']);
     Route::post('/check-out', [AttendanceController::class, 'checkOut']);
- 
+
     Route::post('/process-logs', [AttendanceController::class, 'processLogs']);
     Route::get('/logs', [AttendanceLogController::class, 'index']);
     // Route::get('/reports/monthly', [AttendanceReportController::class, 'monthly']);
@@ -81,6 +81,7 @@ Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     Route::put('/{id}', [AttendanceController::class, 'update']);
     Route::delete('/{id}', [AttendanceController::class, 'destroy']);
     Route::get('/{dailyAttendance}', [AttendanceController::class, 'show'])->whereNumber('dailyAttendance');
+    Route::post('/generate-monthly-records', [AttendanceController::class, 'generateMonthlyRecords']);
 });
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');

@@ -198,6 +198,27 @@ class AttendanceController extends Controller
         ]);
     }
 
+
+    public function generateMonthlyRecords(
+       Request $request,
+        \App\Services\Attendance\AttendanceCalculationService $service
+    ) {
+        $data = $request->validate([
+            'year' => ['required', 'integer', 'min:2000', 'max:2200'],
+            'month' => ['required', 'integer', 'between:1,12'],
+        ]);
+
+        $result = $service->generateMonthlyWorkRecords(
+            $data['year'],
+            $data['month']
+        );
+
+        return response()->json([
+            'message' => 'Monthly work records generated successfully.',
+            'data' => $result,
+        ]);
+    }
+
     private function actorEmployeeAutoId(Request $request): ?int
     {
         $value = $request->user()?->emp_auto_id;

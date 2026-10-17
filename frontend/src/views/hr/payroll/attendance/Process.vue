@@ -1,141 +1,288 @@
 <template>
-    <div>
-        <v-card style="padding: 5px; margin-top: 15px;">
-            <div class="row align-items-center mb-2">
-                <div class="col-md-2">
-                    <input type="month" class="form-control" v-model="filters.month" />
+    <div class="process-page">
+
+        <!-- Monthly Attendance Process Form -->
+        <v-card class="process-card pa-4 mt-3" elevation="2" rounded="lg">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+
+                <!-- Month -->
+                <div class="d-flex align-items-center gap-2">
+                    <label class="mb-0 text-nowrap">
+                        {{ $t('Month:') }}
+                    </label>
+
+                    <input type="month" class="form-control month-input" v-model="filters.month"
+                        :disabled="processing" />
                 </div>
 
-                <div class="col-md-3">
-                    <SearchSelect v-model="filters.department" :items="options.departments" item-value="name"
-                        :placeholder="$t('All Departments')" />
+                <!-- Employee IDs -->
+                <div class="d-flex align-items-center gap-2">
+                    <label class="mb-0 text-nowrap">
+                        {{ $t('Employee IDs:') }}
+                    </label>
+
+                    <input type="text" class="form-control employee-input" v-model="filters.employee_ids"
+                        placeholder="e.g. 101,102,105" :disabled="processing" />
                 </div>
 
-                <div class="col-md-7">
-                    <div class="search-wrapper d-flex align-center gap-2">
-                        <v-text-field variant="outlined" density="compact" :placeholder="$t('Employee ID or name...')"
-                            v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
-                        <v-btn type="button" @click="fetchData" class="text-none text-white" color="blue-darken-3"
-                            rounded="0" variant="flat" min-width="100">
-                            {{ $t('Search') }}
-                        </v-btn>
-                        <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3" rounded="0"
-                            variant="flat" min-width="100">
-                            {{ $t('Reload') }}
-                        </v-btn>
-                    </div>
+                <!-- Process Button -->
+                <v-btn class="text-none text-white" color="orange-darken-3" rounded="0" variant="flat" height="40"
+                    min-width="120" :disabled="!filters.month" :loading="processing" @click="processRecords">
+                    <i class="fa-solid fa-gears me-2"></i>
+                    {{ $t('Process') }}
+                </v-btn>
+
+            </div>
+        </v-card>
+
+        <!-- Process Result -->
+        <v-card v-if="result" class="result-card pa-4 mt-3" elevation="2" rounded="lg">
+            <div class="text-center">
+                <h6 class="mb-3">
+                    {{ $t('Process result') }}
+                </h6>
+
+                <div class="d-flex flex-wrap justify-center gap-2">
+
+                    <span class="badge bg-primary">
+                        {{ monthLabel(resultMonth) }}
+                    </span>
+
+                    <span class="badge bg-success">
+                        {{ $t('{count} employees processed', {
+                            count: result.employees_processed
+                        }) }}
+                    </span>
+
                 </div>
             </div>
-
-            <BasePagination :current-page="pagination.page" :per-page="pagination.perPage" :total="pagination.total"
-                :last-page="pagination.lastPage" @page-change="changePage" @per-page-change="changePerPage" />
         </v-card>
+
     </div>
 </template>
 
 <script>
 import axios from 'axios';
-import BasePagination from '@/components/common/BasePagination.vue';
-import SearchSelect from '@/components/common/SearchSelect.vue';
+import Swal from 'sweetalert2';
+import { toast } from 'vue3-toastify';
+import { t } from '@/i18n';
 
 export default {
     name: 'Process',
-    emits: ['cancel'],
 
-    components: {
-        BasePagination,
-        SearchSelect
-    },
+    emits: ['cancel'],
 
     data() {
         return {
-            loading: false,
+            processing: false,
+            result: null,
+            resultMonth: '',
 
             filters: {
                 month: this.currentMonth(),
-                department: '',
-                search: ''
-            },
-
-            options: {
-                departments: []
-            },
-
-            pagination: {
-                page: 1,
-                perPage: 25,
-                total: 0,
-                lastPage: 1
+                employee_ids: ''
             }
         };
     },
 
-    mounted() {
-        this.fetchOptions();
-        this.fetchData();
+    watch: {
+        'filters.month'() {
+            this.clearResult();
+        },
+
+        'filters.employee_ids'() {
+            this.clearResult();
+        }
     },
 
     methods: {
-        // Current month in local time (YYYY-MM) for <input type="month">
+
+        // Current month in local time
         currentMonth() {
             const now = new Date();
+
             return new Date(
-                now.getTime() - now.getTimezoneOffset() * 60000
+                now.getTime() -
+                now.getTimezoneOffset() * 60000
             ).toISOString().slice(0, 7);
         },
 
-        // Department list for the dropdown
-        async fetchOptions() {
-            try {
-                const response = await axios.get('/api/hr/employees/options');
+        // Month label: 2026-10 -> October 2026
+        monthLabel(value) {
+            if (!value) return '';
 
-                if (response.data?.success) {
-                    this.options = response.data.data;
+            const [year, month] = value
+                .split('-')
+                .map(Number);
+
+            return new Date(
+                year,
+                month - 1,
+                1
+            ).toLocaleString('en-US', {
+                month: 'long',
+                year: 'numeric'
+            });
+        },
+
+        // Clear previous result
+        clearResult() {
+            this.result = null;
+            this.resultMonth = '';
+        },
+
+        // Convert comma-separated employee IDs
+        parseEmployeeIds(value) {
+            if (!value || !value.trim()) {
+                return [];
+            }
+
+            const values = value
+                .split(',')
+                .map(id => id.trim());
+
+            // Allow only positive integer IDs
+            if (
+                values.some(id => !/^[1-9]\d*$/.test(id))
+            ) {
+                throw new Error(
+                    'Enter valid Employee IDs separated by commas.'
+                );
+            }
+
+            // Remove duplicate IDs
+            return [...new Set(values.map(Number))];
+        },
+
+        // Process Monthly Attendance
+        async processRecords() {
+
+            if (this.processing) return;
+
+            // Validate Month
+            if (!this.filters.month) {
+                toast.error(
+                    t('Please select a month.')
+                );
+                return;
+            }
+
+            // Validate Employee IDs
+            let employeeIds = [];
+
+            try {
+                employeeIds = this.parseEmployeeIds(
+                    this.filters.employee_ids
+                );
+            } catch (error) {
+                toast.error(t(error.message));
+                return;
+            }
+
+            const selectedMonth = this.filters.month;
+            const selectedIds = this.filters.employee_ids;
+
+            const [year, month] = selectedMonth
+                .split('-')
+                .map(Number);
+
+            // Employee-wise backend processing
+            // will be implemented later.
+            if (employeeIds.length > 0) {
+                toast.info(
+                    t(
+                        'Employee-wise processing is not implemented yet.'
+                    )
+                );
+                return;
+            }
+
+            // Confirmation
+            const confirm = await Swal.fire({
+                title: t('Process {month}?', {
+                    month: this.monthLabel(selectedMonth)
+                }),
+                text: t(
+                    'Existing monthly records for this month will be recalculated.'
+                ),
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: t('Yes, process'),
+                cancelButtonText: t('Cancel')
+            });
+
+            if (!confirm.isConfirmed) return;
+
+            // Prevent duplicate processing
+            if (this.processing) return;
+
+            // Avoid running outdated selections
+            if (
+                this.filters.month !== selectedMonth ||
+                this.filters.employee_ids !== selectedIds
+            ) {
+                toast.info(
+                    t('Filters changed. Please process again.')
+                );
+                return;
+            }
+
+            this.processing = true;
+            this.clearResult();
+
+            try {
+                // Existing API: all employees
+                const response = await axios.post(
+                    '/api/attendance/generate-monthly-records',
+                    {
+                        year,
+                        month
+                    }
+                );
+
+                // Show result only for current filters
+                if (
+                    this.filters.month === selectedMonth &&
+                    this.filters.employee_ids === selectedIds
+                ) {
+                    this.result = response.data?.data ?? null;
+                    this.resultMonth = selectedMonth;
                 }
+
+                toast.success(
+                    response.data?.message ||
+                    t(
+                        'Monthly work records generated successfully.'
+                    )
+                );
+
             } catch (error) {
-                console.error('Options fetch error:', error);
-            }
-        },
 
-        // Search button. Put the Process API call here.
-        async fetchData() {
-            if (this.loading) return;
+                console.error(
+                    'Monthly process error:',
+                    error
+                );
 
-            this.loading = true;
+                const errors = error.response?.data?.errors;
 
-            try {
-                // TODO: call the Process API with this.filters and this.pagination, e.g.
-                // const response = await axios.get('/api/...', {
-                //     params: { ...this.filters, page: this.pagination.page, per_page: this.pagination.perPage }
-                // });
-            } catch (error) {
-                console.error('Process fetch error:', error);
+                toast.error(
+                    errors
+                        ? Object.values(errors)
+                            .flat()
+                            .join(' ')
+                        : (
+                            error.response?.data?.message ||
+                            t(
+                                'Failed to generate monthly work records.'
+                            )
+                        )
+                );
+
             } finally {
-                this.loading = false;
+                this.processing = false;
             }
-        },
-
-        // Reload button
-        resetFilters() {
-            this.filters = {
-                month: this.currentMonth(),
-                department: '',
-                search: ''
-            };
-            this.pagination.page = 1;
-            this.fetchData();
-        },
-
-        changePage(page) {
-            this.pagination.page = page;
-            this.fetchData();
-        },
-
-        changePerPage(perPage) {
-            this.pagination.perPage = perPage;
-            this.pagination.page = 1;
-            this.fetchData();
         }
     }
 };
 </script>
+
