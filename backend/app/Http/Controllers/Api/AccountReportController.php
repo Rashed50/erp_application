@@ -211,6 +211,34 @@ class AccountReportController extends Controller
         ));
     }
 
+    public function workOrderProfitability(Request $request): JsonResponse
+    {
+        $request->validate([
+            ...$this->dateRangeRules(),
+            'customer_id' => ['nullable', 'integer', Rule::exists('customers', 'id')],
+            'status' => ['nullable', Rule::in(WorkOrder::STATUSES)],
+        ]);
+
+        return ApiResponse::success($this->reportService->workOrderProfitability(
+            $request->integer('customer_id') ?: null,
+            $request->string('status')->value() ?: null,
+            ...$this->dateRange($request),
+        ));
+    }
+
+    public function workOrderDetails(Request $request): JsonResponse
+    {
+        $request->validate([
+            ...$this->dateRangeRules(),
+            'work_order_id' => ['required', 'integer', Rule::exists('work_orders', 'id')],
+        ]);
+
+        return ApiResponse::success($this->reportService->workOrderDetails(
+            WorkOrder::withTrashed()->findOrFail($request->integer('work_order_id')),
+            ...$this->dateRange($request),
+        ));
+    }
+
     public function customerCollections(Request $request): JsonResponse
     {
         $request->validate([

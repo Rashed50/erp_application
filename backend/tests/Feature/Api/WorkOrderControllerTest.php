@@ -2,9 +2,11 @@
 
 use App\Models\ChartOfAccount;
 use App\Models\Customer;
+use App\Models\Purchase;
 use App\Models\User;
 use App\Models\WorkOrder;
 use Database\Seeders\ChartOfAccountSeeder;
+use Spatie\Permission\Models\Permission;
 
 function workOrderPayload(int $customerId, array $overrides = []): array
 {
@@ -327,5 +329,37 @@ describe('destroy', function () {
 
         $this->assertSoftDeleted('work_orders', ['id' => $workOrder->id]);
         expect(WorkOrder::withTrashed()->find($workOrder->id)->deleted_by)->toBe($actor->id);
+    });
+});
+
+describe('options', function () {
+    it('lists every work order for a user who can create purchases', function () {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('purchases.create', 'web'));
+        WorkOrder::factory()->count(2)->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/work-orders/options')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    });
+
+    it('is forbidden without a related permission', function () {
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->getJson('/api/work-orders/options')
+            ->assertStatus(403);
+    });
+});
+
+describe('destroy with costs', function () {
+    it('refuses to delete a work order that has purchases', function () {
+        $workOrder = WorkOrder::factory()->create();
+        Purchase::factory()->create(['work_order_id' => $workOrder->id]);
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->deleteJson("/api/work-orders/{$workOrder->id}")
+            ->assertStatus(422);
+
+        $this->assertNotSoftDeleted('work_orders', ['id' => $workOrder->id]);
     });
 });

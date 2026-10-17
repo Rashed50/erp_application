@@ -38,6 +38,11 @@ class Purchase extends Model
         return $this->belongsTo(Supplier::class);
     }
 
+    public function workOrder(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrder::class)->withTrashed();
+    }
+
     public function ledgerTransaction(): BelongsTo
     {
         return $this->belongsTo(SupplierTransaction::class, 'supplier_transaction_id');

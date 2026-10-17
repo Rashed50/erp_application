@@ -4,6 +4,7 @@ use App\Models\AccountTransactionDetail;
 use App\Models\ChartOfAccount;
 use App\Models\Customer;
 use App\Models\CustomerTransaction;
+use App\Models\IncomeExpenseTransaction;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
@@ -493,5 +494,54 @@ describe('customer collections', function () {
             ->getJson('/api/accounting/reports/customer-collections?period=weekly')
             ->assertStatus(422)
             ->assertJsonStructure(['data' => ['period', 'from_date', 'to_date']]);
+    });
+});
+
+describe('work order profitability', function () {
+    beforeEach(function () {
+        $this->workOrder = WorkOrder::factory()->create(['work_order_no' => 'WO-PL-1', 'issue_date' => '2026-05-01', 'total_amount' => 20000]);
+        Sale::factory()->create(['customer_id' => $this->workOrder->customer_id, 'work_order_id' => $this->workOrder->id, 'issue_date' => '2026-05-10', 'net_total' => 12000]);
+        Purchase::factory()->create(['work_order_id' => $this->workOrder->id, 'purchase_date' => '2026-05-05', 'net_total' => 4000]);
+        Purchase::factory()->create(['work_order_id' => $this->workOrder->id, 'purchase_date' => '2026-07-05', 'net_total' => 999]);
+        IncomeExpenseTransaction::factory()->create(['work_order_id' => $this->workOrder->id, 'transaction_date' => '2026-05-06', 'amount' => 1500]);
+        IncomeExpenseTransaction::factory()->income()->create(['work_order_id' => $this->workOrder->id, 'transaction_date' => '2026-05-07', 'amount' => 500]);
+        Purchase::factory()->create(['purchase_date' => '2026-05-05', 'net_total' => 7777]);
+    });
+
+    it("sums each work order's sales, purchases and expenses in the range", function () {
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/work-order-profitability?from_date=2026-05-01&to_date=2026-05-31')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.rows')
+            ->assertJsonPath('data.rows.0.work_order_no', 'WO-PL-1')
+            ->assertJsonPath('data.rows.0.sales_amount', 12000)
+            ->assertJsonPath('data.rows.0.other_income_amount', 500)
+            ->assertJsonPath('data.rows.0.purchase_amount', 4000)
+            ->assertJsonPath('data.rows.0.expense_amount', 1500)
+            ->assertJsonPath('data.rows.0.total_cost', 5500)
+            ->assertJsonPath('data.rows.0.profit_amount', 7000)
+            ->assertJsonPath('data.totals.profit_amount', 7000);
+    });
+
+    it('lists one work order\'s sales, purchases and expenses in date order', function () {
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/accounting/reports/work-order-details?work_order_id={$this->workOrder->id}&from_date=2026-05-01&to_date=2026-05-31")
+            ->assertOk()
+            ->assertJsonPath('data.work_order.work_order_no', 'WO-PL-1')
+            ->assertJsonCount(4, 'data.rows')
+            ->assertJsonPath('data.rows.0.type', 'Purchase')
+            ->assertJsonPath('data.rows.1.type', 'Expense')
+            ->assertJsonPath('data.rows.2.type', 'Income')
+            ->assertJsonPath('data.rows.3.type', 'Sale')
+            ->assertJsonPath('data.total_income', 12500)
+            ->assertJsonPath('data.total_cost', 5500)
+            ->assertJsonPath('data.profit_amount', 7000);
+    });
+
+    it('requires a work order for the details', function () {
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/work-order-details')
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['work_order_id']]);
     });
 });

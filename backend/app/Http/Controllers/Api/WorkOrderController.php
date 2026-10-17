@@ -42,6 +42,11 @@ class WorkOrderController extends Controller
         return ApiResponse::success(WorkOrderResource::collection($this->workOrderService->forCustomer($customer)));
     }
 
+    public function options(): JsonResponse
+    {
+        return ApiResponse::success(WorkOrderResource::collection($this->workOrderService->options()));
+    }
+
     public function show(WorkOrder $workOrder): JsonResponse
     {
         return ApiResponse::success(new WorkOrderResource($this->workOrderService->find($workOrder)));
@@ -65,6 +70,10 @@ class WorkOrderController extends Controller
     {
         if ($workOrder->sales()->exists() || $workOrder->transactions()->exists()) {
             return ApiResponse::error(__('This work order has sales or payments and cannot be deleted.'), 422);
+        }
+
+        if ($workOrder->purchases()->exists() || $workOrder->incomeExpenses()->exists()) {
+            return ApiResponse::error(__('This work order has purchases or expenses and cannot be deleted.'), 422);
         }
 
         $this->workOrderService->delete($workOrder);

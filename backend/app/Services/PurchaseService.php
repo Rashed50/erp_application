@@ -20,7 +20,7 @@ class PurchaseService
     public function paginate(int $perPage = 15, ?string $search = null, ?int $supplierId = null): LengthAwarePaginator
     {
         return Purchase::query()
-            ->with('supplier:id,name')
+            ->with(['supplier:id,name', 'workOrder:id,work_order_no'])
             ->when($search, fn ($query) => $query->where('invoice_number', 'like', "%{$search}%"))
             ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
             ->latest('purchase_date')
@@ -29,7 +29,7 @@ class PurchaseService
 
     public function find(Purchase $purchase): Purchase
     {
-        return $purchase->load(['items', 'supplier']);
+        return $purchase->load(['items', 'supplier', 'workOrder']);
     }
 
     /**
@@ -41,7 +41,7 @@ class PurchaseService
      * product purchase and Purchase for a service one, the credit to
      * Accounts Payable.
      *
-     * @param  array{supplier_id: int, purchase_type: string, invoice_number: string, description?: ?string, issue_date: string, purchase_date: string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, items: array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
+     * @param  array{supplier_id: int, work_order_id?: ?int, purchase_type: string, invoice_number: string, description?: ?string, issue_date: string, purchase_date: string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, items: array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
      */
     public function create(array $data): Purchase
     {
@@ -50,6 +50,7 @@ class PurchaseService
 
             $purchase = Purchase::create([
                 'supplier_id' => $data['supplier_id'],
+                'work_order_id' => $data['work_order_id'] ?? null,
                 'purchase_type' => $data['purchase_type'],
                 'invoice_number' => $data['invoice_number'],
                 'description' => $data['description'] ?? null,
@@ -82,7 +83,7 @@ class PurchaseService
 
             $purchase->update(['supplier_transaction_id' => $transaction->id]);
 
-            return $purchase->load(['items', 'supplier']);
+            return $purchase->load(['items', 'supplier', 'workOrder']);
         });
     }
 
@@ -145,7 +146,7 @@ class PurchaseService
                 ]);
             }
 
-            return $purchase->load(['items', 'supplier']);
+            return $purchase->load(['items', 'supplier', 'workOrder']);
         });
     }
 

@@ -5,6 +5,7 @@ use App\Models\ChartOfAccount;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
+use App\Models\WorkOrder;
 use Database\Seeders\ChartOfAccountSeeder;
 
 function purchasePayload(int $supplierId, array $overrides = []): array
@@ -450,5 +451,48 @@ describe('chart of account posting', function () {
 
         expect((float) $this->payable->fresh()->balance)->toBe(0.0)
             ->and((float) $cash->fresh()->balance)->toBe(-88.0);
+    });
+});
+
+describe('work order', function () {
+    it('tags a purchase with a work order', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $workOrder = WorkOrder::factory()->create(['work_order_no' => 'WO-PUR-1']);
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, ['work_order_id' => $workOrder->id]));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.work_order_id', $workOrder->id)
+            ->assertJsonPath('data.work_order_no', 'WO-PUR-1');
+    });
+
+    it('rejects a deleted work order', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $workOrder = WorkOrder::factory()->create();
+        $workOrder->delete();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, ['work_order_id' => $workOrder->id]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['work_order_id']]);
+    });
+
+    it('moves a purchase to another work order or clears it', function () {
+        $actor = adminUser();
+        $purchase = Purchase::factory()->create(['work_order_id' => WorkOrder::factory()]);
+        $other = WorkOrder::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/purchases/{$purchase->id}", ['work_order_id' => $other->id])
+            ->assertOk()
+            ->assertJsonPath('data.work_order_id', $other->id);
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/purchases/{$purchase->id}", ['work_order_id' => null])
+            ->assertOk()
+            ->assertJsonPath('data.work_order_id', null);
     });
 });

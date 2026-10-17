@@ -65,6 +65,8 @@ export default {
         balanceSheet: 'Balance Sheet',
         bankReconciliation: 'Bank Reconciliation',
         workOrderCollections: 'Work Order Collection & Due',
+        workOrderProfitability: 'Work Order Sales & Expense',
+        workOrderDetails: 'Work Order Sales & Expense Details',
         customerCollections: 'Customer Collection & Due',
         otherReports: 'Other Reports',
         settings: 'Settings',

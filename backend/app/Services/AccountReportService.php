@@ -7,6 +7,7 @@ use App\Models\AccountType;
 use App\Models\ChartOfAccount;
 use App\Models\Customer;
 use App\Models\CustomerTransaction;
+use App\Models\IncomeExpenseTransaction;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
@@ -603,6 +604,140 @@ class AccountReportService
             'to_date' => $toDate,
             'rows' => $rows->all(),
             'totals' => $totals,
+        ];
+    }
+
+    /**
+     * Each work order's sales against what was spent on it: the net total of
+     * its sales and purchases, and its income and expense entries, dated in
+     * the range when one is given, with the profit or loss they leave.
+     *
+     * @return array{from_date: ?string, to_date: ?string, rows: array<int, array<string, mixed>>, totals: array<string, float>}
+     */
+    public function workOrderProfitability(?int $customerId, ?string $status, ?string $fromDate, ?string $toDate): array
+    {
+        $inRange = fn (string $column, ?string $type = null) => fn ($query) => $query
+            ->when($type, fn ($query) => $query->where('type', $type))
+            ->when($fromDate, fn ($query) => $query->whereDate($column, '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate($column, '<=', $toDate));
+
+        $rows = WorkOrder::query()
+            ->with('customer:id,name')
+            ->withSum(['sales as sales_amount' => $inRange('issue_date')], 'net_total')
+            ->withSum(['purchases as purchase_amount' => $inRange('purchase_date')], 'net_total')
+            ->withSum(['incomeExpenses as expense_amount' => $inRange('transaction_date', 'expense')], 'amount')
+            ->withSum(['incomeExpenses as other_income_amount' => $inRange('transaction_date', 'income')], 'amount')
+            ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
+            ->when($status, fn ($query) => $query->where('status', $status))
+            ->orderBy('issue_date')
+            ->orderBy('id')
+            ->get()
+            ->map(function (WorkOrder $workOrder) {
+                $income = (float) $workOrder->sales_amount + (float) $workOrder->other_income_amount;
+                $cost = (float) $workOrder->purchase_amount + (float) $workOrder->expense_amount;
+
+                return [
+                    'id' => $workOrder->id,
+                    'work_order_no' => $workOrder->work_order_no,
+                    'work_title' => $workOrder->work_title,
+                    'customer_name' => $workOrder->customer?->name,
+                    'issue_date' => $workOrder->issue_date?->toDateString(),
+                    'status' => $workOrder->status,
+                    'total_amount' => (float) $workOrder->total_amount,
+                    'sales_amount' => round((float) $workOrder->sales_amount, 2),
+                    'other_income_amount' => round((float) $workOrder->other_income_amount, 2),
+                    'purchase_amount' => round((float) $workOrder->purchase_amount, 2),
+                    'expense_amount' => round((float) $workOrder->expense_amount, 2),
+                    'total_cost' => round($cost, 2),
+                    'profit_amount' => round($income - $cost, 2),
+                ];
+            });
+
+        $totals = [];
+        foreach (['total_amount', 'sales_amount', 'other_income_amount', 'purchase_amount', 'expense_amount', 'total_cost', 'profit_amount'] as $column) {
+            $totals[$column] = round($rows->sum($column), 2);
+        }
+
+        return [
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'rows' => $rows->all(),
+            'totals' => $totals,
+        ];
+    }
+
+    /**
+     * One work order's sales, purchases and income/expense entries in date
+     * order, each as income or cost, with the profit or loss they leave.
+     *
+     * @return array{work_order: array<string, mixed>, from_date: ?string, to_date: ?string, rows: array<int, array<string, mixed>>, total_income: float, total_cost: float, profit_amount: float}
+     */
+    public function workOrderDetails(WorkOrder $workOrder, ?string $fromDate, ?string $toDate): array
+    {
+        $inRange = fn ($relation, string $column) => $relation
+            ->when($fromDate, fn ($query) => $query->whereDate($column, '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate($column, '<=', $toDate));
+
+        $sales = $inRange($workOrder->sales(), 'issue_date')
+            ->with('customer:id,name')
+            ->get()
+            ->map(fn (Sale $sale) => [
+                'date' => $sale->issue_date?->toDateString(),
+                'type' => 'Sale',
+                'reference' => $sale->invoice_number,
+                'party_name' => $sale->customer?->name,
+                'description' => $sale->description,
+                'income' => (float) $sale->net_total,
+                'cost' => 0.0,
+            ]);
+
+        $purchases = $inRange($workOrder->purchases(), 'purchase_date')
+            ->with('supplier:id,name')
+            ->get()
+            ->map(fn (Purchase $purchase) => [
+                'date' => $purchase->purchase_date?->toDateString(),
+                'type' => 'Purchase',
+                'reference' => $purchase->invoice_number,
+                'party_name' => $purchase->supplier?->name,
+                'description' => $purchase->description,
+                'income' => 0.0,
+                'cost' => (float) $purchase->net_total,
+            ]);
+
+        $entries = $inRange($workOrder->incomeExpenses(), 'transaction_date')
+            ->with('account:id,name')
+            ->get()
+            ->map(fn (IncomeExpenseTransaction $entry) => [
+                'date' => $entry->transaction_date?->toDateString(),
+                'type' => $entry->type === 'income' ? 'Income' : 'Expense',
+                'reference' => $entry->reference_no,
+                'party_name' => $entry->account?->name,
+                'description' => $entry->description,
+                'income' => $entry->type === 'income' ? (float) $entry->amount : 0.0,
+                'cost' => $entry->type === 'expense' ? (float) $entry->amount : 0.0,
+            ]);
+
+        $rows = $sales->concat($purchases)->concat($entries)->sortBy('date')->values();
+        $totalIncome = round($rows->sum('income'), 2);
+        $totalCost = round($rows->sum('cost'), 2);
+
+        $workOrder->loadMissing('customer:id,name');
+
+        return [
+            'work_order' => [
+                'id' => $workOrder->id,
+                'work_order_no' => $workOrder->work_order_no,
+                'work_title' => $workOrder->work_title,
+                'customer_name' => $workOrder->customer?->name,
+                'total_amount' => (float) $workOrder->total_amount,
+                'status' => $workOrder->status,
+            ],
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'rows' => $rows->all(),
+            'total_income' => $totalIncome,
+            'total_cost' => $totalCost,
+            'profit_amount' => round($totalIncome - $totalCost, 2),
         ];
     }
 

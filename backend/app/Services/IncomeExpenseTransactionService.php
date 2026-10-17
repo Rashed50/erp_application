@@ -14,7 +14,7 @@ class IncomeExpenseTransactionService
     public function paginate(int $perPage = 15, ?string $type = null, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
     {
         return IncomeExpenseTransaction::query()
-            ->with(['account:id,name,account_type_id', 'paymentAccount:id,name,account_type_id'])
+            ->with(['account:id,name,account_type_id', 'paymentAccount:id,name,account_type_id', 'workOrder:id,work_order_no'])
             ->when($type, fn ($query) => $query->where('type', $type))
             ->when($fromDate && $toDate, fn ($query) => $query->whereBetween('transaction_date', [$fromDate, $toDate]))
             ->latest('transaction_date')
@@ -23,11 +23,11 @@ class IncomeExpenseTransactionService
 
     public function find(IncomeExpenseTransaction $transaction): IncomeExpenseTransaction
     {
-        return $transaction->load(['account', 'paymentAccount']);
+        return $transaction->load(['account', 'paymentAccount', 'workOrder']);
     }
 
     /**
-     * @param  array{type: string, income_expense_account_id: int, payment_account_id: int, amount: float, transaction_date: string, reference_no?: ?string, description?: ?string}  $data
+     * @param  array{type: string, work_order_id?: ?int, income_expense_account_id: int, payment_account_id: int, amount: float, transaction_date: string, reference_no?: ?string, description?: ?string}  $data
      */
     public function create(array $data): IncomeExpenseTransaction
     {
@@ -40,7 +40,7 @@ class IncomeExpenseTransactionService
 
             $this->post($transaction);
 
-            return $transaction->load(['account', 'paymentAccount']);
+            return $transaction->load(['account', 'paymentAccount', 'workOrder']);
         });
     }
 
@@ -60,7 +60,7 @@ class IncomeExpenseTransactionService
                 $this->post($transaction);
             }
 
-            return $transaction->load(['account', 'paymentAccount']);
+            return $transaction->load(['account', 'paymentAccount', 'workOrder']);
         });
     }
 
