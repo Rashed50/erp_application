@@ -9,7 +9,7 @@ class DepartmentsSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (['Administration', 'Human Resources', 'Accounts', 'Operations', 'Store & Inventory', 'Sales'] as $name) {
+        foreach (['Administration', 'Human Resources', 'Finance', 'Operations','Production','Workshop', 'Store & Inventory', 'Sales'] as $name) {
             DB::table('departments')->updateOrInsert(
                 ['name' => $name],
                 ['description' => $name . ' department', 'status' => 1, 'updated_at' => now()]

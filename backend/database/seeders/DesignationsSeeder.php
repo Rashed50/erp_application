@@ -9,10 +9,10 @@ class DesignationsSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (['Manager', 'HR Officer', 'Accountant', 'Supervisor', 'Store Keeper', 'Sales Executive', 'Office Assistant'] as $name) {
+        foreach (['Chairman','Managing Director','CEO','Manager (Admin)','Manager (HR)','Manager (Finance)', 'Accountant', 'Supervisor'] as $name) {
             DB::table('designations')->updateOrInsert(
                 ['name' => $name],
-                ['description' => $name . ' position', 'status' => 1, 'updated_at' => now()]
+                ['description' => $name, 'status' => 1, 'updated_at' => now()]
             );
         }
     }

@@ -85,4 +85,4 @@ CMD ["nginx", "-g", "daemon off;"]
 # ==========================================
 FROM scratch AS export-stage
 
-COPY --from=build-stage /app/dist /
+COPY --from=build-stage /app/dist /dist/

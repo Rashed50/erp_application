@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call(PermissionSeeder::class);
         $this->call(RoleSeeder::class);
         $this->call(SuperAdminSeeder::class);
+        $this->call(ChartOfAccountSeeder::class);
 
         DB::transaction(function () {
             $this->call(DivisionSeeder::class);
@@ -27,8 +28,18 @@ class DatabaseSeeder extends Seeder
             $this->call(UpazilaSeeder::class);
             $this->call(UnionSeeder::class);
             $this->call(PourashavaSeeder::class);
+            $this->call(DepartmentsSeeder::class);
+            $this->call(DesignationsSeeder::class);
+
+            // for local machine development, not for production. Demo data is separate.
+            // $this->call(EmployeeSeeder::class);
+            // $this->call(EmployeeInfoSeeder::class);
+            // $this->call(EmpWorksSeeder::class);
+            // $this->call(HrDemoDataSeeder::class);
+            // $this->call(CustomerWorkOrderSeeder::class);
+
         });
 
-        $this->call(ChartOfAccountSeeder::class);
+        
     }
 }

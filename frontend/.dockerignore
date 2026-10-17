@@ -4,7 +4,5 @@ dist-output
 .git
 .gitignore
 *.log
-.env
-.env.*
 Dockerfile
 docker-compose.yml

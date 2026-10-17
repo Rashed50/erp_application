@@ -11,9 +11,9 @@ class EmpWorksSeeder extends Seeder
     {
         // Demo data only. Never modify real employee salary/work records.
         $samples = [
-            'DEMO-EMP-101' => ['working_days' => 26, 'present_days' => 24, 'absent_days' => 1, 'paid_leave_days' => 1, 'unpaid_leave_days' => 0, 'overtime_hours' => 8, 'bonus' => 1500, 'other_addition' => 0, 'other_deduction' => 0],
-            'DEMO-EMP-102' => ['working_days' => 26, 'present_days' => 25, 'absent_days' => 0, 'paid_leave_days' => 1, 'unpaid_leave_days' => 0, 'overtime_hours' => 5, 'bonus' => 1000, 'other_addition' => 0, 'other_deduction' => 0],
-            'DEMO-EMP-103' => ['working_days' => 26, 'present_days' => 23, 'absent_days' => 2, 'paid_leave_days' => 1, 'unpaid_leave_days' => 0, 'overtime_hours' => 0, 'bonus' => 0, 'other_addition' => 500, 'other_deduction' => 200],
+            'EMP-07' => ['working_days' => 26, 'present_days' => 24, 'absent_days' => 1, 'paid_leave_days' => 1, 'unpaid_leave_days' => 0, 'overtime_hours' => 8, 'bonus' => 1500, 'other_addition' => 0, 'other_deduction' => 0],
+            'EMP-08' => ['working_days' => 26, 'present_days' => 25, 'absent_days' => 0, 'paid_leave_days' => 1, 'unpaid_leave_days' => 0, 'overtime_hours' => 5, 'bonus' => 1000, 'other_addition' => 0, 'other_deduction' => 0],
+            'EMP-09' => ['working_days' => 26, 'present_days' => 23, 'absent_days' => 2, 'paid_leave_days' => 1, 'unpaid_leave_days' => 0, 'overtime_hours' => 0, 'bonus' => 0, 'other_addition' => 500, 'other_deduction' => 200],
         ];
 
         foreach ($samples as $employeeCode => $values) {
