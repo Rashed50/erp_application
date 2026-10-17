@@ -1,6 +1,6 @@
 <template>
     <div>
-        <!-- Search filters (label and field side by side) -->
+        <!-- Search filters  -->
         <v-card style="padding: 15px; margin-top: 15px;">
             <div class="d-flex flex-wrap align-items-center gap-3">
                 <!-- Fixed widths for the date fields, so the calendar icon never overlaps the next label -->
@@ -68,7 +68,7 @@
                             <td class="text-center">
                                 {{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}
                             </td>
-                            <td>{{ item.employee?.employee_id || item.employee_auto_id || '-' }}</td>
+                            <td>{{ item.employee?.employee_code || item.employee_auto_id || '-' }}</td>
                             <td>{{ item.employee?.name || 'N/A' }}</td>
                             <td>{{ dateOnly(item.attendance_date) }}</td>
                             <td>
@@ -242,13 +242,10 @@ export default {
             ).toISOString().slice(0, 10);
         },
 
-        // "2026-10-16T00:00:00.000000Z" -> "2026-10-16"
         dateOnly(value) {
             return value ? String(value).slice(0, 10) : '-';
         },
 
-        // "2026-10-15T14:46:00.000000Z" -> "02:46 PM"
-        // Read straight from the string (no Date object) so no timezone shift happens.
         timeOnly(value) {
             if (!value) return '-';
 
@@ -262,12 +259,10 @@ export default {
             return `${String(hour).padStart(2, '0')}:${match[2]} ${period}`;
         },
 
-        // "2026-10-15T09:00:00.000000Z" or "2026-10-15 09:00:00" -> "2026-10-15T09:00" (for datetime-local)
         toInput(value) {
             return value ? String(value).replace(' ', 'T').slice(0, 16) : '';
         },
 
-        // "2026-10-15T09:00" -> "2026-10-15 09:00:00" (for API), empty -> null
         toApi(value) {
             if (!value) return null;
             return value.replace('T', ' ') + (value.length === 16 ? ':00' : '');
@@ -284,7 +279,6 @@ export default {
             }
         },
 
-        // Search / Enter always starts from page 1
         search() {
             this.fetchAttendances(1);
         },
@@ -301,7 +295,6 @@ export default {
             this.loading = true;
 
             try {
-                // Laravel paginate() response: { current_page, data: [...], last_page, per_page, total }
                 const response = await axios.get('/api/attendance', {
                     params: {
                         page,
@@ -341,7 +334,7 @@ export default {
         openEdit(item) {
             this.editForm = {
                 id: item.id,
-                employee_code: item.employee?.employee_id || item.employee_auto_id || '',
+                employee_code: item.employee?.employee_code || item.employee_auto_id || '',
                 name: item.employee?.name || '',
                 attendance_date: this.dateOnly(item.attendance_date),
                 status: item.status || 'present',
