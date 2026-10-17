@@ -1,5 +1,10 @@
 node_modules
 dist
+dist-output
 .git
-.dockerignore
+.gitignore
+*.log
+.env
+.env.*
 Dockerfile
+docker-compose.yml

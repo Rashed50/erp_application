@@ -71,3 +71,14 @@ docker compose up --build -d
 ```
 docker builder prune -f
 ```
+
+
+## Geneate build file in docker and copy that files in local machine inside public directory
+```
+docker build --target export-stage --output type=tar,dest=./public/build.zip .
+
+or a root directory build.zip
+
+docker build --target export-stage --output type=tar,dest=./build.zip .
+
+```
