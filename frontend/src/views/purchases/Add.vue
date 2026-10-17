@@ -69,6 +69,10 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-4">
+                                    <WorkOrderOptionSelect v-model="form.work_order_id" :error="errors.work_order_id" />
+                                </div>
+
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
                                         <label for="notes">{{ $t('Notes:') }}</label>
@@ -174,6 +178,7 @@
 </template>
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import WorkOrderOptionSelect from '@/components/common/WorkOrderOptionSelect.vue';
 import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
@@ -189,6 +194,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     invoice_number: '',
     issue_date: new Date().toISOString().slice(0, 10),
     purchase_date: new Date().toISOString().slice(0, 10),
+    work_order_id: '',
     description: '',
     notes: '',
     items: [emptyItem()],

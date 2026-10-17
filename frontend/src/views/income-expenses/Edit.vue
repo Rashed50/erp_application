@@ -77,6 +77,10 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-6">
+                                    <WorkOrderOptionSelect v-model="form.work_order_id" :error="errors.work_order_id" />
+                                </div>
+
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
                                         <label for="description">{{ $t('Description:') }}</label>
@@ -104,6 +108,7 @@
 <script setup>
 import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import WorkOrderOptionSelect from '@/components/common/WorkOrderOptionSelect.vue';
 import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
@@ -120,6 +125,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     transaction_date: '',
     reference_no: '',
     description: '',
+    work_order_id: '',
 })
 
 const { items: accounts, fetchData: loadAccounts } = useFetch('/api/ledger-accounts', {
@@ -168,6 +174,7 @@ const loadTransaction = async () => {
             form.transaction_date = transaction.transaction_date
             form.reference_no = transaction.reference_no
             form.description = transaction.description
+            form.work_order_id = transaction.work_order_id ?? ''
         }
     } catch (e) {
         console.error(e)

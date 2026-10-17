@@ -32,6 +32,7 @@ class StorePurchaseRequest extends FormRequest
     {
         return [
             'supplier_id' => ['required', Rule::exists('suppliers', 'id')],
+            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->withoutTrashed()],
             'purchase_type' => ['required', 'string', Rule::in(['product', 'service'])],
             'invoice_number' => ['required', 'string', 'max:255', Rule::unique('purchases', 'invoice_number')],
             'description' => ['nullable', 'string'],

@@ -80,6 +80,10 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-6">
+                                    <WorkOrderOptionSelect v-model="form.work_order_id" :error="errors.work_order_id" />
+                                </div>
+
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
                                         <label for="description">{{ $t('Description:') }}</label>
@@ -106,6 +110,7 @@
 </template>
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import WorkOrderOptionSelect from '@/components/common/WorkOrderOptionSelect.vue';
 import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
@@ -121,6 +126,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     transaction_date: new Date().toISOString().slice(0, 10),
     reference_no: '',
     description: '',
+    work_order_id: '',
 })
 
 // Load every active account once; the category dropdown is filtered by the

@@ -45,6 +45,19 @@ class WorkOrder extends Model
         return $this->hasMany(Sale::class);
     }
 
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(Purchase::class);
+    }
+
+    /**
+     * Income and expense entries tagged with this work order.
+     */
+    public function incomeExpenses(): HasMany
+    {
+        return $this->hasMany(IncomeExpenseTransaction::class);
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(CustomerTransaction::class);

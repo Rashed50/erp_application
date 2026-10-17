@@ -3,6 +3,7 @@
 use App\Models\AccountTransaction;
 use App\Models\ChartOfAccount;
 use App\Models\IncomeExpenseTransaction;
+use App\Models\WorkOrder;
 
 describe('index', function () {
     it('returns 401 when no token is provided', function () {
@@ -219,5 +220,36 @@ describe('account balances', function () {
             'amount' => 100,
             'transaction_date' => now()->toDateString(),
         ])->assertStatus(422)->assertJsonStructure(['data' => ['payment_account_id']]);
+    });
+});
+
+describe('work order', function () {
+    it('tags an expense with a work order', function () {
+        $actor = adminUser();
+        $workOrder = WorkOrder::factory()->create(['work_order_no' => 'WO-EXP-1']);
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/income-expenses', [
+                'type' => 'expense',
+                'work_order_id' => $workOrder->id,
+                'income_expense_account_id' => ChartOfAccount::factory()->expense()->create()->id,
+                'payment_account_id' => ChartOfAccount::factory()->asset()->create()->id,
+                'amount' => 750,
+                'transaction_date' => now()->toDateString(),
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.work_order_id', $workOrder->id)
+            ->assertJsonPath('data.work_order_no', 'WO-EXP-1');
+    });
+
+    it('rejects an unknown work order', function () {
+        $actor = adminUser();
+        $transaction = IncomeExpenseTransaction::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/income-expenses/{$transaction->id}", ['work_order_id' => 999999])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['work_order_id']]);
     });
 });

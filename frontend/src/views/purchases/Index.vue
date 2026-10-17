@@ -43,6 +43,7 @@
                                 <th class="text-left">#</th>
                                 <th class="text-left">{{ $t('Invoice No') }}</th>
                                 <th class="text-left">{{ $t('Supplier') }}</th>
+                                <th class="text-left">{{ $t('Work Order') }}</th>
                                 <th class="text-left">{{ $t('Type') }}</th>
                                 <th class="text-left">{{ $t('Purchase Date') }}</th>
                                 <th class="text-right">{{ $t('Net Total') }}</th>
@@ -55,7 +56,7 @@
 
                             <!-- Loading State with Vuetify Spinner -->
                             <tr v-if="loading">
-                                <td colspan="9" class="text-center py-4">
+                                <td colspan="10" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
@@ -63,7 +64,7 @@
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
-                                <td colspan="9" class="text-center py-4">
+                                <td colspan="10" class="text-center py-4">
                                     {{ $t('No records found.') }}
                                 </td>
                             </tr>
@@ -73,6 +74,7 @@
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
                                 <td>{{ item.invoice_number }}</td>
                                 <td>{{ item.supplier_name }}</td>
+                                <td>{{ item.work_order_no ?? '' }}</td>
                                 <td class="text-capitalize">{{ $t(item.purchase_type) }}</td>
                                 <td>{{ item.purchase_date }}</td>
                                 <td class="text-right">{{ Number(item.net_total).toFixed(2) }}</td>

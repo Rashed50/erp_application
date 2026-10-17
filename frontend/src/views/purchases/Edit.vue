@@ -64,6 +64,10 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-4">
+                                    <WorkOrderOptionSelect v-model="form.work_order_id" :error="errors.work_order_id" />
+                                </div>
+
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
                                         <label for="notes">{{ $t('Notes:') }}</label>
@@ -178,6 +182,7 @@
 <script setup>
 import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import WorkOrderOptionSelect from '@/components/common/WorkOrderOptionSelect.vue';
 import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
@@ -199,6 +204,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     invoice_number: '',
     issue_date: '',
     purchase_date: '',
+    work_order_id: '',
     description: '',
     notes: '',
     items: [emptyItem()],
@@ -267,6 +273,7 @@ const loadPurchase = async () => {
             form.issue_date = purchase.issue_date
             form.purchase_date = purchase.purchase_date
             form.description = purchase.description
+            form.work_order_id = purchase.work_order_id ?? ''
             form.notes = purchase.notes
             form.items = (purchase.items ?? []).map((item) => ({
                 product_id: item.product_id ?? '',

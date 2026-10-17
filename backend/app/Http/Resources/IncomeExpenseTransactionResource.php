@@ -17,6 +17,8 @@ class IncomeExpenseTransactionResource extends JsonResource
         return [
             'id' => $this->id,
             'type' => $this->type,
+            'work_order_id' => $this->work_order_id,
+            'work_order_no' => $this->whenLoaded('workOrder', fn () => $this->workOrder?->work_order_no),
             'income_expense_account_id' => $this->income_expense_account_id,
             'account_name' => $this->whenLoaded('account', fn () => $this->account->name),
             'payment_account_id' => $this->payment_account_id,

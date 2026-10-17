@@ -42,6 +42,11 @@ class IncomeExpenseTransaction extends Model
         return $this->belongsTo(ChartOfAccount::class, 'payment_account_id');
     }
 
+    public function workOrder(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrder::class)->withTrashed();
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
