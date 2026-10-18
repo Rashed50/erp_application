@@ -23,8 +23,16 @@ return new class extends Migration
             $table->boolean('item_status')->default(1);
             $table->integer('create_by_id');
             $table->integer('update_by_id')->nullable();
+
+            $table->foreignId('unit_id')->nullable()->after('itype_id')->constrained('inventory_units')->nullOnDelete();
+            $table->string('track_type', 20)->default('quantity')->after('unit_id');
+            $table->decimal('minimum_stock', 15, 3)->default(0)->after('track_type');
+
             $table->timestamps();
         });
+
+          // 1 = Asset (see ItemName::TYPE_ASSET).
+      // DB::table('item_names')->where('itype_id', 1)->update(['track_type' => 'serial']);
     }
 
     /**

@@ -32,11 +32,12 @@ class DatabaseSeeder extends Seeder
             $this->call(DesignationsSeeder::class);
 
             // for local machine development, not for production. Demo data is separate.
-            // $this->call(EmployeeSeeder::class);
-            // $this->call(EmployeeInfoSeeder::class);
-            // $this->call(EmpWorksSeeder::class);
-            // $this->call(HrDemoDataSeeder::class);
-            // $this->call(CustomerWorkOrderSeeder::class);
+            $this->call(EmployeeSeeder::class);
+            $this->call(EmployeeInfoSeeder::class);
+            $this->call(EmpWorksSeeder::class);
+            $this->call(HrDemoDataSeeder::class);
+            $this->call(CustomerWorkOrderSeeder::class);
+            $this->call(ItemSeeder::class);
 
         });
 

@@ -80,9 +80,9 @@ CMD ["nginx", "-g", "daemon off;"]
 
 # ==========================================
 # Stage 3: Export dist
-# Note the trailing slash on /app/dist/
+# docker location: Note the trailing slash on /app/dist/
 # The destination/local machine location is / (means root)
 # ==========================================
 FROM scratch AS export-stage
 
-COPY --from=build-stage /app/dist /dist/
+COPY --from=build-stage /app/dist /
