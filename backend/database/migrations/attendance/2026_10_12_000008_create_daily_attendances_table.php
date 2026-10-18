@@ -10,6 +10,8 @@ return new class extends Migration {
         Schema::create('daily_attendances', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('employee_auto_id');
+            $table->unsignedBigInteger('work_order_id')->nullable()->after('id');
+            // $table->foreign('work_order_id')->references('id')->on('work_orders')->onDelete('cascade');
             $table->date('attendance_date');
             $table->unsignedBigInteger('attendance_shift_id')->nullable();
             $table->enum('status', ['present', 'absent', 'late', 'half_day', 'leave', 'holiday', 'weekly_off', 'incomplete', 'offsite'])->default('incomplete');
@@ -23,14 +25,14 @@ return new class extends Migration {
             $table->decimal('overtime_threshold_hours', 5, 2)->default(8.00);
             $table->decimal('overtime_hours', 7, 2)->default(0);
             $table->decimal('approved_overtime_hours', 7, 2)->default(0); // no ui
-            $table->decimal('payable_day_fraction', 3, 2)->default(0);// no ui
+            $table->decimal('payable_day_fraction', 3, 2)->default(0); // no ui
             $table->boolean('is_late')->default(false); // no ui
             $table->unsignedSmallInteger('late_minutes')->default(0);
             $table->boolean('is_early_leave')->default(false); // no 
             $table->unsignedSmallInteger('early_leave_minutes')->default(0); // no 
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('entered_by_employee_auto_id')->nullable(); // no 
-            $table->unsignedBigInteger('approved_by_employee_auto_id')->nullable();// no 
+            $table->unsignedBigInteger('approved_by_employee_auto_id')->nullable(); // no 
             $table->timestamp('approved_at')->nullable(); // no
             $table->timestamp('locked_at')->nullable(); // no
             $table->timestamps();
@@ -49,5 +51,8 @@ return new class extends Migration {
         });
     }
 
-    public function down(): void { Schema::dropIfExists('daily_attendances'); }
+    public function down(): void
+    {
+        Schema::dropIfExists('daily_attendances');
+    }
 };

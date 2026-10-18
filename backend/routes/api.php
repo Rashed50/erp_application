@@ -65,7 +65,7 @@ Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
 Route::get('/get-employees-for-attendance-in', [AttendanceController::class, 'getEmployeesForAttendanceIN']);
 Route::get('/get-employees-for-attendance-out', [AttendanceController::class, 'getEmployeesForAttendanceOUT']);
 
-
+Route::get('/work-orders-list', [WorkOrderController::class, 'getList']);
 Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     Route::post('/check-in', [AttendanceController::class, 'checkIn']);
     Route::post('/check-out', [AttendanceController::class, 'checkOut']);

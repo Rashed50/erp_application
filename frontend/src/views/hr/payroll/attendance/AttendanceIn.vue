@@ -38,10 +38,11 @@
         </v-card>
 
         <!-- Step 2: results & submit -->
-        <v-card v-if="hasSearched" style="padding: 10px; margin-top: 15px;">
+        <v-card v-if="hasSearched" style="padding: 15px; margin-top: 15px;">
 
+            <!-- Work Order & Status & IN Time Selection Row -->
             <div v-if="employeesList.length" class="row g-3 align-items-center mb-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="d-flex align-items-center gap-2">
                         <label class="mb-0 text-nowrap">{{ $t('IN Time:') }}</label>
                         <input type="datetime-local" class="form-control" v-model="actionForm.first_punch_at" />
@@ -65,13 +66,15 @@
                     </div>
                 </div>
 
-                <!-- Total / selected sits right beside the Submit button -->
-                <div class="col-md-5 d-flex justify-content-end align-items-center gap-3">
-                    <span class="text-muted small">
-                        {{ $t('Total {count} employees', { count: employeesList.length }) }} ·
-                        <!-- <strong>{{ $t('{count} selected', { count: selectedEmployeeIds.length }) }}</strong> -->
-                    </span>
+                <!-- Searchable Dropdown for Work Order -->
+                <div class="col-md-3">
+                    <v-autocomplete v-model="actionForm.work_order_id" :items="workOrders" item-title="work_order_no"
+                        item-value="id" :label="$t('Select Work Order')" density="compact" variant="outlined"
+                        hide-details clearable></v-autocomplete>
+                </div>
 
+                <!-- Total & Submit Button -->
+                <div class="col-md-3 d-flex justify-content-end align-items-center gap-3">
                     <v-btn class="text-none text-white" color="green-darken-3" rounded="0" variant="flat" size="small"
                         :disabled="!selectedEmployeeIds.length" :loading="submitting" @click="submitBatchIn">
                         <i class="fa-solid fa-check me-1"></i> {{ $t('Submit') }} ({{ selectedEmployeeIds.length }})
@@ -96,18 +99,15 @@
                             </th>
                         </tr>
                     </thead>
-
                     <tbody>
                         <tr v-if="loading">
                             <td colspan="7" class="text-center py-3">{{ $t('Loading employees...') }}</td>
                         </tr>
-
                         <tr v-else-if="!employeesList.length">
                             <td colspan="7" class="text-center text-muted py-3">
                                 {{ $t('No employee records found.') }}
                             </td>
                         </tr>
-
                         <tr v-for="(emp, index) in employeesList" v-else :key="emp.emp_auto_id">
                             <td class="text-center">{{ index + 1 }}</td>
                             <td>{{ emp.employee_code || emp.id || '-' }}</td>
@@ -152,6 +152,7 @@ export default {
             hasSearched: false,
 
             employeesList: [],
+            workOrders: [], 
             selectedEmployeeIds: [],
             searchedDate: '',
 
@@ -163,9 +164,14 @@ export default {
 
             actionForm: {
                 first_punch_at: `${today}T09:00`,
-                status: 'present'
+                status: 'present',
+                work_order_id: null // সিলেক্টেড ওয়ার্ক অর্ডার আইডি
             }
         };
+    },
+
+    mounted() {
+        this.fetchWorkOrders(); 
     },
 
     computed: {
@@ -183,28 +189,18 @@ export default {
                 const time = this.actionForm.first_punch_at
                     ? this.actionForm.first_punch_at.slice(11, 16)
                     : '09:00';
-
                 this.actionForm.first_punch_at = `${date}T${time}`;
             }
-
             this.clearResults();
         },
-
-        'filters.shift_id'() {
-            this.clearResults();
-        },
-
-        'filters.employee_code'() {
-            this.clearResults();
-        }
+        'filters.shift_id'() { this.clearResults(); },
+        'filters.employee_code'() { this.clearResults(); }
     },
 
     methods: {
         localDate() {
             const now = new Date();
-            return new Date(
-                now.getTime() - now.getTimezoneOffset() * 60000
-            ).toISOString().slice(0, 10);
+            return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
         },
 
         statusClass(status) {
@@ -224,9 +220,17 @@ export default {
             this.selectedEmployeeIds = [];
         },
 
+        async fetchWorkOrders() {
+            try {
+                const response = await axios.get('/api/work-orders-list'); 
+                this.workOrders = response.data?.data || response.data || [];
+            } catch (error) {
+                console.error('Failed to fetch work orders:', error);
+            }
+        },
+
         async fetchEmployees() {
             if (this.loading) return;
-
             if (!this.filters.date) {
                 toast.error(t('Please select attendance date.'));
                 return;
@@ -250,7 +254,6 @@ export default {
                 let list = payload?.employees ?? payload ?? [];
                 if (!Array.isArray(list)) list = list?.data ?? [];
 
-                // Every row MUST have a unique emp_auto_id, otherwise checkboxes share one value.
                 this.employeesList = list.map(emp => ({
                     ...emp,
                     emp_auto_id: emp.emp_auto_id ?? emp.id,
@@ -260,9 +263,7 @@ export default {
                 this.searchedDate = this.filters.date;
             } catch (error) {
                 console.error('Employee search API error:', error);
-                toast.error(
-                    error.response?.data?.message || t('Failed to fetch employee records.')
-                );
+                toast.error(error.response?.data?.message || t('Failed to fetch employee records.'));
             } finally {
                 this.loading = false;
             }
@@ -306,22 +307,21 @@ export default {
 
             try {
                 const punch = this.actionForm.first_punch_at;
-                const formattedPunch =
-                    punch.replace('T', ' ') + (punch.length === 16 ? ':00' : '');
+                const formattedPunch = punch.replace('T', ' ') + (punch.length === 16 ? ':00' : '');
 
                 const response = await axios.post('/api/attendance/check-in', {
                     ids: this.selectedEmployeeIds,
                     attendance_date: this.searchedDate,
                     shift_id: this.filters.shift_id || null,
                     first_punch_at: formattedPunch,
-                    status: this.actionForm.status
+                    status: this.actionForm.status,
+                    work_order_id: this.actionForm.work_order_id || null
                 });
 
                 toast.success(response.data?.message || t('Attendance IN saved successfully!'));
                 await this.fetchEmployees();
             } catch (error) {
                 console.error('Attendance IN API Error:', error);
-
                 const errors = error.response?.data?.errors;
                 toast.error(
                     errors

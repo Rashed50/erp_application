@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Validation\Rule;
- 
+
 
 class AttendanceController extends Controller
 {
@@ -44,7 +44,7 @@ class AttendanceController extends Controller
             ->paginate(min(max((int) $request->input('per_page', 25), 1), 200));
     }
 
- 
+
     public function getEmployeesForAttendanceIN(Request $request): JsonResponse
     {
         $employees = $this->employeeService->getActiveEmployees();
@@ -66,7 +66,7 @@ class AttendanceController extends Controller
             'employees' => EmployeeResource::collection($employees),
         ]);
     }
- 
+
 
     public function show(DailyAttendance $dailyAttendance)
     {
@@ -86,9 +86,8 @@ class AttendanceController extends Controller
                 'string',
                 'in:present,absent,late,half_day,leave,holiday,weekly_off,incomplete,offsite'
             ],
+            'work_order_id'   => ['nullable', 'exists:work_orders,id'],
         ]);
-
-
 
         foreach ($data['ids'] as $employeeId) {
             $service->manualCheckIn(
@@ -96,7 +95,8 @@ class AttendanceController extends Controller
                 $data['attendance_date'],
                 $data['first_punch_at'],
                 $request->user()?->id,
-                $data['status']
+                $data['status'],
+                $data['work_order_id'] ?? 0
             );
         }
 
@@ -200,7 +200,7 @@ class AttendanceController extends Controller
 
 
     public function generateMonthlyRecords(
-       Request $request,
+        Request $request,
         \App\Services\Attendance\AttendanceCalculationService $service
     ) {
         $data = $request->validate([
