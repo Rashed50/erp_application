@@ -80,4 +80,11 @@ class WorkOrderController extends Controller
 
         return ApiResponse::success(message: __('Work order deleted successfully.'));
     }
+
+
+    public function getList()
+    {
+        $workOrders = WorkOrder::select('id', 'work_order_no')->get();
+        return response()->json($workOrders);
+    }
 }

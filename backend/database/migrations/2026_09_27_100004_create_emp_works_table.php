@@ -23,6 +23,7 @@ return new class extends Migration
             $table->decimal('paid_leave_days', 5, 2)->default(0);
             $table->decimal('unpaid_leave_days', 5, 2)->default(0);
             $table->decimal('overtime_hours', 8, 2)->default(0);
+            $table->decimal('total_working_hours', 8, 2)->default(0);
             $table->decimal('bonus', 15, 2)->default(0);
             $table->decimal('other_addition', 15, 2)->default(0);
             $table->decimal('other_deduction', 15, 2)->default(0);
