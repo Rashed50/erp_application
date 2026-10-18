@@ -21,6 +21,9 @@ class DatabaseSeeder extends Seeder
         $this->call(RoleSeeder::class);
         $this->call(SuperAdminSeeder::class);
         $this->call(ChartOfAccountSeeder::class);
+        $this->call(CustomerSeeder::class);
+        // $this->call(WorkOrderSeeder::class);
+
 
         DB::transaction(function () {
             $this->call(DivisionSeeder::class);
@@ -39,7 +42,5 @@ class DatabaseSeeder extends Seeder
             // $this->call(CustomerWorkOrderSeeder::class);
 
         });
-
-        
     }
 }

@@ -128,12 +128,12 @@ class AttendanceCalculationService
     }
 
 
-    public function manualCheckIn(string $employeeId, string $date, string $inTime, ?int $actorId = null, string $status = 'present'): DailyAttendance
+    public function manualCheckIn(string $employeeId, string $date, string $inTime, ?int $actorId = null, string $status = 'present', int $workOrderId = 0): DailyAttendance
     {
         $employee = Employee::query()->where('id', $employeeId)->firstOrFail();
         $settings = AttendanceSetting::query()->where('name', 'default')->first();
 
-        return DB::transaction(function () use ($employee, $date, $inTime, $actorId, $settings, $status) {
+        return DB::transaction(function () use ($employee, $date, $inTime, $actorId, $settings, $status, $workOrderId) {
             $row = DailyAttendance::query()->where('employee_auto_id', $employee->id)
                 ->whereDate('attendance_date', $date)->lockForUpdate()->first();
 
@@ -157,6 +157,7 @@ class AttendanceCalculationService
                     'approved_overtime_hours' => 0,
                     'payable_day_fraction' => 0,
                     'entered_by_employee_auto_id' => $actorId,
+                    'work_order_id' => $workOrderId,
                 ]
             );
         });
