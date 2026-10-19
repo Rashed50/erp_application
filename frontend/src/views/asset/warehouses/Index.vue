@@ -55,18 +55,19 @@
                                 <th class="text-left">{{ $t('Parent Store') }}</th>
                                 <th class="text-left">{{ $t('Store Manager') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="8" class="text-center py-4">{{ $t('No records found.') }}</td>
+                                <td colspan="9" class="text-center py-4">{{ $t('No records found.') }}</td>
                             </tr>
                             <tr v-else v-for="(warehouse, index) in items" :key="warehouse.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
@@ -80,6 +81,7 @@
                                         {{ $t(warehouse.status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
+                                <td>{{ warehouse.created_by_name || '-' }}</td>
                                 <td class="text-center">
                                     <v-menu>
                                         <template v-slot:activator="{ props }">

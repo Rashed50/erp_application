@@ -20,7 +20,7 @@ class SaleService
     public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null): LengthAwarePaginator
     {
         return Sale::query()
-            ->with(['customer:id,name', 'workOrder:id,work_order_no'])
+            ->with(['customer:id,name', 'workOrder:id,work_order_no', 'creator:id,name', 'approver:id,name'])
             ->when($search, fn ($query) => $query->where('invoice_number', 'like', "%{$search}%"))
             ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
             ->latest('issue_date')
@@ -40,12 +40,16 @@ class SaleService
      * accounts can be chosen; they default to Accounts Receivable and Sales
      * Revenue.
      *
-     * @param  array{customer_id: int, work_order_id?: ?int, invoice_number: string, description?: ?string, issue_date: string, due_date?: ?string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, items: array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
+     * @param  array{customer_id: int, work_order_id?: ?int, invoice_number: string, description?: ?string, issue_date: string, due_date?: ?string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, overall_discount?: ?float, overall_vat?: ?float, items: array<int, array{item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
      */
     public function create(array $data): Sale
     {
         return DB::transaction(function () use ($data) {
-            $totals = LineItemTotalCalculator::calculate($data['items']);
+            $totals = LineItemTotalCalculator::calculate(
+                $data['items'],
+                (float) ($data['overall_discount'] ?? 0),
+                (float) ($data['overall_vat'] ?? 0),
+            );
 
             $sale = Sale::create([
                 'customer_id' => $data['customer_id'],
@@ -58,6 +62,8 @@ class SaleService
                 'debit_account_id' => $data['debit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_RECEIVABLE_NUMBER)?->id,
                 'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::SALES_REVENUE_NUMBER)?->id,
                 'total_amount' => $totals['total_amount'],
+                'overall_discount' => $totals['overall_discount'],
+                'overall_vat' => $totals['overall_vat'],
                 'discount_amount' => $totals['discount_amount'],
                 'vat_amount' => $totals['vat_amount'],
                 'net_total' => $totals['net_total'],
@@ -96,7 +102,7 @@ class SaleService
     public function update(Sale $sale, array $data): Sale
     {
         return DB::transaction(function () use ($sale, $data) {
-            $totals = isset($data['items']) ? LineItemTotalCalculator::calculate($data['items']) : null;
+            $totals = $this->recalculatedTotals($sale, $data);
 
             if ($totals && $totals['net_total'] < $sale->paid_amount) {
                 throw ValidationException::withMessages([
@@ -105,7 +111,7 @@ class SaleService
             }
 
             $sale->fill([
-                ...collect($data)->except('items')->all(),
+                ...collect($data)->except(['items', 'overall_discount', 'overall_vat'])->all(),
                 'updated_by' => Auth::id(),
             ]);
 
@@ -114,6 +120,8 @@ class SaleService
 
             if ($totals) {
                 $sale->total_amount = $totals['total_amount'];
+                $sale->overall_discount = $totals['overall_discount'];
+                $sale->overall_vat = $totals['overall_vat'];
                 $sale->discount_amount = $totals['discount_amount'];
                 $sale->vat_amount = $totals['vat_amount'];
                 $sale->net_total = $totals['net_total'];
@@ -121,7 +129,7 @@ class SaleService
 
             $sale->save();
 
-            if ($totals) {
+            if (isset($data['items'])) {
                 $sale->items()->delete();
                 $sale->items()->createMany($totals['items']);
             }
@@ -147,6 +155,27 @@ class SaleService
 
             return $sale->load(['items', 'customer', 'workOrder']);
         });
+    }
+
+    /**
+     * Totals recomputed for an update: when the line items or the overall
+     * discount/VAT change. Whichever of them is not sent is taken from the
+     * sale as it is now. Returns null when none of them changed.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null
+     */
+    private function recalculatedTotals(Sale $sale, array $data): ?array
+    {
+        if (! isset($data['items']) && ! array_key_exists('overall_discount', $data) && ! array_key_exists('overall_vat', $data)) {
+            return null;
+        }
+
+        return LineItemTotalCalculator::calculate(
+            $data['items'] ?? $sale->items->toArray(),
+            (float) (array_key_exists('overall_discount', $data) ? $data['overall_discount'] : $sale->overall_discount),
+            (float) (array_key_exists('overall_vat', $data) ? $data['overall_vat'] : $sale->overall_vat),
+        );
     }
 
     /**

@@ -73,82 +73,8 @@
 
                             <hr>
 
-                            <h5 class="mb-3">{{ $t('Items') }}</h5>
-                            <div v-if="errors.items" class="error-msg mb-2">{{ errors.items }}</div>
-
-                            <div class="table-responsive">
-                                <table class="table table-bordered align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 200px;">{{ $t('Product') }}</th>
-                                            <th>{{ $t('Item Name') }}</th>
-                                            <th>{{ $t('Description') }}</th>
-                                            <th style="width: 90px;">{{ $t('Qty') }}</th>
-                                            <th style="width: 120px;">{{ $t('Unit Price') }}</th>
-                                            <th style="width: 110px;">{{ $t('Discount') }}</th>
-                                            <th style="width: 110px;">{{ $t('VAT') }}</th>
-                                            <th style="width: 120px;">{{ $t('Line Total') }}</th>
-                                            <th style="width: 50px;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="(item, index) in form.items" :key="index">
-                                            <td>
-                                                <select class="form-control" v-model="item.product_id" @change="onProductChange(item)">
-                                                    <option value="">{{ $t('Custom item') }}</option>
-                                                    <option v-for="product in products" :key="product.id" :value="product.id">
-                                                        {{ product.code }} - {{ product.name }}
-                                                    </option>
-                                                </select>
-                                            </td>
-                                            <td><input type="text" class="form-control" v-model="item.item_name" required /></td>
-                                            <td><input type="text" class="form-control" v-model="item.description" /></td>
-                                            <td><input type="number" min="0.01" step="0.01" class="form-control" v-model.number="item.qty" required /></td>
-                                            <td><input type="number" min="0" step="0.01" class="form-control" v-model.number="item.unit_price" required /></td>
-                                            <td><input type="number" min="0" step="0.01" class="form-control" v-model.number="item.discount" /></td>
-                                            <td><input type="number" min="0" step="0.01" class="form-control" v-model.number="item.vat" /></td>
-                                            <td class="text-end">{{ lineTotal(item).toFixed(2) }}</td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                                    :disabled="form.items.length === 1" @click="removeItem(index)">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <v-btn type="button" class="text-none mb-3" color="grey-lighten-3" rounded="0"
-                                variant="flat" @click="addItem">
-                                {{ $t('+ Add Item') }}
-                            </v-btn>
-
-                            <div class="row justify-content-end">
-                                <div class="col-md-4">
-                                    <table class="table table-sm">
-                                        <tbody>
-                                            <tr>
-                                                <td>{{ $t('Total Amount') }}</td>
-                                                <td class="text-end">{{ totals.totalAmount.toFixed(2) }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td>{{ $t('Discount') }}</td>
-                                                <td class="text-end">{{ totals.discountAmount.toFixed(2) }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td>{{ $t('VAT') }}</td>
-                                                <td class="text-end">{{ totals.vatAmount.toFixed(2) }}</td>
-                                            </tr>
-                                            <tr class="fw-bold">
-                                                <td>{{ $t('Net Total') }}</td>
-                                                <td class="text-end">{{ totals.netTotal.toFixed(2) }}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                    <small class="text-muted">{{ $t('Totals are recalculated by the server on save.') }}</small>
-                                </div>
-                            </div>
+                            <InvoiceLineItems v-model:items="form.items" v-model:overall-discount="form.overall_discount"
+                                v-model:overall-vat="form.overall_vat" :products="products" :errors="errors" />
 
                             <div class="row">
                                 <div class="col-md-12">
@@ -168,6 +94,7 @@
 </template>
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import InvoiceLineItems, { emptyInvoiceItem } from '@/components/common/InvoiceLineItems.vue';
 import WorkOrderSelect from '@/components/common/WorkOrderSelect.vue';
 import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
@@ -175,8 +102,6 @@ import { setToast } from "@/helpers/toast";
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-
-const emptyItem = () => ({ product_id: '', item_name: '', description: '', qty: 1, unit_price: 0, discount: 0, vat: 0 })
 
 const { form, errors, isSubmitting, submit } = useStoreForm({
     customer_id: '',
@@ -186,51 +111,15 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     due_date: '',
     description: '',
     notes: '',
-    items: [emptyItem()],
+    overall_discount: 0,
+    overall_vat: 0,
+    items: [emptyInvoiceItem()],
 })
 
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
 
 // Only active products are offered; a line can still be a free-text custom item.
 const { items: products, fetchData: loadProducts } = useFetch('/api/products', { per_page: 500, active_status: 1 })
-
-// Picking a product fills in its name, which is stored on the line as a snapshot.
-const onProductChange = (item) => {
-    const product = products.value.find((p) => p.id === item.product_id)
-    if (product) item.item_name = product.name
-}
-
-const addItem = () => form.items.push(emptyItem())
-const removeItem = (index) => {
-    if (form.items.length > 1) form.items.splice(index, 1)
-}
-
-const lineTotal = (item) => {
-    const qty = Number(item.qty) || 0
-    const unitPrice = Number(item.unit_price) || 0
-    const discount = Number(item.discount) || 0
-    const vat = Number(item.vat) || 0
-    return (qty * unitPrice) - discount + vat
-}
-
-const totals = computed(() => {
-    let totalAmount = 0
-    let discountAmount = 0
-    let vatAmount = 0
-
-    form.items.forEach((item) => {
-        totalAmount += (Number(item.qty) || 0) * (Number(item.unit_price) || 0)
-        discountAmount += Number(item.discount) || 0
-        vatAmount += Number(item.vat) || 0
-    })
-
-    return {
-        totalAmount,
-        discountAmount,
-        vatAmount,
-        netTotal: totalAmount - discountAmount + vatAmount,
-    }
-})
 
 const handleSubmit = async () => {
     if (!form.due_date) delete form.due_date

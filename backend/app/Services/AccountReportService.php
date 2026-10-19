@@ -14,6 +14,7 @@ use App\Models\Supplier;
 use App\Models\SupplierTransaction;
 use App\Models\WorkOrder;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -273,6 +274,73 @@ class AccountReportService
             'profit_or_loss' => $profitOrLoss,
             'result' => $result,
         ];
+    }
+
+    /**
+     * Headline figures for the accounting dashboard: sales and purchases
+     * (net totals, optionally within a date range), and the current
+     * receivable, payable and bank balances from the ledger. The bank balance
+     * covers the Bank Accounts account and every account created under it.
+     *
+     * @return array{from_date: ?string, to_date: ?string, total_sales: float, total_purchase: float, total_receivable: float, total_payable: float, bank_balance: float, banks: array<int, array{id: int, name: string, account_number: ?string, balance: float}>}
+     */
+    public function dashboardSummary(?string $fromDate = null, ?string $toDate = null): array
+    {
+        $totalSales = Sale::query()
+            ->when($fromDate, fn ($query) => $query->whereDate('issue_date', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('issue_date', '<=', $toDate))
+            ->sum('net_total');
+
+        $totalPurchase = Purchase::query()
+            ->when($fromDate, fn ($query) => $query->whereDate('purchase_date', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('purchase_date', '<=', $toDate))
+            ->sum('net_total');
+
+        $receivableId = ChartOfAccount::query()->where('account_number', LedgerPostingService::ACCOUNTS_RECEIVABLE_NUMBER)->value('id');
+        $payableId = ChartOfAccount::query()->where('account_number', LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->value('id');
+        $bankAccounts = $this->bankAccounts();
+
+        $balances = $this->netByAccount(fn (Builder $query) => $query->whereIn(
+            'account_transaction_details.chart_of_account_id',
+            array_filter([$receivableId, $payableId, ...$bankAccounts->modelKeys()]),
+        ));
+
+        $banks = $bankAccounts->map(fn (ChartOfAccount $account) => [
+            'id' => $account->id,
+            'name' => $account->name,
+            'account_number' => $account->account_number,
+            'balance' => (float) ($balances[$account->id] ?? 0),
+        ]);
+
+        return [
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'total_sales' => round((float) $totalSales, 2),
+            'total_purchase' => round((float) $totalPurchase, 2),
+            'total_receivable' => (float) ($balances[$receivableId] ?? 0),
+            'total_payable' => -(float) ($balances[$payableId] ?? 0),
+            'bank_balance' => round($banks->sum('balance'), 2),
+            'banks' => $banks->values()->all(),
+        ];
+    }
+
+    /**
+     * The Bank Accounts account and all of its descendants.
+     *
+     * @return EloquentCollection<int, ChartOfAccount>
+     */
+    private function bankAccounts(): EloquentCollection
+    {
+        $accounts = ChartOfAccount::query()->where('account_number', LedgerPostingService::BANK_ACCOUNTS_NUMBER)->get(['id', 'name', 'account_number']);
+        $parentIds = $accounts->modelKeys();
+
+        while ($parentIds) {
+            $children = ChartOfAccount::query()->whereIn('parent_id', $parentIds)->get(['id', 'name', 'account_number']);
+            $accounts = $accounts->concat($children);
+            $parentIds = $children->modelKeys();
+        }
+
+        return $accounts;
     }
 
     /**

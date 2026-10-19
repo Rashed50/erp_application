@@ -16,7 +16,7 @@ class MaterialRequestService
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return MaterialRequest::query()
-            ->with(['warehouse', 'workOrder', 'requester', 'items.item'])
+            ->with(['warehouse', 'workOrder', 'requester', 'approver', 'items.item'])
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->when($filters['warehouse_id'] ?? null, fn ($query, int $id) => $query->where('warehouse_id', $id))
             ->when($filters['work_order_id'] ?? null, fn ($query, int $id) => $query->where('work_order_id', $id))

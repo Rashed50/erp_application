@@ -28,6 +28,8 @@ class Purchase extends Model
             'total_amount' => 'decimal:2',
             'discount_amount' => 'decimal:2',
             'vat_amount' => 'decimal:2',
+            'overall_discount' => 'decimal:2',
+            'overall_vat' => 'decimal:2',
             'net_total' => 'decimal:2',
             'paid_amount' => 'decimal:2',
         ];
@@ -41,6 +43,14 @@ class Purchase extends Model
     public function workOrder(): BelongsTo
     {
         return $this->belongsTo(WorkOrder::class)->withTrashed();
+    }
+
+    /**
+     * The employee who made the purchase (not the user who entered it).
+     */
+    public function purchasedBy(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'purchased_by_id')->withTrashed();
     }
 
     public function ledgerTransaction(): BelongsTo

@@ -36,6 +36,7 @@ class PayrollService
     public function paginate(int $perPage, array $filters): LengthAwarePaginator
     {
         return $this->filteredQuery($filters)
+            ->with(['generator:id,name', 'approver:id,name'])
             ->orderByDesc('salary_month')
             ->orderBy('employee_code')
             ->paginate($perPage);

@@ -102,6 +102,19 @@ class AccountReportController extends Controller
         ));
     }
 
+    public function dashboard(Request $request): JsonResponse
+    {
+        $request->validate([
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+        ]);
+
+        return ApiResponse::success($this->reportService->dashboardSummary(
+            $request->date('from_date')?->toDateString(),
+            $request->date('to_date')?->toDateString(),
+        ));
+    }
+
     public function balanceSheet(Request $request): JsonResponse
     {
         $request->validate(['to_date' => ['nullable', 'date']]);

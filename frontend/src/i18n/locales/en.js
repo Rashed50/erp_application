@@ -109,6 +109,7 @@ export default {
         record: 'record',
         approved: 'Approved',
         approvedAt: 'Approved at {date}',
+        by: 'by {name}',
         pending: 'Pending',
     },
 }

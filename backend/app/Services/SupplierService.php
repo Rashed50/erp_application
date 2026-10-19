@@ -18,6 +18,7 @@ class SupplierService
     public function paginate(int $perPage = 15, ?string $search = null, ?bool $active = null): LengthAwarePaginator
     {
         return Supplier::query()
+            ->with(['creator:id,name', 'approver:id,name'])
             ->when($search, fn ($query) => $query->search($search))
             ->when(! is_null($active), fn ($query) => $query->where('active_status', $active))
             ->latest()
@@ -26,7 +27,7 @@ class SupplierService
 
     public function find(Supplier $supplier): Supplier
     {
-        return $supplier->load('transactions');
+        return $supplier->load(['transactions.creator:id,name']);
     }
 
     /**

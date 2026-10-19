@@ -30,6 +30,11 @@
                                         rounded="0" variant="flat" min-width="100">
                                         {{ $t('Reload') }}
                                     </v-btn>
+                                    <v-btn @click.prevent="print" class="text-none" color="grey-lighten-3"
+                                        rounded="0" variant="flat" min-width="100" :loading="printing"
+                                        :disabled="!items.length">
+                                        <i class="fa-solid fa-print me-1"></i> {{ $t('Print') }}
+                                    </v-btn>
                                 </div>
                             </div>
                         </div>
@@ -45,6 +50,7 @@
                                 <th class="text-left">{{ $t('Phone') }}</th>
                                 <th class="text-right">{{ $t('Balance') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -53,7 +59,7 @@
 
                             <!-- Loading State with Vuetify Spinner -->
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
@@ -61,7 +67,7 @@
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     {{ $t('No records found.') }}
                                 </td>
                             </tr>
@@ -78,8 +84,10 @@
                                         {{ $t(item.active_status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
+                                <td>{{ item.created_by_name || '-' }}</td>
                                 <td class="text-center">
-                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
+                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
+                                        :approved-by-name="item.approved_by_name" />
                                 </td>
                                 <!-- actions -->
                                 <td class="text-center">
@@ -141,6 +149,7 @@ import { usePermission } from '@/composables/usePermission';
 import ApprovalBadge from '@/components/common/ApprovalBadge.vue';
 import { useApproval } from '@/composables/useApproval';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
+import { usePrintable } from '@/composables/usePrintable';
 import { t } from '@/i18n';
 
 const {
@@ -149,6 +158,7 @@ const {
     filters,
     pagination,
     fetchData,
+    fetchAll,
     changePage,
     changePerPage,
     resetFilters,
@@ -181,6 +191,34 @@ const handleDelete = async (item) => {
     } catch (e) {
         // A supplier with ledger transactions or purchases cannot be deleted (422).
         toast.error(e.response?.data?.message || t('Failed to delete supplier.'))
+    }
+}
+
+// Print every row matching the current filters in the shared report layout.
+const { printTable } = usePrintable()
+const printing = ref(false)
+const print = async () => {
+    printing.value = true
+    try {
+        printTable({
+            title: t('Supplier List'),
+            items: await fetchAll(),
+            columns: [
+                { key: 'index', label: '#' },
+                { key: 'name', label: t('Name') },
+                { key: 'phone', label: t('Phone') },
+                { key: 'email', label: t('Email') },
+                { key: 'address', label: t('Address') },
+                { key: 'current_balance', label: t('Balance'), align: 'right', format: (value) => Number(value || 0).toFixed(2) },
+                { key: 'active_status', label: t('Status'), format: (value) => t(value ? 'Active' : 'Inactive') },
+                { key: 'created_by_name', label: t('Inserted By') },
+                { key: 'approved_by_name', label: t('Approved By') },
+            ],
+        })
+    } catch (e) {
+        toast.error(e.response?.data?.message || t('Failed to load data for printing.'))
+    } finally {
+        printing.value = false
     }
 }
 

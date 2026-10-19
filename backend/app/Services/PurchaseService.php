@@ -20,7 +20,7 @@ class PurchaseService
     public function paginate(int $perPage = 15, ?string $search = null, ?int $supplierId = null): LengthAwarePaginator
     {
         return Purchase::query()
-            ->with(['supplier:id,name', 'workOrder:id,work_order_no'])
+            ->with(['supplier:id,name', 'workOrder:id,work_order_no', 'purchasedBy:id,employee_code,name', 'creator:id,name', 'approver:id,name'])
             ->when($search, fn ($query) => $query->where('invoice_number', 'like', "%{$search}%"))
             ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
             ->latest('purchase_date')
@@ -29,7 +29,7 @@ class PurchaseService
 
     public function find(Purchase $purchase): Purchase
     {
-        return $purchase->load(['items', 'supplier', 'workOrder']);
+        return $purchase->load(['items', 'supplier', 'workOrder', 'purchasedBy']);
     }
 
     /**
@@ -41,16 +41,21 @@ class PurchaseService
      * product purchase and Purchase for a service one, the credit to
      * Accounts Payable.
      *
-     * @param  array{supplier_id: int, work_order_id?: ?int, purchase_type: string, invoice_number: string, description?: ?string, issue_date: string, purchase_date: string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, items: array<int, array{item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
+     * @param  array{supplier_id: int, work_order_id?: ?int, purchased_by_id?: ?int, purchase_type: string, invoice_number: string, description?: ?string, issue_date: string, purchase_date: string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, overall_discount?: ?float, overall_vat?: ?float, items: array<int, array{item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
      */
     public function create(array $data): Purchase
     {
         return DB::transaction(function () use ($data) {
-            $totals = LineItemTotalCalculator::calculate($data['items']);
+            $totals = LineItemTotalCalculator::calculate(
+                $data['items'],
+                (float) ($data['overall_discount'] ?? 0),
+                (float) ($data['overall_vat'] ?? 0),
+            );
 
             $purchase = Purchase::create([
                 'supplier_id' => $data['supplier_id'],
                 'work_order_id' => $data['work_order_id'] ?? null,
+                'purchased_by_id' => $data['purchased_by_id'] ?? null,
                 'purchase_type' => $data['purchase_type'],
                 'invoice_number' => $data['invoice_number'],
                 'description' => $data['description'] ?? null,
@@ -60,6 +65,8 @@ class PurchaseService
                 'debit_account_id' => $data['debit_account_id'] ?? $this->defaultDebitAccountId($data['purchase_type']),
                 'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)?->id,
                 'total_amount' => $totals['total_amount'],
+                'overall_discount' => $totals['overall_discount'],
+                'overall_vat' => $totals['overall_vat'],
                 'discount_amount' => $totals['discount_amount'],
                 'vat_amount' => $totals['vat_amount'],
                 'net_total' => $totals['net_total'],
@@ -83,7 +90,7 @@ class PurchaseService
 
             $purchase->update(['supplier_transaction_id' => $transaction->id]);
 
-            return $purchase->load(['items', 'supplier', 'workOrder']);
+            return $purchase->load(['items', 'supplier', 'workOrder', 'purchasedBy']);
         });
     }
 
@@ -98,7 +105,7 @@ class PurchaseService
     public function update(Purchase $purchase, array $data): Purchase
     {
         return DB::transaction(function () use ($purchase, $data) {
-            $totals = isset($data['items']) ? LineItemTotalCalculator::calculate($data['items']) : null;
+            $totals = $this->recalculatedTotals($purchase, $data);
 
             if ($totals && $totals['net_total'] < $purchase->paid_amount) {
                 throw ValidationException::withMessages([
@@ -107,7 +114,7 @@ class PurchaseService
             }
 
             $purchase->fill([
-                ...collect($data)->except('items')->all(),
+                ...collect($data)->except(['items', 'overall_discount', 'overall_vat'])->all(),
                 'updated_by' => Auth::id(),
             ]);
 
@@ -116,6 +123,8 @@ class PurchaseService
 
             if ($totals) {
                 $purchase->total_amount = $totals['total_amount'];
+                $purchase->overall_discount = $totals['overall_discount'];
+                $purchase->overall_vat = $totals['overall_vat'];
                 $purchase->discount_amount = $totals['discount_amount'];
                 $purchase->vat_amount = $totals['vat_amount'];
                 $purchase->net_total = $totals['net_total'];
@@ -123,7 +132,7 @@ class PurchaseService
 
             $purchase->save();
 
-            if ($totals) {
+            if (isset($data['items'])) {
                 $purchase->items()->delete();
                 $purchase->items()->createMany($totals['items']);
             }
@@ -146,8 +155,29 @@ class PurchaseService
                 ]);
             }
 
-            return $purchase->load(['items', 'supplier', 'workOrder']);
+            return $purchase->load(['items', 'supplier', 'workOrder', 'purchasedBy']);
         });
+    }
+
+    /**
+     * Totals recomputed for an update: when the line items or the overall
+     * discount/VAT change. Whichever of them is not sent is taken from the
+     * purchase as it is now. Returns null when none of them changed.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null
+     */
+    private function recalculatedTotals(Purchase $purchase, array $data): ?array
+    {
+        if (! isset($data['items']) && ! array_key_exists('overall_discount', $data) && ! array_key_exists('overall_vat', $data)) {
+            return null;
+        }
+
+        return LineItemTotalCalculator::calculate(
+            $data['items'] ?? $purchase->items->toArray(),
+            (float) (array_key_exists('overall_discount', $data) ? $data['overall_discount'] : $purchase->overall_discount),
+            (float) (array_key_exists('overall_vat', $data) ? $data['overall_vat'] : $purchase->overall_vat),
+        );
     }
 
     /**

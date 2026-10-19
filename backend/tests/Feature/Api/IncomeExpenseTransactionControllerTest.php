@@ -2,6 +2,7 @@
 
 use App\Models\AccountTransaction;
 use App\Models\ChartOfAccount;
+use App\Models\Employee;
 use App\Models\IncomeExpenseTransaction;
 use App\Models\WorkOrder;
 
@@ -251,5 +252,27 @@ describe('work order', function () {
             ->putJson("/api/income-expenses/{$transaction->id}", ['work_order_id' => 999999])
             ->assertStatus(422)
             ->assertJsonStructure(['data' => ['work_order_id']]);
+    });
+});
+
+describe('expense by', function () {
+    it('records the employee who spent the money', function () {
+        $actor = adminUser();
+        $rent = ChartOfAccount::factory()->expense()->create();
+        $cash = ChartOfAccount::factory()->asset()->create();
+        $employee = Employee::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/income-expenses', [
+                'type' => 'expense',
+                'income_expense_account_id' => $rent->id,
+                'payment_account_id' => $cash->id,
+                'employee_id' => $employee->id,
+                'amount' => 500,
+                'transaction_date' => now()->toDateString(),
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.employee_id', $employee->id)
+            ->assertJsonPath('data.employee_name', "{$employee->name} ({$employee->employee_code})");
     });
 });

@@ -32,6 +32,7 @@ class EmployeeWorkResource extends JsonResource
             'other_addition' => (float) $this->other_addition,
             'other_deduction' => (float) $this->other_deduction,
             'remarks' => $this->remarks,
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

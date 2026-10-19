@@ -22,6 +22,7 @@ class UserResource extends JsonResource
             'image_url' => $this->image ? Storage::disk('public')->url($this->image) : null,
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')),
             'permissions' => $this->whenLoaded('roles', fn () => $this->getAllPermissions()->pluck('name')),
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
