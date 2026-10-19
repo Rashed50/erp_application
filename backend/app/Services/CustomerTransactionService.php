@@ -15,7 +15,7 @@ class CustomerTransactionService
     public function listForCustomer(Customer $customer, int $perPage = 15, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
     {
         return $customer->transactions()
-            ->with('workOrder:id,work_order_no')
+            ->with(['workOrder:id,work_order_no', 'creator:id,name'])
             ->when($fromDate && $toDate, fn ($query) => $query->whereBetween('transaction_date', [$fromDate, $toDate]))
             ->latest('transaction_date')
             ->paginate($perPage);

@@ -13,7 +13,7 @@ class WorkOrderService
     public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null, ?string $status = null): LengthAwarePaginator
     {
         return WorkOrder::query()
-            ->with('customer:id,name')
+            ->with(['customer:id,name', 'creator:id,name', 'approver:id,name'])
             ->withPaymentTotals()
             ->when($search, fn ($query) => $query->search($search))
             ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))

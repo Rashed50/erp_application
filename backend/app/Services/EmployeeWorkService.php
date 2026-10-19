@@ -17,7 +17,7 @@ class EmployeeWorkService
     public function paginate(int $perPage, array $filters): LengthAwarePaginator
     {
         return EmployeeWork::query()
-            ->with(['employee:id,employee_code,name,department_id,designation_id', 'employee.department', 'employee.designation'])
+            ->with(['employee:id,employee_code,name,department_id,designation_id', 'employee.department', 'employee.designation', 'creator:id,name'])
             ->when($filters['month'] ?? null, fn (Builder $query, string $month) => $query->whereDate('salary_month', $month.'-01'))
             ->when($filters['employee_id'] ?? null, fn (Builder $query, int $employeeId) => $query->where('employee_id', $employeeId))
             ->when(

@@ -13,6 +13,7 @@ class SupplierTransactionService
     public function listForSupplier(Supplier $supplier, int $perPage = 15, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
     {
         return $supplier->transactions()
+            ->with('creator:id,name')
             ->when($fromDate && $toDate, fn ($query) => $query->whereBetween('transaction_date', [$fromDate, $toDate]))
             ->latest('transaction_date')
             ->paginate($perPage);

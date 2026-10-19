@@ -51,4 +51,9 @@ class EmployeeWork extends Model
             ->whereIn('status', SalaryHistory::LOCKED_STATUSES)
             ->exists();
     }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

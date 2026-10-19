@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
@@ -12,7 +13,7 @@ class UserService
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
         return User::query()
-            ->with('roles')
+            ->with(['roles', 'creator:id,name'])
             ->latest()
             ->paginate($perPage);
     }
@@ -31,6 +32,7 @@ class UserService
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'created_by' => Auth::id(),
         ]);
     }
 

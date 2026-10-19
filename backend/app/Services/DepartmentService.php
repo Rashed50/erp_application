@@ -14,6 +14,7 @@ class DepartmentService
     public function paginate(int $perPage = 15, ?string $search = null, ?bool $status = null): LengthAwarePaginator
     {
         return Department::query()
+            ->with('creator:id,name')
             ->withCount('employees')
             ->when($search, fn ($query) => $query->search($search))
             ->when(! is_null($status), fn ($query) => $query->where('status', $status))

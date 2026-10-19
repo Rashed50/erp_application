@@ -284,6 +284,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Ledger reports, computed from the journal as in the payroll_software
     // Account module's admin/accounting/reports/* pages.
     Route::prefix('/accounting/reports')->name('account-reports.')->middleware('permission:account-reports.view')->group(function () {
+        Route::get('/dashboard', [AccountReportController::class, 'dashboard'])->name('dashboard');
         Route::get('/general-ledger', [AccountReportController::class, 'generalLedger'])->name('general-ledger');
         Route::get('/trial-balance', [AccountReportController::class, 'trialBalance'])->name('trial-balance');
         Route::get('/profit-loss', [AccountReportController::class, 'profitAndLoss'])->name('profit-loss');
@@ -374,10 +375,10 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('employees.options')
             ->middleware('permission:employees.view|employee-works.view|payroll.view|hr-reports.view');
 
-        // Employee pickers on the work, advance, payroll and report screens use the list too.
+        // Employee pickers on the work, advance, payroll, report, purchase and income/expense screens use the list too.
         Route::get('/employees', [EmployeeController::class, 'index'])
             ->name('employees.index')
-            ->middleware('permission:employees.view|employee-works.view|employee-advances.create|hr-reports.view');
+            ->middleware('permission:employees.view|employee-works.view|employee-advances.create|hr-reports.view|purchases.create|purchases.update|income-expenses.create|income-expenses.update');
         Route::apiResource('employees', EmployeeController::class)
             ->except('index')
             ->middlewareFor('show', 'permission:employees.view')
@@ -505,7 +506,7 @@ Route::middleware('auth:sanctum')->group(function () {
         /* ---------- Inventory setup ---------- */
         Route::get('/units/options', [InventoryUnitController::class, 'options'])
             ->name('units.options')
-            ->middleware('permission:inventory-units.view|item-names.create|item-names.update');
+            ->middleware('permission:inventory-units.view|item-names.create|item-names.update|sales.create|sales.update|purchases.create|purchases.update');
         Route::apiResource('units', InventoryUnitController::class)
             ->except('destroy')
             ->parameters(['units' => 'inventory_unit'])

@@ -45,20 +45,21 @@
                                 <th class="text-left">{{ $t('Description') }}</th>
                                 <th class="text-center">{{ $t('Employees') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
 
                             <tr v-if="loading">
-                                <td colspan="6" class="text-center py-4">
+                                <td colspan="7" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
                             </tr>
 
                             <tr v-else-if="!items.length">
-                                <td colspan="6" class="text-center py-4">
+                                <td colspan="7" class="text-center py-4">
                                     {{ $t('No records found.') }}
                                 </td>
                             </tr>
@@ -73,6 +74,7 @@
                                         {{ $t(item.status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
+                                <td>{{ item.created_by_name || '-' }}</td>
                                 <td class="text-center">
                                     <v-menu v-if="can([`${resource}.update`])">
                                         <template v-slot:activator="{ props }">

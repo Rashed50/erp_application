@@ -21,7 +21,7 @@ class EmployeeService
     public function paginate(int $perPage, array $filters): LengthAwarePaginator
     {
         return Employee::query()
-            ->with(['department', 'designation'])
+            ->with(['department', 'designation', 'creator:id,name'])
             ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->search($search))
             ->when($filters['department'] ?? null, fn (Builder $query, string $department) => $query->inDepartment($department))
             ->when($filters['designation'] ?? null, fn (Builder $query, string $designation) => $query->withDesignation($designation))
@@ -41,9 +41,13 @@ class EmployeeService
              ->get();
     }
 
+    /**
+     * Salary revisions are only loaded for users who may edit them, so the
+     * pay of an employee stays hidden from everyone else.
+     */
     public function find(Employee $employee): Employee
     {
-        return $employee->load([
+        $employee->load([
             'department',
             'designation',
             'division',
@@ -54,8 +58,13 @@ class EmployeeService
             'detail.permanentUpazila',
             'bankDetail',
             'files',
-            'salaryDetails' => fn ($query) => $query->withCount('salaryHistories')->orderByDesc('effective_date'),
         ]);
+
+        if (Auth::user()?->can('salary-configs.update')) {
+            $employee->load(['salaryDetails' => fn ($query) => $query->withCount('salaryHistories')->orderByDesc('effective_date')]);
+        }
+
+        return $employee;
     }
 
     /**

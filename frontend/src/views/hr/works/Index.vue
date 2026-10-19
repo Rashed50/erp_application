@@ -42,18 +42,19 @@
                             <th class="text-right">{{ $t('Unpaid Leave') }}</th>
                             <th class="text-right">{{ $t('OT Hours') }}</th>
                             <th class="text-right">{{ $t('Bonus') }}</th>
+                            <th class="text-left">{{ $t('Inserted By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="loading">
-                            <td colspan="11" class="text-center py-4">
+                            <td colspan="12" class="text-center py-4">
                                 <v-progress-linear indeterminate color="primary"></v-progress-linear>
                                 {{ $t('Loading...') }}
                             </td>
                         </tr>
                         <tr v-else-if="!items.length">
-                            <td colspan="11" class="text-center py-4">{{ $t('No work records found.') }}</td>
+                            <td colspan="12" class="text-center py-4">{{ $t('No work records found.') }}</td>
                         </tr>
                         <tr v-else v-for="item in items" :key="item.id">
                             <td>{{ monthLabel(item.salary_month) }}</td>
@@ -66,6 +67,7 @@
                             <td class="text-right">{{ item.unpaid_leave_days }}</td>
                             <td class="text-right">{{ item.overtime_hours }}</td>
                             <td class="text-right">{{ money(item.bonus) }}</td>
+                            <td>{{ item.created_by_name || '-' }}</td>
                             <td class="text-center">
                                 <router-link v-if="can(['employee-works.update'])"
                                     :to="{ name: 'admin_hr_works_entry', query: { employee_id: item.employee_id, month: item.salary_month } }">

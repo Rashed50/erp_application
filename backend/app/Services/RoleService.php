@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Role;
 
 class RoleService
@@ -11,6 +13,7 @@ class RoleService
     {
         return Role::query()
             ->with('permissions')
+            ->addSelect(['created_by_name' => User::query()->select('name')->whereColumn('users.id', 'roles.created_by')])
             ->latest()
             ->paginate($perPage);
     }
@@ -28,7 +31,7 @@ class RoleService
         // Explicit guard_name avoids Role::create() falling back to the
         // "sanctum" guard that auth:sanctum makes the request's default guard,
         // which would never match the "web"-guarded permissions from the seeder.
-        $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
+        $role = Role::create(['name' => $data['name'], 'guard_name' => 'web', 'created_by' => Auth::id()]);
 
         $role->syncPermissions($data['permissions'] ?? []);
 

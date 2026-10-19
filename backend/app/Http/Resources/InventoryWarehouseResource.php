@@ -30,6 +30,7 @@ class InventoryWarehouseResource extends JsonResource
             'address' => $this->address,
             'status' => $this->status,
             'stocks_count' => $this->whenCounted('stocks'),
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

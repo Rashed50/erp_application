@@ -14,6 +14,7 @@ class ProductService
     public function paginate(int $perPage = 15, ?string $search = null, ?bool $active = null): LengthAwarePaginator
     {
         return Product::query()
+            ->with('creator:id,name')
             ->when($search, fn ($query) => $query->search($search))
             ->when(! is_null($active), fn ($query) => $query->where('active_status', $active))
             ->latest()

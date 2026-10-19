@@ -20,6 +20,8 @@ use LogicException;
  */
 class LedgerPostingService
 {
+    public const BANK_ACCOUNTS_NUMBER = '1020';
+
     public const ACCOUNTS_RECEIVABLE_NUMBER = '1030';
 
     public const INVENTORY_NUMBER = '1040';

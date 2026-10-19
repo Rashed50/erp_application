@@ -30,6 +30,10 @@
                                 variant="flat" min-width="100">
                                 {{ $t('Reload') }}
                             </v-btn>
+                            <v-btn @click.prevent="print" class="text-none" color="grey-lighten-3" rounded="0"
+                                variant="flat" min-width="100" :loading="printing" :disabled="!items.length">
+                                <i class="fa-solid fa-print me-1"></i> {{ $t('Print') }}
+                            </v-btn>
                         </div>
                     </div>
                 </div>
@@ -45,18 +49,19 @@
                             <th class="text-left">{{ $t('Phone') }}</th>
                             <th class="text-left">{{ $t('Joining Date') }}</th>
                             <th class="text-center">{{ $t('Status') }}</th>
+                            <th class="text-left">{{ $t('Inserted By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="loading">
-                            <td colspan="9" class="text-center py-4">
+                            <td colspan="10" class="text-center py-4">
                                 <v-progress-linear indeterminate color="primary"></v-progress-linear>
                                 {{ $t('Loading...') }}
                             </td>
                         </tr>
                         <tr v-else-if="!items.length">
-                            <td colspan="9" class="text-center py-4">{{ $t('No employees found.') }}</td>
+                            <td colspan="10" class="text-center py-4">{{ $t('No employees found.') }}</td>
                         </tr>
                         <tr v-else v-for="(item, index) in items" :key="item.id">
                             <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
@@ -73,6 +78,7 @@
                             <td class="text-center">
                                 <span :class="employeeStatusClass(item.status)">{{ $t(item.status) }}</span>
                             </td>
+                            <td>{{ item.created_by_name || '-' }}</td>
                             <td class="text-center">
                                 <v-menu>
                                     <template v-slot:activator="{ props }">
@@ -121,6 +127,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
+import { usePrintable } from '@/composables/usePrintable';
 import { employeeStatusClass } from '../helpers';
 import { t } from '@/i18n';
 
@@ -132,6 +139,7 @@ const {
     filters,
     pagination,
     fetchData,
+    fetchAll,
     changePage,
     changePerPage,
     resetFilters,
@@ -143,6 +151,34 @@ const {
 })
 
 const options = ref({ departments: [], designations: [], statuses: [] })
+
+// Print every row matching the current filters in the shared report layout.
+const { printTable } = usePrintable()
+const printing = ref(false)
+const print = async () => {
+    printing.value = true
+    try {
+        printTable({
+            title: t('Employee List'),
+            items: await fetchAll(),
+            columns: [
+                { key: 'index', label: '#' },
+                { key: 'employee_code', label: t('Employee ID') },
+                { key: 'name', label: t('Name') },
+                { key: 'department', label: t('Department') },
+                { key: 'designation', label: t('Designation') },
+                { key: 'phone', label: t('Phone') },
+                { key: 'joining_date', label: t('Joining Date') },
+                { key: 'employment_type', label: t('Employment Type'), format: (value) => t(value) },
+                { key: 'status', label: t('Status'), format: (value) => t(value) },
+            ],
+        })
+    } catch (e) {
+        toast.error(e.response?.data?.message || t('Failed to load data for printing.'))
+    } finally {
+        printing.value = false
+    }
+}
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({

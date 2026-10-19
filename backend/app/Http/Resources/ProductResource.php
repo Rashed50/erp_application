@@ -21,6 +21,7 @@ class ProductResource extends JsonResource
             'active_status' => $this->active_status,
             'branch_office_id' => $this->branch_office_id,
             'created_by' => $this->created_by,
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -49,6 +49,7 @@ class EmployeeResource extends JsonResource
             ] : null),
             'bank' => $this->whenLoaded('bankDetail', fn () => $this->bankDetail?->only(EmployeeBankDetail::FIELDS)),
             'files' => EmployeeFileResource::collection($this->whenLoaded('files')),
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'salary_details' => SalaryDetailResource::collection($this->whenLoaded('salaryDetails')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

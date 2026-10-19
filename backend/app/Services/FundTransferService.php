@@ -15,7 +15,7 @@ class FundTransferService
     public function paginate(int $perPage = 15, ?string $search = null, ?int $accountId = null, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
     {
         return FundTransfer::query()
-            ->with(['creditAccount:id,name,account_number', 'debitAccount:id,name,account_number', 'creator:id,name'])
+            ->with(['creditAccount:id,name,account_number', 'debitAccount:id,name,account_number', 'creator:id,name', 'approver:id,name'])
             ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('receipt_no', 'like', "%{$search}%")
                     ->orWhere('remarks', 'like', "%{$search}%");
@@ -31,7 +31,7 @@ class FundTransferService
 
     public function find(FundTransfer $transfer): FundTransfer
     {
-        return $transfer->load(['creditAccount:id,name,account_number', 'debitAccount:id,name,account_number', 'creator:id,name']);
+        return $transfer->load(['creditAccount:id,name,account_number', 'debitAccount:id,name,account_number', 'creator:id,name', 'approver:id,name']);
     }
 
     /**

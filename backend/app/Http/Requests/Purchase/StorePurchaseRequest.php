@@ -33,6 +33,7 @@ class StorePurchaseRequest extends FormRequest
         return [
             'supplier_id' => ['required', Rule::exists('suppliers', 'id')],
             'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->withoutTrashed()],
+            'purchased_by_id' => ['nullable', 'integer', Rule::exists('employee_info', 'id')->withoutTrashed()],
             'purchase_type' => ['required', 'string', Rule::in(['product', 'service'])],
             'invoice_number' => ['required', 'string', 'max:255', Rule::unique('purchases', 'invoice_number')],
             'description' => ['nullable', 'string'],
@@ -49,9 +50,14 @@ class StorePurchaseRequest extends FormRequest
             'items.*.item_name' => ['required', 'string', 'max:255'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit' => ['nullable', 'string', 'max:50'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'items.*.vat' => ['nullable', 'numeric', 'min:0'],
+
+            // Invoice-level amounts on top of the per-line discount and VAT.
+            'overall_discount' => ['nullable', 'numeric', 'min:0'],
+            'overall_vat' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

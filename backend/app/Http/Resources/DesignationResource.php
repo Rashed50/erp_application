@@ -20,6 +20,7 @@ class DesignationResource extends JsonResource
             'description' => $this->description,
             'status' => $this->status,
             'employees_count' => $this->whenCounted('employees'),
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

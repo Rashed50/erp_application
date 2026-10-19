@@ -21,7 +21,8 @@
                 <v-tabs v-model="tab" color="blue-darken-4" show-arrows>
                     <v-tab value="basic">{{ $t('Basic Information') }}</v-tab>
                     <v-tab value="employment">{{ $t('Employment Information') }}</v-tab>
-                    <v-tab value="salary" v-if="can(['salary-configs.view'])">{{ $t('Salary Information') }}</v-tab>
+                    <!-- Salary figures are shown only to users who may edit them. -->
+                    <v-tab value="salary" v-if="can(['salary-configs.update'])">{{ $t('Salary Information') }}</v-tab>
                     <v-tab value="work" v-if="can(['employee-works.view'])">{{ $t('Work History') }}</v-tab>
                     <v-tab value="salary-history" v-if="can(['payroll.view'])">{{ $t('Salary History') }}</v-tab>
                     <v-tab value="documents">{{ $t('Documents / Files') }}</v-tab>
@@ -53,7 +54,7 @@
                     </v-window-item>
 
                     <!-- Salary Information -->
-                    <v-window-item value="salary">
+                    <v-window-item value="salary" v-if="can(['salary-configs.update'])">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div v-if="currentSalary">
                                 {{ $t('Current monthly gross:') }} <strong>{{ money(currentSalary.monthly_gross) }}</strong>

@@ -9,8 +9,10 @@ use App\Models\EmployeeFile;
 use App\Models\EmployeeWork;
 use App\Models\SalaryDetail;
 use App\Models\Upazila;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Permission;
 
 function employeePayload(array $overrides = []): array
 {
@@ -196,4 +198,22 @@ it('rejects a document of a disallowed type', function () {
             'file' => UploadedFile::fake()->create('script.exe', 10),
         ], ['Accept' => 'application/json'])
         ->assertStatus(422);
+});
+
+it('shows salary details only to users who may edit them', function () {
+    $salary = SalaryDetail::factory()->create();
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo(Permission::findOrCreate('employees.view', 'web'));
+
+    $this->actingAs($viewer, 'sanctum')
+        ->getJson("/api/hr/employees/{$salary->employee_id}")
+        ->assertOk()
+        ->assertJsonMissingPath('data.salary_details');
+
+    $viewer->givePermissionTo(Permission::findOrCreate('salary-configs.update', 'web'));
+
+    $this->actingAs($viewer->fresh(), 'sanctum')
+        ->getJson("/api/hr/employees/{$salary->employee_id}")
+        ->assertOk()
+        ->assertJsonCount(1, 'data.salary_details');
 });

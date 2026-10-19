@@ -33,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
 
+
         Queue::after(function (JobProcessed $event) {
             // This runs after any job finishes successfully
             Log::info('Job finished successfully', [
@@ -50,5 +51,21 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
         
+
+        $this->usePublicStorageUrlOfCurrentHost();
+    }
+
+    /**
+     * Build public file URLs (company logo, profile photos, attachments) from the
+     * host that is serving the API rather than APP_URL, so they still resolve when
+     * APP_URL points at a different domain (e.g. www vs. bare, or production in a local .env).
+     */
+    private function usePublicStorageUrlOfCurrentHost(): void
+    {
+        if ($this->app->runningInConsole()) {
+            return;
+        }
+        config(['filesystems.disks.public.url' => url('storage')]);
+
     }
 }

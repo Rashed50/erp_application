@@ -4,7 +4,7 @@ import { usePrintable } from '@/composables/usePrintable'
 export function useMainMember() {
     const printable = usePrintable()
 
-    // Prints in the shared company layout (header, watermark, signatures).
+    // Prints in the shared company layout (header, watermark, footer).
     const printTable = (items, options = {}) => {
         if (!items || !items.length) return
 
