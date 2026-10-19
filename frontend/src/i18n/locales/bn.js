@@ -70,6 +70,7 @@ export default {
         workOrderDetails: 'ওয়ার্ক অর্ডারভিত্তিক বিক্রয় ও খরচের বিবরণ',
         customerCollections: 'গ্রাহকভিত্তিক আদায় ও বকেয়া',
         settings: 'সেটিংস',
+        quotation: 'সেটিংস',
         profile: 'প্রোফাইল',
         logout: 'লগআউট',
     },
