@@ -69,7 +69,7 @@ export default {
         workOrderDetails: 'Work Order Sales & Expense Details',
         customerCollections: 'Customer Collection & Due',
         otherReports: 'Other Reports',
-        settings: 'Settings',
+        quotation: 'Quotation',
         profile: 'Profile',
         logout: 'Logout',
     },
