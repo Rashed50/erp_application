@@ -57,6 +57,9 @@ use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\QuotationController;
+
+
 
 // Device endpoint: add a dedicated ADMS authentication middleware before production.
 Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
@@ -83,6 +86,13 @@ Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     Route::get('/{dailyAttendance}', [AttendanceController::class, 'show'])->whereNumber('dailyAttendance');
     Route::post('/generate-monthly-records', [AttendanceController::class, 'generateMonthlyRecords']);
 });
+
+
+Route::get('quotations', [QuotationController::class, 'index'])->middleware('permission:quotations.view');
+Route::get('quotations/{quotation}', [QuotationController::class, 'show'])->middleware('permission:quotations.view');
+Route::post('quotations', [QuotationController::class, 'store'])->middleware('permission:quotations.create');
+Route::put('quotations/{quotation}', [QuotationController::class, 'update'])->middleware('permission:quotations.update');
+Route::delete('quotations/{quotation}', [QuotationController::class, 'destroy'])->middleware('permission:quotations.delete');
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/branding', [CompanySettingController::class, 'branding'])->name('branding');

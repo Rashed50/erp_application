@@ -1,7 +1,7 @@
 import './bootstrap';
 import { createPinia } from "pinia";
 import { createApp } from "vue";
-import router from './router';
+import router from './router/Index';
 
 // custom component import
 // import DualScroll from '@/components/common/DualScroll.vue'

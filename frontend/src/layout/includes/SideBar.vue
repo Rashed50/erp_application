@@ -344,6 +344,16 @@
                 </div>
             </v-list-group>
             <!-- HR Menu END -->
+            <!-- Quotation Start -->
+            <v-list-item class="" v-if="can(['quoation.index'])">
+                <router-link :to="{ name: 'admin_quotation' }" class="custom_router_link">
+                    <span class="sidebar-menu-icon">
+                        <i class="fa-solid fa-circle"></i>
+                    </span>
+                    {{ $t('nav.quotation') }}
+                </router-link>
+            </v-list-item>
+            <!-- Quotation End -->
 
             <!-- Payroll Menu START -->
             <v-list-group value="payroll" v-if="canAny([
