@@ -84,6 +84,12 @@
                                     <WorkOrderOptionSelect v-model="form.work_order_id" :error="errors.work_order_id" />
                                 </div>
 
+                                <div class="col-md-6">
+                                    <EmployeeSelect v-model="form.employee_id"
+                                        :label="form.type === 'income' ? $t('Received By:') : $t('Expense By:')"
+                                        :error="errors.employee_id" />
+                                </div>
+
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
                                         <label for="description">{{ $t('Description:') }}</label>
@@ -110,6 +116,7 @@
 </template>
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import EmployeeSelect from '@/components/common/EmployeeSelect.vue';
 import WorkOrderOptionSelect from '@/components/common/WorkOrderOptionSelect.vue';
 import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
@@ -127,6 +134,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     reference_no: '',
     description: '',
     work_order_id: '',
+    employee_id: '',
 })
 
 // Load every active account once; the category dropdown is filtered by the

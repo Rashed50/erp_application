@@ -27,6 +27,7 @@ class CustomerTransactionResource extends JsonResource
             'transaction_date' => $this->transaction_date?->toDateString(),
             'notes' => $this->notes,
             'status' => $this->status,
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

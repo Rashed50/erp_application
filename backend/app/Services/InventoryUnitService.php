@@ -14,6 +14,7 @@ class InventoryUnitService
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return InventoryUnit::query()
+            ->with('creator:id,name')
             ->when($filters['search'] ?? null, fn ($query, string $search) => $query->search($search))
             ->when(! is_null($filters['status'] ?? null), fn ($query) => $query->where('status', $filters['status']))
             ->orderBy('name')

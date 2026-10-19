@@ -50,18 +50,20 @@
                                 <th class="text-left">{{ $t('Material Request') }}</th>
                                 <th class="text-right">{{ $t('Grand Total') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Approved By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="10" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="8" class="text-center py-4">{{ $t('No records found.') }}</td>
+                                <td colspan="10" class="text-center py-4">{{ $t('No records found.') }}</td>
                             </tr>
                             <tr v-else v-for="(order, index) in items" :key="order.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
@@ -73,6 +75,8 @@
                                 <td class="text-center">
                                     <span :class="statusClass(order.status)">{{ $t(statusLabel(order.status)) }}</span>
                                 </td>
+                                <td>{{ order.created_by_name || '-' }}</td>
+                                <td>{{ order.approved_by_name || '-' }}</td>
                                 <td class="text-center">
                                     <button type="button" class="table-action-button" @click="openView(order)">
                                         <i class="fa-solid fa-eye"></i>

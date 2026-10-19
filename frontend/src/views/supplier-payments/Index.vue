@@ -45,7 +45,7 @@
                                 <th class="text-right">{{ $t('Bank Charge') }}</th>
                                 <th class="text-right">{{ $t('Total') }}</th>
                                 <th class="text-left">{{ $t('Remarks') }}</th>
-                                <th class="text-left">{{ $t('Created') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Manage') }}</th>
                             </tr>
@@ -72,7 +72,8 @@
                                 <td>{{ item.remarks }}</td>
                                 <td>{{ item.created_by_name || $t('Unknown') }}</td>
                                 <td class="text-center">
-                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
+                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
+                                        :approved-by-name="item.approved_by_name" />
                                 </td>
                                 <td class="text-center">
                                     <v-menu>

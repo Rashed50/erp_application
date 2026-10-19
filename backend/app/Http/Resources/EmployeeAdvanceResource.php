@@ -31,6 +31,7 @@ class EmployeeAdvanceResource extends JsonResource
             'purpose' => $this->purpose,
             'remarks' => $this->remarks,
             'status' => $this->status,
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'recoveries' => EmployeeAdvanceRecoveryResource::collection($this->whenLoaded('recoveries')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

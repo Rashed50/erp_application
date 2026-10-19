@@ -34,6 +34,7 @@ class SupplierPaymentResource extends JsonResource
             'created_by' => $this->created_by,
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'approved_by' => $this->approved_by,
+            'approved_by_name' => $this->whenLoaded('approver', fn () => $this->approver?->name),
             'approved_at' => $this->approved_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

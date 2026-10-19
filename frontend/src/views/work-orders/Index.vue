@@ -39,6 +39,11 @@
                                         rounded="0" variant="flat" min-width="100">
                                         {{ $t('Reload') }}
                                     </v-btn>
+                                    <v-btn @click.prevent="print" class="text-none" color="grey-lighten-3"
+                                        rounded="0" variant="flat" min-width="100" :loading="printing"
+                                        :disabled="!items.length">
+                                        <i class="fa-solid fa-print me-1"></i> {{ $t('Print') }}
+                                    </v-btn>
                                 </div>
                             </div>
                         </div>
@@ -59,6 +64,7 @@
                                 <th class="text-right">{{ $t('Paid') }}</th>
                                 <th class="text-right">{{ $t('Outstanding') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -67,7 +73,7 @@
 
                             <!-- Loading State with Vuetify Spinner -->
                             <tr v-if="loading">
-                                <td colspan="13" class="text-center py-4">
+                                <td colspan="14" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
@@ -75,7 +81,7 @@
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
-                                <td colspan="13" class="text-center py-4">
+                                <td colspan="14" class="text-center py-4">
                                     {{ $t('No records found.') }}
                                 </td>
                             </tr>
@@ -101,8 +107,10 @@
                                 <td class="text-center">
                                     <span :class="statusBadgeClass(item.status)">{{ $t(item.status) }}</span>
                                 </td>
+                                <td>{{ item.created_by_name || '-' }}</td>
                                 <td class="text-center">
-                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
+                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
+                                        :approved-by-name="item.approved_by_name" />
                                 </td>
                                 <!-- actions -->
                                 <td class="text-center">
@@ -157,6 +165,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import ApprovalBadge from '@/components/common/ApprovalBadge.vue';
 import { useApproval } from '@/composables/useApproval';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
+import { usePrintable } from '@/composables/usePrintable';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';
 import { WORK_ORDER_STATUSES } from './statuses';
@@ -170,6 +179,7 @@ const {
     filters,
     pagination,
     fetchData,
+    fetchAll,
     changePage,
     changePerPage,
     resetFilters,
@@ -183,6 +193,40 @@ const {
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
 
 const { approve } = useApproval('/api/work-orders', () => fetchData())
+
+const amount = (value) => Number(value || 0).toFixed(2)
+
+// Print every row matching the current filters in the shared report layout.
+const { printTable } = usePrintable()
+const printing = ref(false)
+const print = async () => {
+    printing.value = true
+    try {
+        printTable({
+            title: t('Work Order List'),
+            items: await fetchAll(),
+            columns: [
+                { key: 'index', label: '#' },
+                { key: 'work_order_no', label: t('Work Order No') },
+                { key: 'work_title', label: t('Work Title') },
+                { key: 'customer_name', label: t('Customer') },
+                { key: 'issue_date', label: t('Issue Date') },
+                { key: 'deliver_date', label: t('Deliver Date') },
+                { key: 'total_amount', label: t('Total Amount'), align: 'right', format: amount },
+                { key: 'retention_amount', label: t('Retention'), align: 'right', format: amount },
+                { key: 'paid_amount', label: t('Paid'), align: 'right', format: amount },
+                { key: 'outstanding_amount', label: t('Outstanding'), align: 'right', format: amount },
+                { key: 'status', label: t('Status'), format: (value) => t(value) },
+                { key: 'created_by_name', label: t('Inserted By') },
+                { key: 'approved_by_name', label: t('Approved By') },
+            ],
+        })
+    } catch (e) {
+        toast.error(e.response?.data?.message || t('Failed to load data for printing.'))
+    } finally {
+        printing.value = false
+    }
+}
 
 const statusBadgeClass = (status) => ({
     'Pending': 'badge bg-warning text-dark',

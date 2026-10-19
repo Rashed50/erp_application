@@ -49,9 +49,14 @@ class UpdateSaleRequest extends FormRequest
             'items.*.item_name' => ['required', 'string', 'max:255'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit' => ['nullable', 'string', 'max:50'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'items.*.vat' => ['nullable', 'numeric', 'min:0'],
+
+            // Invoice-level amounts on top of the per-line discount and VAT.
+            'overall_discount' => ['nullable', 'numeric', 'min:0'],
+            'overall_vat' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

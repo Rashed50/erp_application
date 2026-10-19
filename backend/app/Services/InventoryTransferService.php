@@ -27,7 +27,7 @@ class InventoryTransferService
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return InventoryTransfer::query()
-            ->with(['fromWarehouse', 'toWarehouse', 'requester', 'items.item'])
+            ->with(['fromWarehouse', 'toWarehouse', 'requester', 'approver', 'items.item'])
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->when($filters['from_warehouse_id'] ?? null, fn ($query, int $id) => $query->where('from_warehouse_id', $id))
             ->when($filters['to_warehouse_id'] ?? null, fn ($query, int $id) => $query->where('to_warehouse_id', $id))

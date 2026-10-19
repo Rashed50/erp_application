@@ -147,6 +147,37 @@ describe('balance sheet', function () {
     });
 });
 
+describe('dashboard', function () {
+    it('totals sales and purchases and reads receivable, payable and bank balances from the ledger', function () {
+        Sale::factory()->create(['issue_date' => '2026-05-02', 'net_total' => 1000]);
+        Sale::factory()->create(['issue_date' => '2026-06-01', 'net_total' => 250]);
+        Purchase::factory()->create(['purchase_date' => '2026-05-03', 'net_total' => 400]);
+
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/customers', ['name' => 'Due Customer', 'opening_balance' => 500])->assertStatus(201);
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/suppliers', ['name' => 'Due Supplier', 'opening_balance' => 300])->assertStatus(201);
+
+        $subBank = ChartOfAccount::factory()->create(['parent_id' => $this->bank->id, 'account_type_id' => $this->bank->account_type_id, 'name' => 'City Bank']);
+        postIncomeExpense($this->actor, 'income', $this->revenue, $this->bank, 700, '2026-05-05');
+        postIncomeExpense($this->actor, 'income', $this->revenue, $subBank, 200, '2026-05-06');
+        postIncomeExpense($this->actor, 'expense', $this->rent, $this->cash, 50, '2026-05-07');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.total_sales', 1250)
+            ->assertJsonPath('data.total_purchase', 400)
+            ->assertJsonPath('data.total_receivable', 500)
+            ->assertJsonPath('data.total_payable', 300)
+            ->assertJsonPath('data.bank_balance', 900)
+            ->assertJsonCount(2, 'data.banks');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/dashboard?from_date=2026-05-01&to_date=2026-05-31')
+            ->assertOk()
+            ->assertJsonPath('data.total_sales', 1000);
+    });
+});
+
 describe('cash transactions', function () {
     it("lists the selected accounts' journal lines in the date range with totals", function () {
         postIncomeExpense($this->actor, 'income', $this->revenue, $this->cash, 1000, '2026-01-10');
