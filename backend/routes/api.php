@@ -517,6 +517,10 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('item-names.status')
             ->middleware('permission:item-names.update');
 
+
+        Route::get('lookups/inventory-units', [InventoryUnitController::class, 'getInventoryUnit'])
+            ->middleware('permission:quotations.create|quotations.update');
+
         /* ---------- Inventory setup ---------- */
         Route::get('/units/options', [InventoryUnitController::class, 'options'])
             ->name('units.options')

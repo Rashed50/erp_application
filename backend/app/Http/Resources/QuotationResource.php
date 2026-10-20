@@ -21,6 +21,7 @@ class QuotationResource extends JsonResource
             'customer_name' => $this->whenLoaded('customer', fn() => $this->customer->name),
             'invoice_number' => $this->invoice_number,
             'description' => $this->description,
+            'unit_id' => $this->unit_id,
             'issue_date' => $this->issue_date?->toDateString(),
             'total_amount' => (float) $this->total_amount,
             'discount_amount' => (float) $this->discount_amount,

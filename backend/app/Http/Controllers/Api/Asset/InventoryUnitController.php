@@ -34,6 +34,15 @@ class InventoryUnitController extends Controller
         ]);
     }
 
+    public function getInventoryUnit(): JsonResponse
+    {
+        $units = InventoryUnit::query()
+            ->where('status', 1)
+            ->orderBy('name')
+            ->get(['id', 'name', 'short_name']);
+
+        return ApiResponse::success(['units' => $units]);
+    }
     /**
      * Active units for the item form's dropdown.
      */

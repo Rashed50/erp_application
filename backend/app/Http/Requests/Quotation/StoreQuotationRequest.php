@@ -44,7 +44,7 @@ class StoreQuotationRequest extends FormRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.item_name' => ['required', 'string', 'max:255'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
-            'items.*.unit_id' => ['nullable', 'integer', Rule::exists('units', 'id')],
+            'items.*.unit_id' => [ 'integer', Rule::exists('inventory_units', 'id')->where('status', 1)],
             'items.*.count' => ['nullable', 'numeric', 'min:0'],
             'items.*.weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],

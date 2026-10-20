@@ -238,7 +238,19 @@ const isSubmitting = ref(false);
 
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 });
 const { items: products, fetchData: loadProducts } = useFetch('/api/products', { per_page: 500, active_status: 1 });
-const { items: units, fetchData: loadUnits } = useFetch('/api/units', { per_page: 200 });
+
+// Units come from the inventory units table through a small lookup endpoint.
+const units = ref([]);
+
+const loadUnits = async () => {
+    try {
+        const { data } = await axios.get('/api/asset/lookups/inventory-units');
+        units.value = data.data?.units ?? [];
+    } catch (error) {
+        console.error('Unit load error:', error);
+        setToast('error', t('Failed to load units.'));
+    }
+};
 
 // The product list only helps to fill the item name (quotation lines do not store a product).
 const onProductChange = (item) => {

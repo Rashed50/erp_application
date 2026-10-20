@@ -64,7 +64,7 @@ class QuotationService
                     'updated_by' => Auth::id(),
                 ]);
 
-                $quotation->items()->createMany($totals['items']);
+                $quotation->items()->createMany($this->lineItems($totals['items'], $data['items']));
 
                 return $quotation->load(['items.unit', 'customer']);
             });
@@ -121,7 +121,7 @@ class QuotationService
 
                 if ($totals) {
                     $quotation->items()->delete();
-                    $quotation->items()->createMany($totals['items']);
+                    $quotation->items()->createMany($this->lineItems($totals['items'], $data['items']));
                 }
 
                 return $quotation->load(['items.unit', 'customer']);
@@ -159,6 +159,36 @@ class QuotationService
                 'discount_amount' => __('The discount cannot be greater than the total amount.'),
             ]);
         }
+    }
+
+    /**
+     * Rows for quotation_items: the calculator's lines (amounts) plus the fields
+     * it does not return, taken from the submitted line at the same position.
+     *
+     * LineItemTotalCalculator only returns what it needs for the totals, so
+     * unit_id (and count / weight when sent) would otherwise be lost and stored as NULL.
+     *
+     * @param  array<int, array<string, mixed>>  $calculated
+     * @param  array<int, array<string, mixed>>  $submitted
+     * @return array<int, array<string, mixed>>
+     */
+    private function lineItems(array $calculated, array $submitted): array
+    {
+        $submitted = array_values($submitted);
+
+        return collect($calculated)->values()->map(function (array $line, int $index) use ($submitted) {
+            $input = $submitted[$index] ?? [];
+
+            $extra = ['unit_id' => $input['unit_id'] ?? null];
+
+            foreach (['count', 'weight'] as $key) {
+                if (isset($input[$key])) {
+                    $extra[$key] = $input[$key];
+                }
+            }
+
+            return [...$line, ...$extra];
+        })->all();
     }
 
     /**
