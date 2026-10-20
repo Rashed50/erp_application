@@ -26,7 +26,7 @@ class ChartOfAccountService
         ?bool $closed = null,
     ): LengthAwarePaginator {
         return ChartOfAccount::query()
-            ->with(['accountType:id,name,normal_balance', 'parent:id,name', 'creator:id,name'])
+            ->with(['accountType:id,name,normal_balance', 'parent:id,name', 'creator:id,name', 'approver:id,name'])
             ->withLedgerTotals()
             ->when($search, fn ($query) => $query->search($search))
             ->when($accountTypeId, fn ($query) => $query->ofType($accountTypeId))

@@ -434,3 +434,35 @@ describe('chart of account posting', function () {
             ->assertJsonStructure(['data' => ['payment_account_id']]);
     });
 });
+
+describe('units and overall discount/VAT', function () {
+    it('stores line units and adds the overall discount and VAT to the totals', function () {
+        $actor = adminUser();
+        $customer = Customer::factory()->create();
+
+        // Lines: 90 gross, 5 discount, 3 VAT. Overall: -10 discount, +4 VAT.
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/sales', salePayload($customer->id, [
+                'items' => [
+                    ['item_name' => 'Consulting', 'qty' => 10, 'unit' => 'Hour', 'unit_price' => 5],
+                    ['item_name' => 'Support', 'qty' => 20, 'unit' => 'Day', 'unit_price' => 2, 'discount' => 5, 'vat' => 3],
+                ],
+                'overall_discount' => 10,
+                'overall_vat' => 4,
+            ]));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.items.1.unit', 'Day')
+            ->assertJsonPath('data.overall_discount', 10)
+            ->assertJsonPath('data.overall_vat', 4)
+            ->assertJsonPath('data.discount_amount', 15)
+            ->assertJsonPath('data.vat_amount', 7)
+            ->assertJsonPath('data.net_total', 82);
+
+        $this->assertDatabaseHas('customer_transactions', [
+            'customer_id' => $customer->id,
+            'transaction_type' => 'Invoice',
+            'debit' => 82,
+        ]);
+    });
+});

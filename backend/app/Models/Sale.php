@@ -28,6 +28,8 @@ class Sale extends Model
             'total_amount' => 'decimal:2',
             'discount_amount' => 'decimal:2',
             'vat_amount' => 'decimal:2',
+            'overall_discount' => 'decimal:2',
+            'overall_vat' => 'decimal:2',
             'net_total' => 'decimal:2',
             'paid_amount' => 'decimal:2',
         ];

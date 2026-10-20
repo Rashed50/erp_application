@@ -1,5 +1,5 @@
 import { imagePlaceholder } from '@/helpers/imagePlaceholder'
-import { t } from '@/i18n'
+import { intlLocale, t } from '@/i18n'
 import { useSettingStore } from '@/stores/settings'
 
 export function usePrintable() {
@@ -41,19 +41,19 @@ export function usePrintable() {
         landscape: { width: 297, height: 210 },
     }
     const WIDE_TABLE_COLUMNS = 8
-    const DEFAULT_SIGNATURES = ['Prepared by', 'Checked by', 'Approved by']
 
     /**
-     * Open a print window in the shared company layout: header (logo, name,
-     * address, phone, email), the company name as a background watermark and
-     * signature lines in the footer. Every report and invoice prints through
+     * Open a print window in the shared company layout: header (print date,
+     * company name, address and contacts, logo), the company name as a background
+     * watermark and a system-generated note (plus any signature lines) in the
+     * footer. Every report and invoice prints through
      * this so they all share one format.
      */
     const printDocument = ({
         title = '',
         contentHtml = '',
         orientation = 'portrait',
-        signatures = DEFAULT_SIGNATURES,
+        signatures = [],
         logo = settings.company?.logo_url || '',
     }) => {
         const sheet = A4[orientation] ?? A4.portrait
@@ -73,17 +73,20 @@ export function usePrintable() {
             company.phone ? `${escapeHtml(t('Phone:'))} ${escapeHtml(company.phone)}` : '',
             company.email ? `${escapeHtml(t('Email:'))} ${escapeHtml(company.email)}` : '',
         ].filter(Boolean).join(' &nbsp;|&nbsp; ')
+        const printDate = new Date().toLocaleString(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' })
         const headerHtml = `
             <div class="header">
-                <div class="logo-box">
-                    ${logo ? `<img src="${escapeHtml(logo)}" onerror="this.onerror=null;this.src='${placeholderUrl}'" />` : ''}
+                <div class="side-box print-date">
+                    <strong>${escapeHtml(t('Print Date:'))}</strong><br>${escapeHtml(printDate)}
                 </div>
                 <div class="title-box">
                     ${company.company_name ? `<h5>${escapeHtml(company.company_name)}</h5>` : ''}
                     ${company.address ? `<p>${escapeHtml(company.address)}</p>` : ''}
                     ${contactLine ? `<p>${contactLine}</p>` : ''}
                 </div>
-                <div class="logo-box"></div>
+                <div class="side-box logo-box">
+                    ${logo ? `<img src="${escapeHtml(logo)}" onerror="this.onerror=null;this.src='${placeholderUrl}'" />` : ''}
+                </div>
             </div>
         `
 
@@ -95,15 +98,23 @@ export function usePrintable() {
             ? `<div class="watermark"><span>${escapeHtml(watermarkText)}</span></div>`
             : ''
 
-        /* ---------- FOOTER (signature lines) ---------- */
+        /* ---------- FOOTER (optional signature lines + system-generated note) ---------- */
+        const signaturesHtml = signatures.length
+            ? `
+                <div class="signatures">
+                    ${signatures.map(label => `
+                        <div class="sign">
+                            <div class="line"></div>
+                            <p>${escapeHtml(t(label))}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `
+            : ''
         const footerHtml = `
             <div class="print-footer">
-                ${signatures.map(label => `
-                    <div class="sign">
-                        <div class="line"></div>
-                        <p>${escapeHtml(t(label))}</p>
-                    </div>
-                `).join('')}
+                ${signaturesHtml}
+                <p class="system-note">${escapeHtml(t('This report is computer system generated, and authentic without signature'))}</p>
             </div>
         `
 
@@ -199,12 +210,22 @@ export function usePrintable() {
                     margin-bottom: 10px;
                 }
 
+                .side-box {
+                    width: 130px;
+                }
+
+                .print-date {
+                    font-size: 11px;
+                    text-align: left;
+                }
+
                 .logo-box {
-                    width: 80px;
+                    text-align: right;
                 }
 
                 .logo-box img {
-                    width: 70px;
+                    max-width: 90px;
+                    max-height: 70px;
                 }
 
                 .title-box {
@@ -286,12 +307,25 @@ export function usePrintable() {
                 /* ---------- FOOTER ---------- */
                 .print-footer {
                     margin-top: auto;
-                    padding-top: 50px;
-                    display: flex;
-                    justify-content: space-around;
+                    padding-top: 30px;
                     text-align: center;
                     font-size: 12px;
                     page-break-inside: avoid;
+                }
+
+                .print-footer .signatures {
+                    display: flex;
+                    justify-content: space-around;
+                    padding-top: 20px;
+                    margin-bottom: 15px;
+                }
+
+                .print-footer .system-note {
+                    border-top: 1px solid #000;
+                    padding-top: 6px;
+                    margin: 0;
+                    font-size: 11px;
+                    font-style: italic;
                 }
 
                 .print-footer .line {
@@ -416,8 +450,8 @@ export function usePrintable() {
      *   partyLabel: string,
      *   partyName: string,
      *   meta?: Array<{ label: string, value: string }>,
-     *   items: Array<{ item_name: string, description?: string, qty: number, unit_price: number, discount: number, vat: number, total_amount: number }>,
-     *   totals: { total_amount: number, discount_amount: number, vat_amount: number, net_total: number, paid_amount: number, due_amount: number },
+     *   items: Array<{ item_name: string, description?: string, qty: number, unit?: string, unit_price: number, discount: number, vat: number, total_amount: number }>,
+     *   totals: { total_amount: number, overall_discount?: number, discount_amount: number, overall_vat?: number, vat_amount: number, net_total: number, paid_amount: number, due_amount: number },
      *   notes?: string,
      *   signatures?: string[],
      * }} invoice
@@ -452,6 +486,7 @@ export function usePrintable() {
                         <th style="text-align:left">#</th>
                         <th style="text-align:left">${escapeHtml(t('Item'))}</th>
                         <th style="text-align:right">${escapeHtml(t('Qty'))}</th>
+                        <th style="text-align:left">${escapeHtml(t('Unit'))}</th>
                         <th style="text-align:right">${escapeHtml(t('Unit Price'))}</th>
                         <th style="text-align:right">${escapeHtml(t('Discount'))}</th>
                         <th style="text-align:right">${escapeHtml(t('VAT'))}</th>
@@ -467,6 +502,7 @@ export function usePrintable() {
                                 ${item.description ? `<br><small>${escapeHtml(item.description)}</small>` : ''}
                             </td>
                             <td style="text-align:right">${escapeHtml(item.qty)}</td>
+                            <td>${escapeHtml(item.unit)}</td>
                             <td style="text-align:right">${formatAmount(item.unit_price)}</td>
                             <td style="text-align:right">${formatAmount(item.discount)}</td>
                             <td style="text-align:right">${formatAmount(item.vat)}</td>
@@ -477,9 +513,13 @@ export function usePrintable() {
             </table>
         `
 
+        // Discount and VAT are the invoice totals; the overall (invoice-level)
+        // part is shown on its own line when there is one.
         const totalRows = [
             ['Total Amount', totals.total_amount],
+            ...(Number(totals.overall_discount) ? [['Overall Discount', totals.overall_discount]] : []),
             ['Discount', totals.discount_amount],
+            ...(Number(totals.overall_vat) ? [['Overall VAT', totals.overall_vat]] : []),
             ['VAT', totals.vat_amount],
             ['Net Total', totals.net_total],
             ['Paid', totals.paid_amount],

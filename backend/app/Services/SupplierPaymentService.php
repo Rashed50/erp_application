@@ -27,7 +27,7 @@ class SupplierPaymentService
         ?string $toDate = null,
     ): LengthAwarePaginator {
         return SupplierPayment::query()
-            ->with(['supplier:id,name', 'paymentAccount:id,name,account_number', 'purchase:id,invoice_number', 'creator:id,name'])
+            ->with(['supplier:id,name', 'paymentAccount:id,name,account_number', 'purchase:id,invoice_number', 'creator:id,name', 'approver:id,name'])
             ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('invoice_no', 'like', "%{$search}%")
                     ->orWhere('remarks', 'like', "%{$search}%")
@@ -42,7 +42,7 @@ class SupplierPaymentService
 
     public function find(SupplierPayment $payment): SupplierPayment
     {
-        return $payment->load(['supplier:id,name', 'paymentAccount:id,name,account_number', 'purchase:id,invoice_number', 'creator:id,name']);
+        return $payment->load(['supplier:id,name', 'paymentAccount:id,name,account_number', 'purchase:id,invoice_number', 'creator:id,name', 'approver:id,name']);
     }
 
     /**

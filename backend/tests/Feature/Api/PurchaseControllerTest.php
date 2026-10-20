@@ -2,6 +2,7 @@
 
 use App\Models\AccountTransaction;
 use App\Models\ChartOfAccount;
+use App\Models\Employee;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
@@ -494,5 +495,62 @@ describe('work order', function () {
             ->putJson("/api/purchases/{$purchase->id}", ['work_order_id' => null])
             ->assertOk()
             ->assertJsonPath('data.work_order_id', null);
+    });
+});
+
+describe('units, overall discount/VAT and purchased by', function () {
+    it('stores line units and adds the overall discount and VAT to the totals', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $buyer = Employee::factory()->create();
+
+        // Lines: 90 gross, 5 discount, 3 VAT (see the totals test). Overall: -8 discount, +10 VAT.
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, [
+                'items' => [
+                    ['item_name' => 'Paper', 'qty' => 10, 'unit' => 'Ream', 'unit_price' => 5],
+                    ['item_name' => 'Pens', 'qty' => 20, 'unit' => 'Pcs', 'unit_price' => 2, 'discount' => 5, 'vat' => 3],
+                ],
+                'overall_discount' => 8,
+                'overall_vat' => 10,
+                'purchased_by_id' => $buyer->id,
+            ]));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.items.0.unit', 'Ream')
+            ->assertJsonPath('data.overall_discount', 8)
+            ->assertJsonPath('data.overall_vat', 10)
+            ->assertJsonPath('data.discount_amount', 13)
+            ->assertJsonPath('data.vat_amount', 13)
+            ->assertJsonPath('data.net_total', 90)
+            ->assertJsonPath('data.purchased_by_id', $buyer->id)
+            ->assertJsonPath('data.purchased_by_name', "{$buyer->name} ({$buyer->employee_code})");
+
+        expect($supplier->fresh()->current_balance)->toEqual('90.00');
+    });
+
+    it('recomputes the totals when only the overall discount changes', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $purchase = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->json('data');
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/purchases/{$purchase['id']}", ['overall_discount' => 8])
+            ->assertOk()
+            ->assertJsonPath('data.discount_amount', 13)
+            ->assertJsonPath('data.net_total', 80)
+            ->assertJsonCount(2, 'data.items');
+    });
+
+    it('rejects a discount larger than the invoice amount', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, ['overall_discount' => 1000]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['overall_discount']]);
     });
 });

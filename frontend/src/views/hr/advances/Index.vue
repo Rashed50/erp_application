@@ -46,18 +46,19 @@
                             <th class="text-right">{{ $t('Recovered') }}</th>
                             <th class="text-right">{{ $t('Outstanding') }}</th>
                             <th>{{ $t('Status') }}</th>
+                            <th>{{ $t('Inserted By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="loading">
-                            <td colspan="10" class="text-center py-4">
+                            <td colspan="11" class="text-center py-4">
                                 <v-progress-linear indeterminate color="primary"></v-progress-linear>
                                 {{ $t('Loading...') }}
                             </td>
                         </tr>
                         <tr v-else-if="!items.length">
-                            <td colspan="10" class="text-center py-4">{{ $t('No advance salary found.') }}</td>
+                            <td colspan="11" class="text-center py-4">{{ $t('No advance salary found.') }}</td>
                         </tr>
                         <tr v-else v-for="item in items" :key="item.id">
                             <td>{{ item.advance_date }}</td>
@@ -75,6 +76,7 @@
                             <td class="text-right">{{ money(item.recovered_amount) }}</td>
                             <td class="text-right"><strong>{{ money(item.outstanding_amount) }}</strong></td>
                             <td><span :class="advanceStatusClass(item.status)">{{ $t(item.status) }}</span></td>
+                            <td>{{ item.created_by_name || '-' }}</td>
                             <td class="text-center text-nowrap">
                                 <v-btn size="small" variant="text" color="blue-darken-3" icon="mdi-eye"
                                     :title="$t('Details')" @click="openDetail(item)"></v-btn>
@@ -94,7 +96,7 @@
                             <td colspan="2"></td>
                             <td class="text-right">{{ money(totals.recovered_amount) }}</td>
                             <td class="text-right">{{ money(totals.outstanding_amount) }}</td>
-                            <td colspan="2"></td>
+                            <td colspan="3"></td>
                         </tr>
                     </tfoot>
                 </v-table>

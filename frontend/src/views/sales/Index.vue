@@ -46,6 +46,7 @@
                                 <th class="text-left">{{ $t('Issue Date') }}</th>
                                 <th class="text-right">{{ $t('Net Total') }}</th>
                                 <th class="text-right">{{ $t('Due') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -54,7 +55,7 @@
 
                             <!-- Loading State with Vuetify Spinner -->
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
@@ -62,7 +63,7 @@
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     {{ $t('No records found.') }}
                                 </td>
                             </tr>
@@ -79,8 +80,10 @@
                                         {{ Number(item.due_amount).toFixed(2) }}
                                     </span>
                                 </td>
+                                <td>{{ item.created_by_name || '-' }}</td>
                                 <td class="text-center">
-                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
+                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
+                                        :approved-by-name="item.approved_by_name" />
                                 </td>
                                 <!-- actions -->
                                 <td class="text-center">

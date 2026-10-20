@@ -68,6 +68,16 @@ export function usePaginatedFetch(url, initialFilters = {}, options = {}) {
         }
     }
 
+    // Every row matching the current filters (all pages), e.g. for printing;
+    // leaves the table's own page and items untouched.
+    const fetchAll = async () => {
+        const response = await axios.get(url, {
+            params: { page: 1, per_page: 1000000, ...filters },
+        })
+
+        return unwrapListPayload(response.data?.data ?? {})
+    }
+
     // pagination helpers
     const changePage = (page) => {
         pagination.page = page
@@ -102,6 +112,7 @@ export function usePaginatedFetch(url, initialFilters = {}, options = {}) {
         pagination,
 
         fetchData,
+        fetchAll,
         changePage,
         changePerPage,
         resetFilters,

@@ -34,7 +34,7 @@ class PurchaseOrderService
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return PurchaseOrder::query()
-            ->with(['supplier', 'materialRequest', 'items.item'])
+            ->with(['supplier', 'materialRequest', 'items.item', 'creator:id,name', 'approver:id,name'])
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->when($filters['supplier_id'] ?? null, fn ($query, int $id) => $query->where('supplier_id', $id))
             ->when($filters['material_request_id'] ?? null, fn ($query, int $id) => $query->where('material_request_id', $id))

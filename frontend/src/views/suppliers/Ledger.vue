@@ -95,18 +95,19 @@
                             <th class="text-right">{{ $t('Credit') }}</th>
                             <th class="text-left">{{ $t('Notes') }}</th>
                             <th class="text-center">{{ $t('Status') }}</th>
+                            <th class="text-left">{{ $t('Inserted By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="loading">
-                            <td colspan="8" class="text-center py-4">
+                            <td colspan="9" class="text-center py-4">
                                 <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                 {{ $t('Loading...') }}
                             </td>
                         </tr>
                         <tr v-else-if="!items.length">
-                            <td colspan="8" class="text-center py-4">{{ $t('No transactions found.') }}</td>
+                            <td colspan="9" class="text-center py-4">{{ $t('No transactions found.') }}</td>
                         </tr>
                         <tr v-else v-for="item in items" :key="item.id">
                             <td>{{ item.transaction_date }}</td>
@@ -120,6 +121,7 @@
                                     {{ $t(item.status ? 'Active' : 'Reversed') }}
                                 </span>
                             </td>
+                            <td>{{ item.created_by_name || '-' }}</td>
                             <td class="text-center">
                                 <v-btn v-if="item.status && can(['supplier-transactions.delete'])" size="small"
                                     color="red-darken-2" variant="text" @click="handleReverse(item)">

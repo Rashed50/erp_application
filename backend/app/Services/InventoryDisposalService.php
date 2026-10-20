@@ -26,7 +26,7 @@ class InventoryDisposalService
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return InventoryDisposal::query()
-            ->with(['warehouse', 'items.item', 'items.serial'])
+            ->with(['warehouse', 'items.item', 'items.serial', 'creator:id,name', 'approver:id,name'])
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->when($filters['warehouse_id'] ?? null, fn ($query, int $id) => $query->where('warehouse_id', $id))
             ->latest()

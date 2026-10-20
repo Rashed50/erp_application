@@ -89,4 +89,9 @@ class InventoryWarehouse extends Model
                 ->orWhere('warehouse_code', 'like', "%{$search}%");
         });
     }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

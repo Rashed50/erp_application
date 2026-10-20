@@ -50,18 +50,20 @@
                                 <th class="text-left">{{ $t('Items') }}</th>
                                 <th class="text-center">{{ $t('Priority') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Approved By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="10" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="8" class="text-center py-4">{{ $t('No records found.') }}</td>
+                                <td colspan="10" class="text-center py-4">{{ $t('No records found.') }}</td>
                             </tr>
                             <tr v-else v-for="(request, index) in items" :key="request.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
@@ -77,6 +79,8 @@
                                 <td class="text-center">
                                     <span :class="statusClass(request.status)">{{ $t(statusLabel(request.status)) }}</span>
                                 </td>
+                                <td>{{ request.requested_by_name || '-' }}</td>
+                                <td>{{ request.approved_by_name || '-' }}</td>
                                 <td class="text-center">
                                     <button type="button" class="table-action-button" @click="openView(request)">
                                         <i class="fa-solid fa-eye"></i>

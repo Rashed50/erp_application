@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Validation\ValidationException;
+
 class LineItemTotalCalculator
 {
     /**
@@ -9,10 +11,16 @@ class LineItemTotalCalculator
      * Shared by SaleService and PurchaseService so the same money math can't
      * drift between the two — a client-supplied total is never trusted.
      *
-     * @param  array<int, array{product_id?: ?int, item_name: string, description?: ?string, qty: float, unit_price: float, discount?: ?float, vat?: ?float}>  $items
-     * @return array{items: array<int, array<string, mixed>>, total_amount: float, discount_amount: float, vat_amount: float, net_total: float}
+     * The invoice-level (overall) discount and VAT are added on top of the
+     * per-line amounts, so `discount_amount` and `vat_amount` are the full
+     * invoice totals.
+     *
+     * @param  array<int, array{product_id?: ?int, item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>  $items
+     * @return array{items: array<int, array<string, mixed>>, total_amount: float, overall_discount: float, overall_vat: float, discount_amount: float, vat_amount: float, net_total: float}
+     *
+     * @throws ValidationException when the discounts exceed the invoice amount.
      */
-    public static function calculate(array $items): array
+    public static function calculate(array $items, float $overallDiscount = 0, float $overallVat = 0): array
     {
         $totalAmount = 0;
         $discountAmount = 0;
@@ -36,6 +44,7 @@ class LineItemTotalCalculator
                 'item_name' => $item['item_name'],
                 'description' => $item['description'] ?? null,
                 'qty' => $qty,
+                'unit' => $item['unit'] ?? null,
                 'unit_price' => $unitPrice,
                 'discount' => $discount,
                 'vat' => $vat,
@@ -43,9 +52,20 @@ class LineItemTotalCalculator
             ];
         }
 
+        $discountAmount += $overallDiscount;
+        $vatAmount += $overallVat;
+
+        if (round($discountAmount, 2) > round($totalAmount, 2)) {
+            throw ValidationException::withMessages([
+                'overall_discount' => __('The total discount (:discount) cannot be more than the invoice amount (:amount).', ['discount' => $discountAmount, 'amount' => $totalAmount]),
+            ]);
+        }
+
         return [
             'items' => $computedItems,
             'total_amount' => $totalAmount,
+            'overall_discount' => $overallDiscount,
+            'overall_vat' => $overallVat,
             'discount_amount' => $discountAmount,
             'vat_amount' => $vatAmount,
             'net_total' => $totalAmount - $discountAmount + $vatAmount,

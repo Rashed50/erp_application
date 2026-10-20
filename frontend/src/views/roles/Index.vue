@@ -22,6 +22,9 @@
                                         <th class="text-left">
                                             {{ $t('Name') }}
                                         </th>
+                                        <th class="text-left">
+                                            {{ $t('Inserted By') }}
+                                        </th>
                                         <th class="text-center">
                                             {{ $t('Action') }}
                                         </th>
@@ -49,6 +52,7 @@
                                     <tr v-else v-for="(item, index) in items" :key="item.id || index">
                                         <td>{{ index + 1 }}</td>
                                         <td>{{ item.name }}</td>
+                                        <td>{{ item.created_by_name || '-' }}</td>
                                         <!-- actions -->
                                         <td class="text-center">
                                             <v-menu v-if="item.name != 'Super Admin'">

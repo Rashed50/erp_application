@@ -34,7 +34,7 @@ class EmployeeAdvanceService
     public function paginate(int $perPage, array $filters): LengthAwarePaginator
     {
         return $this->filteredQuery($filters)
-            ->with(['employee:id,employee_code,name,department_id,designation_id', 'employee.department', 'employee.designation'])
+            ->with(['employee:id,employee_code,name,department_id,designation_id', 'employee.department', 'employee.designation', 'creator:id,name'])
             ->orderByDesc('advance_date')
             ->orderByDesc('id')
             ->paginate($perPage);

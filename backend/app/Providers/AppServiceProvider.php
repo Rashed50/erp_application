@@ -27,5 +27,21 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(function (User $user, string $ability) {
             return $user->hasRole('Super Admin') ? true : null;
         });
+
+        $this->usePublicStorageUrlOfCurrentHost();
+    }
+
+    /**
+     * Build public file URLs (company logo, profile photos, attachments) from the
+     * host that is serving the API rather than APP_URL, so they still resolve when
+     * APP_URL points at a different domain (e.g. www vs. bare, or production in a local .env).
+     */
+    private function usePublicStorageUrlOfCurrentHost(): void
+    {
+        if ($this->app->runningInConsole()) {
+            return;
+        }
+
+        config(['filesystems.disks.public.url' => url('storage')]);
     }
 }

@@ -47,6 +47,9 @@
                                 <th class="text-left">
                                     {{ $t('Role') }}
                                 </th>
+                                <th class="text-left">
+                                    {{ $t('Inserted By') }}
+                                </th>
                                 <th class="text-center">
                                     {{ $t('Action') }}
                                 </th>
@@ -79,6 +82,7 @@
                                         {{ role }}<span v-if="index < item.roles.length - 1">, </span>
                                     </span>
                                 </td>
+                                <td>{{ item.created_by_name || '-' }}</td>
                                 <!-- actions -->
                                 <td class="text-center">
                                     <v-menu>

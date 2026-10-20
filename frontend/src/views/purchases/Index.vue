@@ -44,10 +44,12 @@
                                 <th class="text-left">{{ $t('Invoice No') }}</th>
                                 <th class="text-left">{{ $t('Supplier') }}</th>
                                 <th class="text-left">{{ $t('Work Order') }}</th>
+                                <th class="text-left">{{ $t('Purchase By') }}</th>
                                 <th class="text-left">{{ $t('Type') }}</th>
                                 <th class="text-left">{{ $t('Purchase Date') }}</th>
                                 <th class="text-right">{{ $t('Net Total') }}</th>
                                 <th class="text-right">{{ $t('Due') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -56,7 +58,7 @@
 
                             <!-- Loading State with Vuetify Spinner -->
                             <tr v-if="loading">
-                                <td colspan="10" class="text-center py-4">
+                                <td colspan="12" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
@@ -64,7 +66,7 @@
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
-                                <td colspan="10" class="text-center py-4">
+                                <td colspan="12" class="text-center py-4">
                                     {{ $t('No records found.') }}
                                 </td>
                             </tr>
@@ -75,6 +77,7 @@
                                 <td>{{ item.invoice_number }}</td>
                                 <td>{{ item.supplier_name }}</td>
                                 <td>{{ item.work_order_no ?? '' }}</td>
+                                <td>{{ item.purchased_by_name || '-' }}</td>
                                 <td class="text-capitalize">{{ $t(item.purchase_type) }}</td>
                                 <td>{{ item.purchase_date }}</td>
                                 <td class="text-right">{{ Number(item.net_total).toFixed(2) }}</td>
@@ -83,8 +86,10 @@
                                         {{ Number(item.due_amount).toFixed(2) }}
                                     </span>
                                 </td>
+                                <td>{{ item.created_by_name || '-' }}</td>
                                 <td class="text-center">
-                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
+                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
+                                        :approved-by-name="item.approved_by_name" />
                                 </td>
                                 <!-- actions -->
                                 <td class="text-center">
@@ -203,6 +208,7 @@ const handlePrintInvoice = async (item) => {
                 { label: 'Invoice No:', value: purchase.invoice_number },
                 { label: 'Issue Date:', value: purchase.issue_date },
                 { label: 'Purchase Date:', value: purchase.purchase_date },
+                { label: 'Purchase By:', value: purchase.purchased_by_name },
             ],
             items: purchase.items ?? [],
             totals: purchase,
