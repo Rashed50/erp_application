@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class QuotationResource extends JsonResource
 {
@@ -20,6 +21,7 @@ class QuotationResource extends JsonResource
             'customer_name' => $this->whenLoaded('customer', fn() => $this->customer->name),
             'invoice_number' => $this->invoice_number,
             'description' => $this->description,
+            'unit_id' => $this->unit_id,
             'issue_date' => $this->issue_date?->toDateString(),
             'total_amount' => (float) $this->total_amount,
             'discount_amount' => (float) $this->discount_amount,
@@ -28,6 +30,7 @@ class QuotationResource extends JsonResource
             'net_total' => (float) $this->net_total,
             'notes' => $this->notes,
             'file_path' => $this->file_path,
+            // 'file_url' => $this->file_path ? Storage::disk('public')->url($this->file_path) : null,
             'items' => QuotationItemResource::collection($this->whenLoaded('items')),
             'created_by' => $this->created_by,
             'created_at' => $this->created_at,

@@ -41,6 +41,6 @@ class QuotationItem extends Model
 
     public function unit(): BelongsTo
     {
-        return $this->belongsTo(Unit::class);
+        return $this->belongsTo(InventoryUnit::class, 'unit_id');
     }
 }

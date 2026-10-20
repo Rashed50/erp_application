@@ -88,11 +88,15 @@ Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
 });
 
 
-Route::get('quotations', [QuotationController::class, 'index'])->middleware('permission:quotations.view');
-Route::get('quotations/{quotation}', [QuotationController::class, 'show'])->middleware('permission:quotations.view');
-Route::post('quotations', [QuotationController::class, 'store'])->middleware('permission:quotations.create');
-Route::put('quotations/{quotation}', [QuotationController::class, 'update'])->middleware('permission:quotations.update');
-Route::delete('quotations/{quotation}', [QuotationController::class, 'destroy'])->middleware('permission:quotations.delete');
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('quotations', [QuotationController::class, 'index'])->middleware('permission:quotations.view');
+    Route::get('quotations/{quotation}', [QuotationController::class, 'show'])->middleware('permission:quotations.view');
+    Route::post('quotations', [QuotationController::class, 'store'])->middleware('permission:quotations.create');
+    Route::put('quotations/{quotation}', [QuotationController::class, 'update'])->middleware('permission:quotations.update');
+    Route::delete('quotations/{quotation}', [QuotationController::class, 'destroy'])->middleware('permission:quotations.delete');
+});
+
+
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/branding', [CompanySettingController::class, 'branding'])->name('branding');
@@ -512,6 +516,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/item-names/{item_name}/status', [ItemNameController::class, 'updateStatus'])
             ->name('item-names.status')
             ->middleware('permission:item-names.update');
+
+
+        Route::get('lookups/inventory-units', [InventoryUnitController::class, 'getInventoryUnit'])
+            ->middleware('permission:quotations.create|quotations.update');
 
         /* ---------- Inventory setup ---------- */
         Route::get('/units/options', [InventoryUnitController::class, 'options'])

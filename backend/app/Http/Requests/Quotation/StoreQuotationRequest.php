@@ -22,9 +22,9 @@ class StoreQuotationRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * Money totals (`total_amount`, `discount_amount`, `vat_amount`, `net_total`)
-     * are not accepted here — they are computed server-side from `items`, the
-     * same as sales.
+     * `total_amount` and `net_total` are not accepted here — they are computed
+     * server-side from `items`. `discount_amount` and `vat_amount` are
+     * quotation-level amounts typed by the user.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -36,11 +36,15 @@ class StoreQuotationRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'issue_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
+            'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'vat_amount' => ['nullable', 'numeric', 'min:0'],
+            // Optional attachment, saved to quotations.file_path (max 5 MB).
+            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.item_name' => ['required', 'string', 'max:255'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
-            'items.*.unit_id' => ['nullable', 'integer', Rule::exists('units', 'id')],
+            'items.*.unit_id' => [ 'integer', Rule::exists('inventory_units', 'id')->where('status', 1)],
             'items.*.count' => ['nullable', 'numeric', 'min:0'],
             'items.*.weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],

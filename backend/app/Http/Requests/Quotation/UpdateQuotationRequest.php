@@ -34,11 +34,16 @@ class UpdateQuotationRequest extends FormRequest
             'description' => ['sometimes', 'nullable', 'string'],
             'issue_date' => ['sometimes', 'required', 'date'],
             'notes' => ['sometimes', 'nullable', 'string'],
+            'discount_amount' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'vat_amount' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            // A new attachment replaces the old one; remove_file deletes it.
+            'file' => ['sometimes', 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
+            'remove_file' => ['sometimes', 'boolean'],
 
             'items' => ['sometimes', 'required', 'array', 'min:1'],
             'items.*.item_name' => ['required', 'string', 'max:255'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
-            'items.*.unit_id' => ['nullable', 'integer', Rule::exists('units', 'id')],
+            'items.*.unit_id' => ['nullable', 'integer', Rule::exists('inventory_units', 'id')],
             'items.*.count' => ['nullable', 'numeric', 'min:0'],
             'items.*.weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],

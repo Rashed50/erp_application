@@ -1,23 +1,23 @@
 <template lang="html">
-    <!-- Breadcrumb Header with Multiple Buttons on Top-Right -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="page-title mb-0">{{ showAddForm ? $t('Add New Quotation') : $t('All Quotation') }}</h4>
-
-        <div class="d-flex align-center gap-2">
-            <!-- 1st Button: Add Sale / Back to List -->
-            <v-btn class="text-none text-white" color="blue-darken-3" rounded="0" variant="flat" @click="toggleView">
-                <i :class="showAddForm ? 'fa-solid fa-list me-1' : 'fa-solid fa-file-invoice-dollar me-1'"></i>
-                {{ showAddForm ? $t('Back to Quotation') : $t('Add Sale') }}
-            </v-btn>
-
-
-        </div>
-    </div>
-
     <div class="main-content-wrapper mt-4">
         <div class="container-fluid">
 
-            <template v-if="!showAddForm">
+            <!-- Header: page title on the left, view buttons on the right -->
+            <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+                <h4 class="page-title mb-0">{{ $t(currentView.title) }}</h4>
+
+                <div class="d-flex align-center gap-2">
+                    <v-btn v-for="view in views" :key="view.key" class="text-none"
+                        :class="{ 'text-white': activeView === view.key }" :color="view.color"
+                        :variant="activeView === view.key ? 'flat' : 'outlined'" rounded="0" @click="setView(view.key)">
+                        <i class="fa-solid me-1" :class="view.icon"></i> {{ $t(view.label) }}
+                    </v-btn>
+                </div>
+            </div>
+
+
+            <!-- View: list -->
+            <template v-if="activeView === 'list'">
                 <v-card style="padding: 5px; margin-top: 15px;">
                     <div class="row">
                         <div class="col-md-12 mb-2">
@@ -58,20 +58,19 @@
                                     <th class="text-left">{{ $t('Customer') }}</th>
                                     <th class="text-left">{{ $t('Issue Date') }}</th>
                                     <th class="text-right">{{ $t('Net Total') }}</th>
-                                    <th class="text-right">{{ $t('Due') }}</th>
-                                    <th class="text-center">{{ $t('Approval') }}</th>
+                                    <th class="text-center">{{ $t('File') }}</th>
                                     <th class="text-center">{{ $t('Action') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="loading">
-                                    <td colspan="8" class="text-center py-4">
+                                    <td colspan="7" class="text-center py-4">
                                         <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                         {{ $t('Loading...') }}
                                     </td>
                                 </tr>
                                 <tr v-else-if="!items.length">
-                                    <td colspan="8" class="text-center py-4">
+                                    <td colspan="7" class="text-center py-4">
                                         {{ $t('No records found.') }}
                                     </td>
                                 </tr>
@@ -81,14 +80,12 @@
                                     <td>{{ item.customer_name }}</td>
                                     <td>{{ item.issue_date }}</td>
                                     <td class="text-right">{{ Number(item.net_total).toFixed(2) }}</td>
-                                    <td class="text-right">
-                                        <span :class="item.due_amount > 0 ? 'badge bg-danger' : 'badge bg-success'">
-                                            {{ Number(item.due_amount).toFixed(2) }}
-                                        </span>
-                                    </td>
                                     <td class="text-center">
-                                        <ApprovalBadge :approved-by="item.approved_by"
-                                            :approved-at="item.approved_at" />
+                                        <a v-if="item.file_url" :href="item.file_url" target="_blank" rel="noopener"
+                                            :title="$t('Open attachment')">
+                                            <i class="fa-solid fa-paperclip"></i>
+                                        </a>
+                                        <span v-else>-</span>
                                     </td>
                                     <td class="text-center">
                                         <v-menu>
@@ -98,24 +95,10 @@
                                                 </button>
                                             </template>
                                             <ul class="table-action-menu">
-                                                <li class="menu-item"
-                                                    v-if="!item.approved_by && can(['Quotation.approve'])">
-                                                    <button type="button" class="menu-link"
-                                                        @click="approve(item, 'sale')">
-                                                        {{ $t('Approve') }}
-                                                    </button>
-                                                </li>
-                                                <li class="menu-item"
-                                                    v-if="item.due_amount > 0 && can(['sale-payments.create'])">
-                                                    <button type="button" class="menu-link"
-                                                        @click="openPaymentDialog(item)">
-                                                        {{ $t('Record Payment') }}
-                                                    </button>
-                                                </li>
                                                 <li class="menu-item">
                                                     <button type="button" class="menu-link"
                                                         @click="handlePrintInvoice(item)">
-                                                        {{ $t('Print Invoice') }}
+                                                        {{ $t('Print Quotation') }}
                                                     </button>
                                                 </li>
                                                 <li class="menu-item">
@@ -138,52 +121,54 @@
                 </v-card>
             </template>
 
-            <!-- যদি showAddForm true থাকে, তবে AddSaleForm কম্পোনেন্ট দেখাবে -->
-            <template v-else>
-                <AddSaleForm @saved="onQuotationaved" @cancel="showAddForm = false" />
-            </template>
+            <!-- View: add -->
+            <AddQuotationForm v-else-if="activeView === 'add'" @saved="onQuotationSaved" @cancel="setView('list')" />
 
-            <PaymentDialog v-model="paymentDialogOpen" :endpoint="`/api/Quotation/${selectedSale?.id}/payments`"
-                :due-amount="selectedSale?.due_amount ?? 0" :title="$t('Record Payment Received')" with-payment-account
-                @recorded="fetchData" />
-
+            <!--
+                To add one more button + component:
+                  1) add an entry to `views` in the script,
+                  2) import the component,
+                  3) add a line here, for example:
+                     <QuotationReport v-else-if="activeView === 'report'" />
+            -->
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
-import ApprovalBadge from '@/components/common/ApprovalBadge.vue';
-import { useApproval } from '@/composables/useApproval';
-import PaymentDialog from '@/components/common/PaymentDialog.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { useFetch } from '@/composables/useFetch';
-import { usePermission } from '@/composables/usePermission';
 import { usePrintable } from '@/composables/usePrintable';
 import { t } from '@/i18n';
 
-import AddSaleForm from './Add.vue';
+import AddQuotationForm from './Add.vue';
 
-const showAddForm = ref(false);
+// One entry per button in the header. `key` decides which component is shown.
+const views = [
+    { key: 'list', label: 'Search', title: 'All Quotation', icon: 'fa-search', color: 'blue-darken-3' },
+    { key: 'add', label: 'New', title: 'Add New Quotation', icon: 'fa-plus', color: 'green-darken-3' },
+];
 
-const toggleView = () => {
-    showAddForm.value = !showAddForm.value;
+const activeView = ref('list');
+
+const currentView = computed(() => views.find((view) => view.key === activeView.value) ?? views[0]);
+
+const setView = (key) => {
+    activeView.value = key;
+
+    // The list may be stale after adding a record, so reload it when coming back
+    if (key === 'list') fetchData();
 };
 
-const onQuotationaved = () => {
-    showAddForm.value = false;
-    fetchData();
+const onQuotationSaved = () => {
+    setView('list');
 };
 
-const handleExport = () => {
-    toast.info(t('Export functionality coming soon!'));
-};
-
-const { can } = usePermission();
 const { printInvoice } = usePrintable();
 
 const {
@@ -195,50 +180,41 @@ const {
     changePage,
     changePerPage,
     resetFilters,
-} = usePaginatedFetch('/api/Quotation', {
+} = usePaginatedFetch('/api/quotations', {
     search: '',
     customer_id: '',
 });
 
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 });
 
-const paymentDialogOpen = ref(false);
-const selectedSale = ref(null);
-
-const openPaymentDialog = (item) => {
-    selectedSale.value = item;
-    paymentDialogOpen.value = true;
-};
-
-const { approve } = useApproval('/api/quotations', () => fetchData());
-
 const handlePrintInvoice = async (item) => {
     try {
         const { data } = await axios.get(`/api/quotations/${item.id}`);
         if (!data.success) return;
-        const sale = data.data;
+
+        const quotation = data.data;
+
         printInvoice({
-            title: 'Quotation Invoice',
+            title: 'Quotation',
             partyLabel: 'Customer:',
-            partyName: sale.customer_name,
+            partyName: quotation.customer_name,
             meta: [
-                { label: 'Invoice No:', value: sale.invoice_number },
-                { label: 'Issue Date:', value: sale.issue_date },
-                { label: 'Due Date:', value: sale.due_date },
+                { label: 'Quotation No:', value: quotation.invoice_number },
+                { label: 'Issue Date:', value: quotation.issue_date },
             ],
-            items: sale.items ?? [],
-            totals: sale,
-            notes: sale.notes,
+            items: quotation.items ?? [],
+            totals: quotation,
+            notes: quotation.notes,
         });
     } catch (e) {
-        toast.error(e.response?.data?.message || t('Failed to load the invoice.'));
+        toast.error(e.response?.data?.message || t('Failed to load the quotation.'));
     }
 };
 
 const handleDelete = async (item) => {
     const result = await Swal.fire({
         title: t('Are you sure?'),
-        text: t('Delete sale "{invoice}"? This reverses its customer ledger entry.', { invoice: item.invoice_number }),
+        text: t('Delete quotation "{invoice}"?', { invoice: item.invoice_number }),
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: t('Yes, delete'),
@@ -249,12 +225,13 @@ const handleDelete = async (item) => {
 
     try {
         const resp = await axios.delete(`/api/quotations/${item.id}`);
+
         if (resp.data.success) {
             toast.success(resp.data.message);
             fetchData();
         }
     } catch (e) {
-        toast.error(e.response?.data?.message || t('Failed to delete sale.'))
+        toast.error(e.response?.data?.message || t('Failed to delete quotation.'));
     }
 };
 
