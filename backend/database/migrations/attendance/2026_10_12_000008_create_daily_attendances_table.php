@@ -10,8 +10,8 @@ return new class extends Migration {
         Schema::create('daily_attendances', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('employee_auto_id');
-            $table->unsignedBigInteger('work_order_id')->nullable()->after('id');
-            // $table->foreign('work_order_id')->references('id')->on('work_orders')->onDelete('cascade');
+            $table->unsignedBigInteger('work_order_id')->nullable();
+            $table->foreign('work_order_id')->references('id')->on('work_orders')->onDelete('cascade');
             $table->date('attendance_date');
             $table->unsignedBigInteger('attendance_shift_id')->nullable();
             $table->enum('status', ['present', 'absent', 'late', 'half_day', 'leave', 'holiday', 'weekly_off', 'incomplete', 'offsite'])->default('incomplete');
@@ -36,12 +36,15 @@ return new class extends Migration {
             $table->timestamp('approved_at')->nullable(); // no
             $table->timestamp('locked_at')->nullable(); // no
             $table->timestamps();
-            // $table->foreign('employee_auto_id', 'daily_attendances_employee_fk')
-            //     ->references('emp_auto_id')->on('employee_infos')->cascadeOnUpdate()->restrictOnDelete();
+            $table->foreign('employee_auto_id', 'daily_attendances_employee_fk')
+                ->references('id')->on('employee_info')->cascadeOnUpdate()->restrictOnDelete();
+
             $table->foreign('attendance_shift_id', 'daily_attendances_shift_fk')
                 ->references('id')->on('attendance_shifts')->cascadeOnUpdate()->nullOnDelete();
+
             $table->foreign('entered_by_employee_auto_id', 'daily_attendances_entered_by_fk')
                 ->references('id')->on('employee_info')->cascadeOnUpdate()->nullOnDelete();
+
             $table->foreign('approved_by_employee_auto_id', 'daily_attendances_approved_by_fk')
                 ->references('id')->on('employee_info')->cascadeOnUpdate()->nullOnDelete();
             $table->unique(['employee_auto_id', 'attendance_date'], 'daily_attendances_employee_date_unique');

@@ -24,9 +24,9 @@ return new class extends Migration
             $table->integer('create_by_id');
             $table->integer('update_by_id')->nullable();
 
-            $table->foreignId('unit_id')->nullable()->after('itype_id')->constrained('inventory_units')->nullOnDelete();
-            $table->string('track_type', 20)->default('quantity')->after('unit_id');
-            $table->decimal('minimum_stock', 15, 3)->default(0)->after('track_type');
+            $table->foreignId('unit_id')->nullable()->constrained('inventory_units')->nullOnDelete();
+            $table->string('track_type', 20)->default('quantity');
+            $table->decimal('minimum_stock', 15, 3)->default(0);
 
             $table->timestamps();
         });

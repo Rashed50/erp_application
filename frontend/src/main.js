@@ -14,7 +14,7 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
 import App from './App.vue'
-import router from './router/Index'
+import router from './router/index'
 import i18n from './i18n'
 import { registerImageFallback } from './helpers/imagePlaceholder'
 
