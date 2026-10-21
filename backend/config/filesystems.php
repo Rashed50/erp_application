@@ -33,7 +33,9 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Private files (employee documents) are only downloaded through
+            // their own authorized controllers, never through /storage.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
@@ -42,6 +44,10 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Laravel serves /storage/{path} itself when the public/storage symlink
+            // is missing (e.g. on hosting where `storage:link` was never run), so
+            // the company logo, profile photos and attachments always load.
+            'serve' => true,
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

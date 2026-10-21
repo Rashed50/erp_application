@@ -39,6 +39,7 @@ class StoreIncomeExpenseTransactionRequest extends FormRequest
             'transaction_date' => ['required', 'date'],
             'reference_no' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx', 'max:20480'],
         ];
     }
 

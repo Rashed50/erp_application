@@ -87,6 +87,11 @@
                                                     {{ $t('Approve') }}
                                                 </button>
                                             </li>
+                                            <li class="menu-item" v-if="item.attachment_url">
+                                                <a :href="item.attachment_url" target="_blank" class="menu-link">
+                                                    {{ $t('Attachment') }}
+                                                </a>
+                                            </li>
                                             <li class="menu-item">
                                                 <router-link
                                                     :to="{ name: 'admin_income_expense_edit', params: { id: item.id } }"

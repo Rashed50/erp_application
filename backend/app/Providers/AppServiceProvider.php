@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\PersonalAccessToken;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,6 +31,21 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->usePublicStorageUrlOfCurrentHost();
+        $this->expireIdleAccessTokens();
+    }
+
+    /**
+     * Reject an API token that has not been used for `sanctum.idle_timeout` minutes.
+     * Sanctum stamps last_used_at on every authenticated request (after this
+     * check), so working keeps the login alive and inactivity ends it.
+     */
+    private function expireIdleAccessTokens(): void
+    {
+        Sanctum::authenticateAccessTokensUsing(function (PersonalAccessToken $accessToken, bool $isValid): bool {
+            $lastActivity = $accessToken->last_used_at ?? $accessToken->created_at;
+
+            return $isValid && $lastActivity->gt(now()->subMinutes(config('sanctum.idle_timeout')));
+        });
     }
 
     /**

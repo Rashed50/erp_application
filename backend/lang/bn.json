@@ -161,5 +161,6 @@
     "Reconciliation updated.": "রিকনসিলিয়েশন হালনাগাদ হয়েছে।",
     "Profile updated successfully.": "প্রোফাইল সফলভাবে আপডেট হয়েছে।",
     "Password changed successfully. Other devices have been signed out.": "পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে। অন্য সব ডিভাইস থেকে লগআউট করা হয়েছে।",
-    "The current password is incorrect.": "বর্তমান পাসওয়ার্ড সঠিক নয়।"
+    "The current password is incorrect.": "বর্তমান পাসওয়ার্ড সঠিক নয়।",
+    "The invoice total must be greater than zero. Please enter the unit price.": "ইনভয়েসের মোট পরিমাণ শূন্যের বেশি হতে হবে। অনুগ্রহ করে একক মূল্য লিখুন।"
 }

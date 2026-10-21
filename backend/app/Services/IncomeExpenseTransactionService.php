@@ -3,13 +3,17 @@
 namespace App\Services;
 
 use App\Models\IncomeExpenseTransaction;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class IncomeExpenseTransactionService
 {
-    public function __construct(private readonly LedgerPostingService $ledgerPostingService) {}
+    public function __construct(
+        private readonly LedgerPostingService $ledgerPostingService,
+        private readonly AttachmentService $attachmentService,
+    ) {}
 
     public function paginate(int $perPage = 15, ?string $type = null, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
     {
@@ -27,13 +31,14 @@ class IncomeExpenseTransactionService
     }
 
     /**
-     * @param  array{type: string, work_order_id?: ?int, employee_id?: ?int, income_expense_account_id: int, payment_account_id: int, amount: float, transaction_date: string, reference_no?: ?string, description?: ?string}  $data
+     * @param  array{type: string, work_order_id?: ?int, employee_id?: ?int, income_expense_account_id: int, payment_account_id: int, amount: float, transaction_date: string, reference_no?: ?string, description?: ?string, attachment?: ?UploadedFile}  $data
      */
     public function create(array $data): IncomeExpenseTransaction
     {
         return DB::transaction(function () use ($data) {
             $transaction = IncomeExpenseTransaction::create([
-                ...$data,
+                ...collect($data)->except(AttachmentService::FIELDS)->all(),
+                'attachment' => isset($data['attachment']) ? $data['attachment']->store('income-expenses', 'public') : null,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
@@ -50,7 +55,8 @@ class IncomeExpenseTransactionService
     public function update(IncomeExpenseTransaction $transaction, array $data): IncomeExpenseTransaction
     {
         return DB::transaction(function () use ($transaction, $data) {
-            $transaction->fill([...$data, 'updated_by' => Auth::id()]);
+            $transaction->fill([...collect($data)->except(AttachmentService::FIELDS)->all(), 'updated_by' => Auth::id()]);
+            $this->attachmentService->sync($transaction, $data, 'income-expenses');
             $transaction->save();
 
             // Rewrite the journal entry in place so it always matches the entry.

@@ -7,6 +7,8 @@ use App\Models\CustomerTransaction;
 use App\Models\Product;
 use App\Models\Sale;
 use Database\Seeders\ChartOfAccountSeeder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Seeds the predefined chart of accounts (idempotent) and returns the Cash in Hand account id.
@@ -464,5 +466,74 @@ describe('units and overall discount/VAT', function () {
             'transaction_type' => 'Invoice',
             'debit' => 82,
         ]);
+    });
+});
+
+describe('attachment', function () {
+    it('stores an uploaded invoice file and returns its url', function () {
+        Storage::fake('public');
+        $customer = Customer::factory()->create();
+
+        $response = $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/sales', salePayload($customer->id, ['attachment' => UploadedFile::fake()->create('invoice.pdf', 100, 'application/pdf')]))
+            ->assertStatus(201);
+
+        $sale = Sale::sole();
+
+        Storage::disk('public')->assertExists($sale->attachment);
+        $response->assertJsonPath('data.attachment_url', Storage::disk('public')->url($sale->attachment));
+    });
+
+    it('replaces the attachment through a method-spoofed multipart update and deletes the old file', function () {
+        Storage::fake('public');
+        $customer = Customer::factory()->create();
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/sales', salePayload($customer->id, ['attachment' => UploadedFile::fake()->create('old.pdf', 100, 'application/pdf')]))
+            ->assertStatus(201);
+        $sale = Sale::sole();
+        $oldAttachment = $sale->attachment;
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->post("/api/sales/{$sale->id}", ['_method' => 'PUT', 'attachment' => UploadedFile::fake()->image('new.jpg')], ['Accept' => 'application/json'])
+            ->assertOk();
+
+        expect($sale->fresh()->attachment)->not->toBe($oldAttachment);
+        Storage::disk('public')->assertMissing($oldAttachment);
+        Storage::disk('public')->assertExists($sale->fresh()->attachment);
+    });
+
+    it('removes the attachment on request', function () {
+        Storage::fake('public');
+        Storage::disk('public')->put('sales/invoice.pdf', 'pdf');
+        $sale = Sale::factory()->create(['attachment' => 'sales/invoice.pdf']);
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->putJson("/api/sales/{$sale->id}", ['remove_attachment' => true])
+            ->assertOk()
+            ->assertJsonPath('data.attachment_url', null);
+
+        Storage::disk('public')->assertMissing('sales/invoice.pdf');
+    });
+
+    it('rejects an executable file', function () {
+        $customer = Customer::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/sales', salePayload($customer->id, ['attachment' => UploadedFile::fake()->create('virus.php', 10, 'application/x-php')]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['attachment']]);
+    });
+});
+
+describe('zero total', function () {
+    it('rejects a sale whose total is zero', function () {
+        $customer = Customer::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/sales', salePayload($customer->id, [
+                'items' => [['item_name' => 'Consulting', 'qty' => 1, 'unit_price' => 0]],
+            ]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['items']]);
     });
 });

@@ -17,6 +17,8 @@ import App from './App.vue'
 import router from './router'
 import i18n from './i18n'
 import { registerImageFallback } from './helpers/imagePlaceholder'
+import axios from 'axios'
+import { touchSession, useAuthStore } from './stores/auth'
 
 const vuetify = createVuetify({
   components,
@@ -34,5 +36,24 @@ app.use(vuetify)
 app.use(i18n)
 
 registerImageFallback()
+
+// Every answered request restarts the backend's idle clock, so mirror it here.
+// A 401 means the login timed out (or was revoked): sign out and return to the
+// login page. Login and logout handle their own 401s.
+axios.interceptors.response.use(
+  (response) => {
+    touchSession()
+    return response
+  },
+  (error) => {
+    const url = error.config?.url ?? ''
+    // Validation and other errors still reached the backend with a valid token.
+    if (error.response && error.response.status !== 401) touchSession()
+    if (error.response?.status === 401 && !url.endsWith('/api/login') && !url.endsWith('/api/logout')) {
+      useAuthStore().expireSession()
+    }
+    return Promise.reject(error)
+  },
+)
 
 app.mount('#app')

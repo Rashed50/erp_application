@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class PurchaseResource extends JsonResource
 {
@@ -25,6 +26,7 @@ class PurchaseResource extends JsonResource
             'purchase_type' => $this->purchase_type,
             'invoice_number' => $this->invoice_number,
             'description' => $this->description,
+            'attachment_url' => $this->attachment ? Storage::disk('public')->url($this->attachment) : null,
             'issue_date' => $this->issue_date?->toDateString(),
             'purchase_date' => $this->purchase_date?->toDateString(),
             'total_amount' => (float) $this->total_amount,

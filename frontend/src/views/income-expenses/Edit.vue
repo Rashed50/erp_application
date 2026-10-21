@@ -94,6 +94,11 @@
                                             v-model="form.description"></textarea>
                                     </div>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <AttachmentInput v-model="form.attachment" v-model:remove="form.remove_attachment"
+                                        :current-url="attachmentUrl" :error="errors.attachment" />
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-12">
@@ -114,6 +119,7 @@
 <script setup>
 import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import AttachmentInput from '@/components/common/AttachmentInput.vue';
 import EmployeeSelect from '@/components/common/EmployeeSelect.vue';
 import WorkOrderOptionSelect from '@/components/common/WorkOrderOptionSelect.vue';
 import { useFetch } from '@/composables/useFetch';
@@ -124,6 +130,8 @@ import { useRouter, useRoute } from 'vue-router';
 const router = useRouter();
 const route = useRoute();
 
+const attachmentUrl = ref('')
+
 const { form, errors, isSubmitting, submit } = useStoreForm({
     type: 'expense',
     income_expense_account_id: '',
@@ -132,6 +140,8 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     transaction_date: '',
     reference_no: '',
     description: '',
+    attachment: null,
+    remove_attachment: 0,
     work_order_id: '',
     employee_id: '',
 })
@@ -182,6 +192,7 @@ const loadTransaction = async () => {
             form.transaction_date = transaction.transaction_date
             form.reference_no = transaction.reference_no
             form.description = transaction.description
+            attachmentUrl.value = transaction.attachment_url ?? ''
             form.work_order_id = transaction.work_order_id ?? ''
             form.employee_id = transaction.employee_id ?? ''
         }
