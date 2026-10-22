@@ -85,3 +85,52 @@ it('logs out an authenticated user and revokes the current token', function () {
 
     $this->assertDatabaseCount('personal_access_tokens', 0);
 });
+
+/**
+ * Logs in a fresh user and returns the plain-text API token.
+ */
+function loginToken(): string
+{
+    User::factory()->create(['email' => 'jane@example.com']);
+
+    return test()->postJson('/api/login', ['email' => 'jane@example.com', 'password' => 'password'])->json('data.token');
+}
+
+describe('inactivity timeout', function () {
+    it('tells the client the inactivity timeout', function () {
+        User::factory()->create(['email' => 'jane@example.com']);
+
+        $this->postJson('/api/login', ['email' => 'jane@example.com', 'password' => 'password'])
+            ->assertOk()
+            ->assertJsonPath('data.idle_timeout', 30);
+    });
+
+    it('keeps an active login alive beyond 30 minutes', function () {
+        $token = loginToken();
+
+        foreach (range(1, 3) as $request) {
+            $this->travel(20)->minutes();
+            $this->app['auth']->forgetGuards();
+            $this->withToken($token)->getJson('/api/user')->assertOk();
+        }
+    });
+
+    it('signs out a login that has been idle for more than 30 minutes', function () {
+        $token = loginToken();
+
+        $this->travel(20)->minutes();
+        $this->withToken($token)->getJson('/api/user')->assertOk();
+
+        $this->travel(31)->minutes();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->getJson('/api/user')->assertUnauthorized();
+    });
+
+    it('rejects an old token that was never used for more than 30 minutes', function () {
+        $token = User::factory()->create()->createToken('api')->plainTextToken;
+
+        $this->travel(31)->minutes();
+
+        $this->withToken($token)->getJson('/api/user')->assertUnauthorized();
+    });
+});

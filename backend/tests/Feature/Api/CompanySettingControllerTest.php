@@ -131,3 +131,18 @@ describe('update', function () {
         Storage::disk('public')->assertMissing('company/logo.png');
     });
 });
+
+describe('public file serving', function () {
+    it('serves an uploaded logo from /storage even without the public/storage symlink', function () {
+        Storage::disk('public')->put('company/logo.png', 'logo-bytes');
+
+        $this->get('/storage/company/logo.png')->assertOk();
+    });
+
+    it('does not expose private files through /storage', function () {
+        Storage::fake('local');
+        Storage::disk('local')->put('employees/1/contract.pdf', 'secret');
+
+        $this->get('/storage/employees/1/contract.pdf')->assertNotFound();
+    });
+});

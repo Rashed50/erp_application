@@ -97,6 +97,10 @@
                                             v-model="form.description"></textarea>
                                     </div>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <AttachmentInput v-model="form.attachment" :error="errors.attachment" />
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-12">
@@ -116,6 +120,7 @@
 </template>
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import AttachmentInput from '@/components/common/AttachmentInput.vue';
 import EmployeeSelect from '@/components/common/EmployeeSelect.vue';
 import WorkOrderOptionSelect from '@/components/common/WorkOrderOptionSelect.vue';
 import { useFetch } from '@/composables/useFetch';
@@ -133,6 +138,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     transaction_date: new Date().toISOString().slice(0, 10),
     reference_no: '',
     description: '',
+    attachment: null,
     work_order_id: '',
     employee_id: '',
 })

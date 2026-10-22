@@ -52,6 +52,10 @@ return [
 
     'expiration' => null,
 
+    // Minutes a login survives without any API request. Each request restarts
+    // the clock (via the token's last_used_at; see AppServiceProvider).
+    'idle_timeout' => (int) env('SANCTUM_IDLE_TIMEOUT', 30),
+
     /*
     |--------------------------------------------------------------------------
     | Token Prefix

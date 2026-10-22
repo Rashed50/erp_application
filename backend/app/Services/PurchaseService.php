@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AccountTransaction;
 use App\Models\Purchase;
 use App\Models\Supplier;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,7 @@ class PurchaseService
     public function __construct(
         private readonly SupplierTransactionService $supplierTransactionService,
         private readonly LedgerPostingService $ledgerPostingService,
+        private readonly AttachmentService $attachmentService,
     ) {}
 
     public function paginate(int $perPage = 15, ?string $search = null, ?int $supplierId = null): LengthAwarePaginator
@@ -41,7 +43,7 @@ class PurchaseService
      * product purchase and Purchase for a service one, the credit to
      * Accounts Payable.
      *
-     * @param  array{supplier_id: int, work_order_id?: ?int, purchased_by_id?: ?int, purchase_type: string, invoice_number: string, description?: ?string, issue_date: string, purchase_date: string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, overall_discount?: ?float, overall_vat?: ?float, items: array<int, array{item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
+     * @param  array{supplier_id: int, work_order_id?: ?int, purchased_by_id?: ?int, purchase_type: string, invoice_number: string, description?: ?string, issue_date: string, purchase_date: string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, overall_discount?: ?float, overall_vat?: ?float, attachment?: ?UploadedFile, items: array<int, array{item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
      */
     public function create(array $data): Purchase
     {
@@ -62,6 +64,7 @@ class PurchaseService
                 'issue_date' => $data['issue_date'],
                 'purchase_date' => $data['purchase_date'],
                 'notes' => $data['notes'] ?? null,
+                'attachment' => isset($data['attachment']) ? $data['attachment']->store('purchases', 'public') : null,
                 'debit_account_id' => $data['debit_account_id'] ?? $this->defaultDebitAccountId($data['purchase_type']),
                 'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)?->id,
                 'total_amount' => $totals['total_amount'],
@@ -114,9 +117,11 @@ class PurchaseService
             }
 
             $purchase->fill([
-                ...collect($data)->except(['items', 'overall_discount', 'overall_vat'])->all(),
+                ...collect($data)->except(['items', 'overall_discount', 'overall_vat', ...AttachmentService::FIELDS])->all(),
                 'updated_by' => Auth::id(),
             ]);
+
+            $this->attachmentService->sync($purchase, $data, 'purchases');
 
             $purchase->debit_account_id ??= $this->defaultDebitAccountId($purchase->purchase_type);
             $purchase->credit_account_id ??= $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)?->id;

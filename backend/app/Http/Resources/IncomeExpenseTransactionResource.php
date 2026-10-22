@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class IncomeExpenseTransactionResource extends JsonResource
 {
@@ -29,6 +30,7 @@ class IncomeExpenseTransactionResource extends JsonResource
             'transaction_date' => $this->transaction_date?->toDateString(),
             'reference_no' => $this->reference_no,
             'description' => $this->description,
+            'attachment_url' => $this->attachment ? Storage::disk('public')->url($this->attachment) : null,
             'created_by' => $this->created_by,
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'approved_by' => $this->approved_by,
