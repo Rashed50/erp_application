@@ -39,6 +39,8 @@ class UpdateIncomeExpenseTransactionRequest extends FormRequest
             'transaction_date' => ['sometimes', 'required', 'date'],
             'reference_no' => ['sometimes', 'nullable', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx', 'max:20480'],
+            'remove_attachment' => ['sometimes', 'boolean'],
         ];
     }
 

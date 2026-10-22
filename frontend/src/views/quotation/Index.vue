@@ -143,7 +143,7 @@ import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { useFetch } from '@/composables/useFetch';
-import { usePrintable } from '@/composables/usePrintable';
+import { printQuotation } from '@/helpers/printQuotation';
 import { t } from '@/i18n';
 
 import AddQuotationForm from './Add.vue';
@@ -169,8 +169,6 @@ const onQuotationSaved = () => {
     setView('list');
 };
 
-const { printInvoice } = usePrintable();
-
 const {
     items,
     loading,
@@ -187,25 +185,14 @@ const {
 
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 });
 
+// The list only has summary data, so the full quotation (items, customer address)
+// is loaded first and then printed in the company format.
 const handlePrintInvoice = async (item) => {
     try {
         const { data } = await axios.get(`/api/quotations/${item.id}`);
         if (!data.success) return;
 
-        const quotation = data.data;
-
-        printInvoice({
-            title: 'Quotation',
-            partyLabel: 'Customer:',
-            partyName: quotation.customer_name,
-            meta: [
-                { label: 'Quotation No:', value: quotation.invoice_number },
-                { label: 'Issue Date:', value: quotation.issue_date },
-            ],
-            items: quotation.items ?? [],
-            totals: quotation,
-            notes: quotation.notes,
-        });
+        printQuotation(data.data);
     } catch (e) {
         toast.error(e.response?.data?.message || t('Failed to load the quotation.'));
     }

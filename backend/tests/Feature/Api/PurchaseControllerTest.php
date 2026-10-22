@@ -8,6 +8,8 @@ use App\Models\Purchase;
 use App\Models\Supplier;
 use App\Models\WorkOrder;
 use Database\Seeders\ChartOfAccountSeeder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 function purchasePayload(int $supplierId, array $overrides = []): array
 {
@@ -552,5 +554,41 @@ describe('units, overall discount/VAT and purchased by', function () {
             ->postJson('/api/purchases', purchasePayload($supplier->id, ['overall_discount' => 1000]))
             ->assertStatus(422)
             ->assertJsonStructure(['data' => ['overall_discount']]);
+    });
+});
+
+describe('attachment', function () {
+    it('stores an uploaded invoice file and replaces it on update', function () {
+        Storage::fake('public');
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, ['attachment' => UploadedFile::fake()->create('bill.pdf', 100, 'application/pdf')]))
+            ->assertStatus(201);
+        $purchase = Purchase::sole();
+        $oldAttachment = $purchase->attachment;
+        Storage::disk('public')->assertExists($oldAttachment);
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->post("/api/purchases/{$purchase->id}", ['_method' => 'PUT', 'attachment' => UploadedFile::fake()->image('bill.jpg')], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.attachment_url', Storage::disk('public')->url($purchase->fresh()->attachment));
+
+        Storage::disk('public')->assertMissing($oldAttachment);
+    });
+});
+
+describe('zero total', function () {
+    it('rejects a purchase whose total is zero instead of failing to post it', function () {
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, [
+                'items' => [['item_name' => 'Paper', 'qty' => 1, 'unit_price' => 0]],
+            ]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['items']]);
+
+        expect(Purchase::count())->toBe(0);
     });
 });

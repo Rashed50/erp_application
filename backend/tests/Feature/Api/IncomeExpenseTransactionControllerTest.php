@@ -5,6 +5,8 @@ use App\Models\ChartOfAccount;
 use App\Models\Employee;
 use App\Models\IncomeExpenseTransaction;
 use App\Models\WorkOrder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 describe('index', function () {
     it('returns 401 when no token is provided', function () {
@@ -274,5 +276,35 @@ describe('expense by', function () {
             ->assertStatus(201)
             ->assertJsonPath('data.employee_id', $employee->id)
             ->assertJsonPath('data.employee_name', "{$employee->name} ({$employee->employee_code})");
+    });
+});
+
+describe('attachment', function () {
+    it('stores an uploaded expense voucher and removes it on request', function () {
+        Storage::fake('public');
+        $rent = ChartOfAccount::factory()->expense()->create();
+        $cash = ChartOfAccount::factory()->asset()->create();
+
+        $response = $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/income-expenses', [
+                'type' => 'expense',
+                'income_expense_account_id' => $rent->id,
+                'payment_account_id' => $cash->id,
+                'amount' => 500,
+                'transaction_date' => now()->toDateString(),
+                'attachment' => UploadedFile::fake()->image('voucher.jpg'),
+            ])
+            ->assertStatus(201);
+
+        $transaction = IncomeExpenseTransaction::sole();
+        Storage::disk('public')->assertExists($transaction->attachment);
+        $response->assertJsonPath('data.attachment_url', Storage::disk('public')->url($transaction->attachment));
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->putJson("/api/income-expenses/{$transaction->id}", ['remove_attachment' => true])
+            ->assertOk()
+            ->assertJsonPath('data.attachment_url', null);
+
+        Storage::disk('public')->assertMissing($transaction->attachment);
     });
 });

@@ -18,7 +18,7 @@ class LineItemTotalCalculator
      * @param  array<int, array{product_id?: ?int, item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>  $items
      * @return array{items: array<int, array<string, mixed>>, total_amount: float, overall_discount: float, overall_vat: float, discount_amount: float, vat_amount: float, net_total: float}
      *
-     * @throws ValidationException when the discounts exceed the invoice amount.
+     * @throws ValidationException when the discounts exceed the invoice amount, or the invoice total is zero.
      */
     public static function calculate(array $items, float $overallDiscount = 0, float $overallVat = 0): array
     {
@@ -61,6 +61,16 @@ class LineItemTotalCalculator
             ]);
         }
 
+        $netTotal = $totalAmount - $discountAmount + $vatAmount;
+
+        // A zero invoice has nothing to post to the ledger, and is almost always
+        // a missing unit price.
+        if (round($netTotal, 2) <= 0) {
+            throw ValidationException::withMessages([
+                'items' => __('The invoice total must be greater than zero. Please enter the unit price.'),
+            ]);
+        }
+
         return [
             'items' => $computedItems,
             'total_amount' => $totalAmount,
@@ -68,7 +78,7 @@ class LineItemTotalCalculator
             'overall_vat' => $overallVat,
             'discount_amount' => $discountAmount,
             'vat_amount' => $vatAmount,
-            'net_total' => $totalAmount - $discountAmount + $vatAmount,
+            'net_total' => $netTotal,
         ];
     }
 }

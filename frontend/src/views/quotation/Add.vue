@@ -2,9 +2,10 @@
     <div class="row">
         <div class="col-md-1"></div>
         <div class="col-md-10">
-            <v-card style="padding: 5px; margin: 15px 0px;">
+            <v-card style="padding: 15px; margin: 15px 0px;">
                 <form @submit.prevent="handleSubmit">
                     <div class="row">
+                        <!-- Customer -->
                         <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label for="customer_id">{{ $t('Customer:') }}</label>
@@ -18,6 +19,7 @@
                             </div>
                         </div>
 
+                        <!-- Invoice Number -->
                         <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label for="invoice_number">{{ $t('Invoice Number:') }}</label>
@@ -27,6 +29,7 @@
                             </div>
                         </div>
 
+                        <!-- Issue Date -->
                         <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label for="issue_date">{{ $t('Issue Date:') }}</label>
@@ -36,33 +39,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-4">
-                            <div class="form-group mb-3">
-                                <label for="discount_amount">{{ $t('Discount:') }}</label>
-                                <input type="number" min="0" step="0.01" id="discount_amount" class="form-control"
-                                    v-model.number="form.discount_amount" />
-                                <div v-if="errors.discount_amount" class="error-msg">{{ errors.discount_amount }}</div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <div class="form-group mb-3">
-                                <label for="vat_amount">{{ $t('VAT:') }}</label>
-                                <input type="number" min="0" step="0.01" id="vat_amount" class="form-control"
-                                    v-model.number="form.vat_amount" />
-                                <div v-if="errors.vat_amount" class="error-msg">{{ errors.vat_amount }}</div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <div class="form-group mb-3">
-                                <label for="file">{{ $t('Attachment:') }}</label>
-                                <input type="file" id="file" class="form-control"
-                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" @change="onFileChange" />
-                                <div v-if="errors.file" class="error-msg">{{ errors.file }}</div>
-                            </div>
-                        </div>
-
+                        <!-- Notes -->
                         <div class="col-md-12">
                             <div class="form-group mb-3">
                                 <label for="notes">{{ $t('Notes:') }}</label>
@@ -73,6 +50,7 @@
 
                     <hr>
 
+                    <!-- Items Section -->
                     <h5 class="mb-3">{{ $t('Items') }}</h5>
                     <div v-if="errors.items" class="error-msg mb-2">{{ errors.items }}</div>
 
@@ -80,12 +58,13 @@
                         <table class="table table-bordered align-middle">
                             <thead>
                                 <tr>
-                                    <th style="width: 200px;">{{ $t('Product') }}</th>
+                                    <th style="width: 180px;">{{ $t('Product') }}</th>
                                     <th>{{ $t('Item Name') }}</th>
                                     <th>{{ $t('Description') }}</th>
-                                    <th style="width: 90px;">{{ $t('Qty') }}</th>
-                                    <th style="width: 130px;">{{ $t('Unit') }}</th>
-                                    <th style="width: 120px;">{{ $t('Unit Price') }}</th>
+                                    <th style="width: 80px;">{{ $t('Qty') }}</th>
+                                    <th style="width: 110px;">{{ $t('Unit') }}</th>
+                                    <th style="width: 110px;">{{ $t('Unit Price') }}</th>
+                                    <th style="width: 110px;" class="text-end">{{ $t('Total') }}</th>
                                     <th style="width: 50px;"></th>
                                 </tr>
                             </thead>
@@ -121,9 +100,6 @@
                                                 {{ unit.name }}
                                             </option>
                                         </select>
-                                        <div v-if="errors[`items.${index}.unit_id`]" class="error-msg">
-                                            {{ errors[`items.${index}.unit_id`] }}
-                                        </div>
                                     </td>
                                     <td>
                                         <input type="number" min="0" step="0.01" class="form-control"
@@ -131,6 +107,9 @@
                                         <div v-if="errors[`items.${index}.unit_price`]" class="error-msg">
                                             {{ errors[`items.${index}.unit_price`] }}
                                         </div>
+                                    </td>
+                                    <td class="text-end fw-bold">
+                                        {{ lineTotal(item).toFixed(2) }}
                                     </td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-outline-danger"
@@ -143,12 +122,53 @@
                         </table>
                     </div>
 
-                    <v-btn type="button" class="text-none mb-3" color="grey-lighten-3" rounded="0" variant="flat"
+                    <v-btn type="button" class="text-none mb-4" color="grey-lighten-3" rounded="0" variant="flat"
                         @click="addItem">
                         {{ $t('+ Add Item') }}
                     </v-btn>
 
-                    <div class="row justify-content-end">
+                    <hr>
+
+                    <!-- Bottom Fields: Discount, VAT, Attachment & Totals -->
+                    <div class="row align-items-start">
+                        <!-- Left Side: Discount, VAT & Attachment -->
+                        <div class="col-md-8">
+                            <div class="row">
+                                <!-- Discount -->
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="discount_amount">{{ $t('Discount:') }}</label>
+                                        <input type="number" min="0" step="0.01" id="discount_amount"
+                                            class="form-control" v-model.number="form.discount_amount" />
+                                        <div v-if="errors.discount_amount" class="error-msg">{{ errors.discount_amount
+                                            }}</div>
+                                    </div>
+                                </div>
+
+                                <!-- VAT -->
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="vat_amount">{{ $t('VAT:') }}</label>
+                                        <input type="number" min="0" step="0.01" id="vat_amount" class="form-control"
+                                            v-model.number="form.vat_amount" />
+                                        <div v-if="errors.vat_amount" class="error-msg">{{ errors.vat_amount }}</div>
+                                    </div>
+                                </div>
+
+                                <!-- Attachment Field -->
+                                <div class="col-md-12">
+                                    <div class="form-group mb-3">
+                                        <label for="file">{{ $t('Attachment:') }}</label>
+                                        <input type="file" id="file" class="form-control"
+                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                                            @change="onFileChange" />
+                                        <div v-if="errors.file" class="error-msg">{{ errors.file }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Side: Calculation Summary -->
                         <div class="col-md-4">
                             <table class="table table-sm">
                                 <tbody>
@@ -161,20 +181,24 @@
                                         <td class="text-end">{{ totals.discountAmount.toFixed(2) }}</td>
                                     </tr>
                                     <tr>
+                                        <td>{{ $t('Subtotal') }}</td>
+                                        <td class="text-end">{{ totals.subtotalAfterDiscount.toFixed(2) }}</td>
+                                    </tr>
+                                    <tr>
                                         <td>{{ $t('VAT') }}</td>
                                         <td class="text-end">{{ totals.vatAmount.toFixed(2) }}</td>
                                     </tr>
-                                    <tr class="fw-bold">
+                                    <tr class="fw-bold border-top">
                                         <td>{{ $t('Net Total') }}</td>
                                         <td class="text-end">{{ totals.netTotal.toFixed(2) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
-                            <small class="text-muted">{{ $t('Totals are recalculated by the server on save.') }}</small>
                         </div>
                     </div>
 
-                    <div class="row">
+                    <!-- Submit / Cancel Buttons -->
+                    <div class="row mt-4">
                         <div class="col-md-12 d-flex gap-2">
                             <v-btn type="submit" class="text-none text-white" color="blue-darken-4" rounded="0"
                                 variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
@@ -201,16 +225,13 @@ import { t } from '@/i18n';
 
 const emit = defineEmits(['saved', 'cancel']);
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB, same as the server rule
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
-// Today in local time (toISOString() alone would give the UTC date).
 const today = () => {
     const now = new Date();
     return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
 
-// discount and vat are not shown per line (they are set once for the whole quotation),
-// but they stay in the payload as 0 because the server's line calculator expects them.
 const emptyItem = () => ({
     product_id: '',
     item_name: '',
@@ -239,7 +260,6 @@ const isSubmitting = ref(false);
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 });
 const { items: products, fetchData: loadProducts } = useFetch('/api/products', { per_page: 500, active_status: 1 });
 
-// Units come from the inventory units table through a small lookup endpoint.
 const units = ref([]);
 
 const loadUnits = async () => {
@@ -252,7 +272,6 @@ const loadUnits = async () => {
     }
 };
 
-// The product list only helps to fill the item name (quotation lines do not store a product).
 const onProductChange = (item) => {
     const product = products.value.find((p) => p.id === item.product_id);
     if (product) item.item_name = product.name;
@@ -269,23 +288,21 @@ const removeItem = (index) => {
 
 const lineTotal = (item) => (Number(item.qty) || 0) * (Number(item.unit_price) || 0);
 
-// Discount and VAT are quotation-level amounts typed above the items,
-// so they flow straight into the summary below.
 const totals = computed(() => {
     const totalAmount = form.items.reduce((sum, item) => sum + lineTotal(item), 0);
     const discountAmount = Number(form.discount_amount) || 0;
+    const subtotalAfterDiscount = totalAmount - discountAmount;
     const vatAmount = Number(form.vat_amount) || 0;
 
     return {
         totalAmount,
         discountAmount,
+        subtotalAfterDiscount,
         vatAmount,
-        netTotal: totalAmount - discountAmount + vatAmount,
+        netTotal: subtotalAfterDiscount + vatAmount,
     };
 });
 
-// A file cannot travel inside JSON, so the whole form is sent as multipart FormData.
-// Laravel reads items[0][item_name] style keys back into the items array.
 const buildFormData = () => {
     const fd = new FormData();
 
@@ -312,8 +329,6 @@ const handleSubmit = async () => {
 
     errors.value = {};
 
-    // These checks stop the request before it is sent, so each one shows its message
-    // right under the field (a silent return here makes Submit look dead).
     if (totals.value.discountAmount > totals.value.totalAmount) {
         errors.value = { discount_amount: t('The discount cannot be greater than the total amount.') };
         return;
@@ -332,15 +347,12 @@ const handleSubmit = async () => {
         setToast('success', data.message);
         emit('saved');
     } catch (error) {
-        // Validation errors may arrive as { errors: {...} } or inside { data: {...} }
         const raw = error.response?.data?.errors ?? error.response?.data?.data;
 
         if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
             errors.value = Object.fromEntries(
                 Object.entries(raw).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value])
             );
-
-            // Also as a toast, so an error on a field that has no inline slot is never missed
             setToast('error', Object.values(errors.value).join(' '));
         } else {
             setToast('error', error.response?.data?.message || t('Failed to save the quotation.'));

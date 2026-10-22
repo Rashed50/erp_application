@@ -609,6 +609,8 @@ const routes = [
                 component: () => import('@/views/quotation/Index.vue'),
                 meta: {
                     title: 'quoation',
+                  permissions: ['quotation.view']
+
                     
                 }
             },

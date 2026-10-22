@@ -12,8 +12,9 @@ class AuthService
 {
     /**
      * Attempt to authenticate a user by credentials and issue a new API token.
+     * The token dies after `sanctum.idle_timeout` minutes without a request.
      *
-     * @return array{user: User, token: string}
+     * @return array{user: User, token: string, idle_timeout: int}
      */
     public function login(string $email, string $password, string $deviceName = 'api'): array
     {
@@ -31,6 +32,7 @@ class AuthService
         return [
             'user' => $user->load('roles'),
             'token' => $accessToken->plainTextToken,
+            'idle_timeout' => (int) config('sanctum.idle_timeout'),
         ];
     }
 

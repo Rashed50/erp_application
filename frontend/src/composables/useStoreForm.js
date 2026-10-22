@@ -1,6 +1,7 @@
 import { ref, reactive } from 'vue'
 import axios from 'axios'
 import { t } from '@/i18n'
+import { objectToFormData } from '@/helpers/objectToFormData'
 
 export function useStoreForm(initialData = {}) {
   // reactive form data
@@ -32,9 +33,16 @@ export function useStoreForm(initialData = {}) {
 
         try {
             const payload = { ...form }
-            const response = method.toLowerCase() === 'put'
-                ? await axios.put(url, payload)
-                : await axios.post(url, payload)
+            const isPut = method.toLowerCase() === 'put'
+            let response
+
+            // A form holding a file must go as multipart; PHP only parses multipart
+            // bodies on POST, so an update is sent as POST with Laravel's _method spoofing.
+            if (Object.values(payload).some((value) => value instanceof File)) {
+                response = await axios.post(url, objectToFormData(isPut ? { ...payload, _method: 'PUT' } : payload))
+            } else {
+                response = isPut ? await axios.put(url, payload) : await axios.post(url, payload)
+            }
 
             if (response.data.message) {
                 successMessage.value = response.data.message

@@ -470,6 +470,11 @@ export default {
         'Purchase Date': 'ক্রয়ের তারিখ',
         'Purchase Date:': 'ক্রয়ের তারিখ:',
         'Items': 'আইটেমসমূহ',
+        'Discount:':'ছাড়',
+        'VAT:':'ভ্যাট',
+        'Attachment:':'ফাইল সমুহ',
+        'Subtotal':'সাব মোট',
+         
         'Item Name': 'আইটেমের নাম',
         'Qty': 'পরিমাণ',
         'Unit Price': 'একক মূল্য',
@@ -593,6 +598,16 @@ export default {
         'Company Logo': 'কোম্পানির লোগো',
         'JPG, PNG, WEBP or SVG, max 2MB.': 'JPG, PNG, WEBP বা SVG, সর্বোচ্চ ২ মেগাবাইট।',
         'Remove logo': 'লোগো সরান',
+        'Company Profile': 'কোম্পানি প্রোফাইল',
+        'Working Setting': 'কর্মদিবস সেটিং',
+        'Leave Setting': 'ছুটি সেটিং',
+        'Working days and office hours settings will be available here soon.': 'কর্মদিবস ও অফিস সময়ের সেটিংস শীঘ্রই এখানে পাওয়া যাবে।',
+        'Leave types and yearly leave allowances will be available here soon.': 'ছুটির ধরন ও বার্ষিক ছুটির বরাদ্দ শীঘ্রই এখানে পাওয়া যাবে।',
+        'JPG, PNG, PDF, Word or Excel, max 20MB.': 'JPG, PNG, PDF, Word বা Excel, সর্বোচ্চ ২০ মেগাবাইট।',
+        'View current attachment': 'বর্তমান সংযুক্তি দেখুন',
+        'Remove attachment': 'সংযুক্তি সরান',
+        'You will be logged out in 1 minute due to inactivity.': 'নিষ্ক্রিয়তার কারণে ১ মিনিটের মধ্যে আপনাকে লগআউট করা হবে।',
+        'You were logged out due to inactivity. Please log in again.': 'নিষ্ক্রিয়তার কারণে আপনাকে লগআউট করা হয়েছে। অনুগ্রহ করে আবার লগইন করুন।',
         'Save Settings': 'সেটিংস সংরক্ষণ করুন',
         'The company name field is required.': 'কোম্পানির নাম দেওয়া আবশ্যক।',
 
@@ -782,6 +797,8 @@ export default {
         'Save Work Record': 'কাজের রেকর্ড সংরক্ষণ করুন',
         'Working Days': 'কর্মদিবস',
         'Present Days': 'উপস্থিতির দিন',
+        'Attendance Date:': 'উপস্থিতির তারিখ',
+        'Shift:': 'শিফট',
         'Absent Days': 'অনুপস্থিতির দিন',
         'Overtime Hours': 'ওভারটাইম ঘণ্টা',
         'Other Addition': 'অন্যান্য সংযোজন',
@@ -790,6 +807,7 @@ export default {
         'Failed to save the work record.': 'কাজের রেকর্ড সংরক্ষণ করা যায়নি।',
         'Delete this work record?': 'এই কাজের রেকর্ড ডিলিট করবেন?',
         'Employee ID or name...': 'কর্মচারী আইডি বা নাম...',
+        'Employee ID ': 'কর্মচারী আইডি ',
 
         // HR: payroll
         'Salary Month:': 'বেতনের মাস:',
@@ -927,6 +945,8 @@ export default {
         'As of date': 'নির্দিষ্ট তারিখ পর্যন্ত',
         'For the period': 'নির্দিষ্ট সময়কালের জন্য',
         'From Date:': 'শুরুর তারিখ:',
+        'From:': 'শুরু:',
+        'To:': 'শেষ:',
         'To Date:': 'শেষ তারিখ:',
         'As of Date:': 'যে তারিখ পর্যন্ত:',
         'Account:': 'অ্যাকাউন্ট:',
@@ -1318,4 +1338,6 @@ export default {
         'Expense By:': 'ব্যয়কারী:',
         'Expense / Received By': 'ব্যয়কারী / গ্রহণকারী',
     },
+
+   
 }

@@ -41,6 +41,8 @@ class UpdatePurchaseRequest extends FormRequest
             'issue_date' => ['sometimes', 'required', 'date'],
             'purchase_date' => ['sometimes', 'required', 'date'],
             'notes' => ['sometimes', 'nullable', 'string'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx', 'max:20480'],
+            'remove_attachment' => ['sometimes', 'boolean'],
             // The journal entry's accounts, as on the payroll module's form; omitted
             // to use the predefined defaults.
             'debit_account_id' => ['sometimes', 'nullable', Rule::exists('chart_of_accounts', 'id')->where('is_transaction', 1)->where('is_closed', 0)->whereNull('deleted_at'), 'different:credit_account_id'],

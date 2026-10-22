@@ -344,16 +344,8 @@
                 </div>
             </v-list-group>
             <!-- HR Menu END -->
-            <!-- Quotation Start -->
-            <v-list-item class="">
-                <router-link :to="{ name: 'admin_quotation' }" class="custom_router_link">
-                    <span class="sidebar-menu-icon">
-                        <i class="fa-solid fa-circle"></i>
-                    </span>
-                    {{ $t('nav.quotation') }}
-                </router-link>
-            </v-list-item>
-            <!-- Quotation End -->
+
+
 
             <!-- Payroll Menu START -->
             <v-list-group value="payroll" v-if="canAny([
@@ -423,6 +415,33 @@
                 </div>
             </v-list-group>
             <!-- Payroll Menu END -->
+            <!-- Quotation Start -->
+
+            <v-list-group value="quotation" v-if="canAny([
+                'quotation.view',
+            ])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-money-check-dollar"></i>
+                            </span>
+                            {{ $t('nav.quotation') }}
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
+                    <router-link :to="{ name: 'admin_quotation' }" class="custom_router_sub_link"
+                        v-if="can(['quotation.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.quotation') }}
+                        </span>
+                    </router-link>
+
+                </div>
+            </v-list-group>
+            <!-- Quotation Menu END -->
 
             <!-- Asset Menu START -->
             <v-list-group value="asset" v-if="canAny(assetMenuPermissions)">

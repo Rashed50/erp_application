@@ -84,6 +84,10 @@
                                         <textarea id="notes" class="form-control" rows="2" v-model="form.notes"></textarea>
                                     </div>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <AttachmentInput v-model="form.attachment" :error="errors.attachment" />
+                                </div>
                             </div>
 
                             <hr>
@@ -109,6 +113,7 @@
 </template>
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import AttachmentInput from '@/components/common/AttachmentInput.vue';
 import EmployeeSelect from '@/components/common/EmployeeSelect.vue';
 import InvoiceLineItems, { emptyInvoiceItem } from '@/components/common/InvoiceLineItems.vue';
 import WorkOrderOptionSelect from '@/components/common/WorkOrderOptionSelect.vue';
@@ -128,6 +133,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     work_order_id: '',
     description: '',
     notes: '',
+    attachment: null,
     purchased_by_id: '',
     overall_discount: 0,
     overall_vat: 0,

@@ -64,6 +64,11 @@
                                         <textarea id="notes" class="form-control" rows="2" v-model="form.notes"></textarea>
                                     </div>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <AttachmentInput v-model="form.attachment" v-model:remove="form.remove_attachment"
+                                        :current-url="attachmentUrl" :error="errors.attachment" />
+                                </div>
                             </div>
 
                             <hr>
@@ -102,6 +107,7 @@
 <script setup>
 import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import AttachmentInput from '@/components/common/AttachmentInput.vue';
 import InvoiceLineItems, { emptyInvoiceItem, toInvoiceFormItem } from '@/components/common/InvoiceLineItems.vue';
 import WorkOrderSelect from '@/components/common/WorkOrderSelect.vue';
 import { useFetch } from '@/composables/useFetch';
@@ -116,6 +122,7 @@ const customerName = ref('')
 const customerId = ref('')
 const paidAmount = ref(0)
 const dueAmount = ref(0)
+const attachmentUrl = ref('')
 
 // customer_id is intentionally not part of the submitted form — the backend
 // does not accept changing a sale's customer after creation.
@@ -126,6 +133,8 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     due_date: '',
     description: '',
     notes: '',
+    attachment: null,
+    remove_attachment: 0,
     overall_discount: 0,
     overall_vat: 0,
     items: [emptyInvoiceItem()],
@@ -158,6 +167,7 @@ const loadSale = async () => {
             form.due_date = sale.due_date
             form.description = sale.description
             form.notes = sale.notes
+            attachmentUrl.value = sale.attachment_url ?? ''
             form.items = (sale.items ?? []).map(toInvoiceFormItem)
             if (!form.items.length) form.items = [emptyInvoiceItem()]
             form.overall_discount = sale.overall_discount ?? 0

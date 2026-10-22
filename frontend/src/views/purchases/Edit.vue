@@ -79,6 +79,11 @@
                                         <textarea id="notes" class="form-control" rows="2" v-model="form.notes"></textarea>
                                     </div>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <AttachmentInput v-model="form.attachment" v-model:remove="form.remove_attachment"
+                                        :current-url="attachmentUrl" :error="errors.attachment" />
+                                </div>
                             </div>
 
                             <hr>
@@ -117,6 +122,7 @@
 <script setup>
 import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import AttachmentInput from '@/components/common/AttachmentInput.vue';
 import EmployeeSelect from '@/components/common/EmployeeSelect.vue';
 import InvoiceLineItems, { emptyInvoiceItem, toInvoiceFormItem } from '@/components/common/InvoiceLineItems.vue';
 import WorkOrderOptionSelect from '@/components/common/WorkOrderOptionSelect.vue';
@@ -131,6 +137,7 @@ const route = useRoute();
 const supplierName = ref('')
 const paidAmount = ref(0)
 const dueAmount = ref(0)
+const attachmentUrl = ref('')
 
 // supplier_id is intentionally not part of the submitted form — the backend
 // does not accept changing a purchase's supplier after creation.
@@ -142,6 +149,8 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     work_order_id: '',
     description: '',
     notes: '',
+    attachment: null,
+    remove_attachment: 0,
     purchased_by_id: '',
     overall_discount: 0,
     overall_vat: 0,
@@ -175,6 +184,7 @@ const loadPurchase = async () => {
             form.description = purchase.description
             form.work_order_id = purchase.work_order_id ?? ''
             form.notes = purchase.notes
+            attachmentUrl.value = purchase.attachment_url ?? ''
             form.items = (purchase.items ?? []).map(toInvoiceFormItem)
             if (!form.items.length) form.items = [emptyInvoiceItem()]
             form.overall_discount = purchase.overall_discount ?? 0

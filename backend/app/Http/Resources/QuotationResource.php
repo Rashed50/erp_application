@@ -18,10 +18,11 @@ class QuotationResource extends JsonResource
         return [
             'id' => $this->id,
             'customer_id' => $this->customer_id,
-            'customer_name' => $this->whenLoaded('customer', fn() => $this->customer->name),
+            'customer_name' => $this->whenLoaded('customer', fn () => $this->customer->name),
+            // data_get(toArray()) so a missing column simply gives null instead of an error
+            'customer_address' => $this->whenLoaded('customer', fn () => data_get($this->customer->toArray(), 'address')),
             'invoice_number' => $this->invoice_number,
             'description' => $this->description,
-            'unit_id' => $this->unit_id,
             'issue_date' => $this->issue_date?->toDateString(),
             'total_amount' => (float) $this->total_amount,
             'discount_amount' => (float) $this->discount_amount,
@@ -30,7 +31,7 @@ class QuotationResource extends JsonResource
             'net_total' => (float) $this->net_total,
             'notes' => $this->notes,
             'file_path' => $this->file_path,
-            // 'file_url' => $this->file_path ? Storage::disk('public')->url($this->file_path) : null,
+            'file_url' => $this->file_path ? Storage::disk('public')->url($this->file_path) : null,
             'items' => QuotationItemResource::collection($this->whenLoaded('items')),
             'created_by' => $this->created_by,
             'created_at' => $this->created_at,

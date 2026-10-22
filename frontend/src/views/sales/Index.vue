@@ -109,6 +109,11 @@
                                                     {{ $t('Print Invoice') }}
                                                 </button>
                                             </li>
+                                            <li class="menu-item" v-if="item.attachment_url">
+                                                <a :href="item.attachment_url" target="_blank" class="menu-link">
+                                                    {{ $t('Attachment') }}
+                                                </a>
+                                            </li>
                                             <li class="menu-item">
                                                 <router-link :to="{ name: 'admin_sale_edit', params: { id: item.id } }"
                                                     class="menu-link">

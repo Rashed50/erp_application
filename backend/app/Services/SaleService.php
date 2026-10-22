@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AccountTransaction;
 use App\Models\Customer;
 use App\Models\Sale;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,7 @@ class SaleService
     public function __construct(
         private readonly CustomerTransactionService $customerTransactionService,
         private readonly LedgerPostingService $ledgerPostingService,
+        private readonly AttachmentService $attachmentService,
     ) {}
 
     public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null): LengthAwarePaginator
@@ -40,7 +42,7 @@ class SaleService
      * accounts can be chosen; they default to Accounts Receivable and Sales
      * Revenue.
      *
-     * @param  array{customer_id: int, work_order_id?: ?int, invoice_number: string, description?: ?string, issue_date: string, due_date?: ?string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, overall_discount?: ?float, overall_vat?: ?float, items: array<int, array{item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
+     * @param  array{customer_id: int, work_order_id?: ?int, invoice_number: string, description?: ?string, issue_date: string, due_date?: ?string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, overall_discount?: ?float, overall_vat?: ?float, attachment?: ?UploadedFile, items: array<int, array{item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
      */
     public function create(array $data): Sale
     {
@@ -59,6 +61,7 @@ class SaleService
                 'issue_date' => $data['issue_date'],
                 'due_date' => $data['due_date'] ?? null,
                 'notes' => $data['notes'] ?? null,
+                'attachment' => isset($data['attachment']) ? $data['attachment']->store('sales', 'public') : null,
                 'debit_account_id' => $data['debit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_RECEIVABLE_NUMBER)?->id,
                 'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::SALES_REVENUE_NUMBER)?->id,
                 'total_amount' => $totals['total_amount'],
@@ -111,9 +114,11 @@ class SaleService
             }
 
             $sale->fill([
-                ...collect($data)->except(['items', 'overall_discount', 'overall_vat'])->all(),
+                ...collect($data)->except(['items', 'overall_discount', 'overall_vat', ...AttachmentService::FIELDS])->all(),
                 'updated_by' => Auth::id(),
             ]);
+
+            $this->attachmentService->sync($sale, $data, 'sales');
 
             $sale->debit_account_id ??= $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_RECEIVABLE_NUMBER)?->id;
             $sale->credit_account_id ??= $this->ledgerPostingService->predefinedAccount(LedgerPostingService::SALES_REVENUE_NUMBER)?->id;
