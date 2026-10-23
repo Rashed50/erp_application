@@ -64,7 +64,7 @@ class PurchaseService
                 'issue_date' => $data['issue_date'],
                 'purchase_date' => $data['purchase_date'],
                 'notes' => $data['notes'] ?? null,
-                'attachment' => isset($data['attachment']) ? $data['attachment']->store('purchases', 'public') : null,
+                'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'purchases'),
                 'debit_account_id' => $data['debit_account_id'] ?? $this->defaultDebitAccountId($data['purchase_type']),
                 'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)?->id,
                 'total_amount' => $totals['total_amount'],

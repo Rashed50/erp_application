@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Api\Hr;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Hr\CancelSalaryRequest;
 use App\Http\Requests\Hr\GeneratePayrollRequest;
+use App\Http\Requests\Hr\PaySalaryRequest;
 use App\Http\Requests\Hr\SalaryStatusRequest;
+use App\Http\Requests\Hr\StoreSalaryPaymentRequest;
 use App\Http\Resources\SalaryHistoryResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\SalaryHistory;
+use App\Models\SalaryPayment;
 use App\Services\PayrollService;
 use App\Services\SalaryCalculationService;
 use Carbon\CarbonImmutable;
@@ -81,7 +84,7 @@ class PayrollController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = [
-            ...$request->only(['month', 'department', 'designation', 'status']),
+            ...$request->only(['month', 'department', 'designation', 'status', 'payment_status']),
             'employee_id' => $request->integer('employee_id') ?: null,
             'include_cancelled' => $request->boolean('include_cancelled'),
         ];
@@ -102,7 +105,24 @@ class PayrollController extends Controller
 
     public function show(SalaryHistory $salaryHistory): JsonResponse
     {
-        return ApiResponse::success(new SalaryHistoryResource($salaryHistory));
+        return ApiResponse::success(new SalaryHistoryResource($this->payrollService->withPayments($salaryHistory)));
+    }
+
+    /**
+     * Pay all or part of one salary's due amount.
+     */
+    public function storePayment(StoreSalaryPaymentRequest $request, SalaryHistory $salaryHistory): JsonResponse
+    {
+        $salary = $this->payrollService->pay($salaryHistory, $request->validated());
+
+        return ApiResponse::success(new SalaryHistoryResource($salary), __('Salary payment recorded successfully.'), 201);
+    }
+
+    public function destroyPayment(SalaryPayment $salaryPayment): JsonResponse
+    {
+        $salary = $this->payrollService->deletePayment($salaryPayment);
+
+        return ApiResponse::success(new SalaryHistoryResource($salary), __('Salary payment deleted successfully.'));
     }
 
     public function approve(SalaryStatusRequest $request): JsonResponse
@@ -112,9 +132,13 @@ class PayrollController extends Controller
         return ApiResponse::success(['updated' => $count], __(':count salaries approved.', ['count' => $count]));
     }
 
-    public function pay(SalaryStatusRequest $request): JsonResponse
+    public function pay(PaySalaryRequest $request): JsonResponse
     {
-        $count = $this->payrollService->markPaid($request->validated('ids'));
+        $count = $this->payrollService->markPaid(
+            $request->validated('ids'),
+            (int) $request->validated('payment_account_id'),
+            $request->validated('payment_date'),
+        );
 
         return ApiResponse::success(['updated' => $count], __(':count salaries marked as paid.', ['count' => $count]));
     }

@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Services\FileStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class FundTransferResource extends JsonResource
 {
@@ -30,7 +30,7 @@ class FundTransferResource extends JsonResource
             'vat' => (float) $this->vat,
             'total_amount' => (float) $this->total_amount,
             'remarks' => $this->remarks,
-            'attachment_url' => $this->attachment ? Storage::disk('public')->url($this->attachment) : null,
+            'attachment_url' => resolve(FileStorageService::class)->url($this->attachment),
             'created_by' => $this->created_by,
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'approved_by' => $this->approved_by,

@@ -22,6 +22,8 @@ class EmployeeAdvanceResource extends JsonResource
             'department' => $this->whenLoaded('employee', fn () => $this->employee?->department?->name),
             'designation' => $this->whenLoaded('employee', fn () => $this->employee?->designation?->name),
             'advance_date' => $this->advance_date?->toDateString(),
+            'payment_account_id' => $this->payment_account_id,
+            'payment_account_name' => $this->whenLoaded('paymentAccount', fn () => $this->paymentAccount ? "{$this->paymentAccount->account_number} - {$this->paymentAccount->name}" : null),
             'amount' => (float) $this->amount,
             'installment_count' => $this->installment_count,
             'installment_amount' => (float) $this->installment_amount,

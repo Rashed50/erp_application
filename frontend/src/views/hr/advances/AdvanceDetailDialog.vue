@@ -15,7 +15,8 @@
                     </div>
                 </div>
                 <div class="small text-muted mb-3">
-                    {{ $t('Given on') }} {{ advance.advance_date }} ·
+                    {{ $t('Given on') }} {{ advance.advance_date }}
+                    <span v-if="advance.payment_account_name">{{ $t('from') }} {{ advance.payment_account_name }}</span> ·
                     {{ $t('{count} installments from {month}', { count: advance.installment_count, month: monthLabel(advance.deduction_start_month) }) }}
                     <span v-if="advance.purpose"> · {{ advance.purpose }}</span>
                     <span v-if="advance.remarks"> · {{ advance.remarks }}</span>
@@ -29,6 +30,7 @@
                             <th>{{ $t('Type') }}</th>
                             <th>{{ $t('Salary Month') }}</th>
                             <th class="text-right">{{ $t('Amount') }}</th>
+                            <th>{{ $t('Received In') }}</th>
                             <th>{{ $t('Remarks') }}</th>
                             <th>{{ $t('Entry By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
@@ -36,7 +38,7 @@
                     </thead>
                     <tbody>
                         <tr v-if="!advance.recoveries?.length">
-                            <td colspan="7" class="text-center py-3">{{ $t('Nothing recovered yet.') }}</td>
+                            <td colspan="8" class="text-center py-3">{{ $t('Nothing recovered yet.') }}</td>
                         </tr>
                         <tr v-for="recovery in advance.recoveries" :key="recovery.id">
                             <td>{{ recovery.recovery_date }}</td>
@@ -47,6 +49,7 @@
                             </td>
                             <td>{{ monthLabel(recovery.salary_month) }}</td>
                             <td class="text-right">{{ money(recovery.amount) }}</td>
+                            <td>{{ recovery.payment_account_name || '-' }}</td>
                             <td>{{ recovery.remarks }}</td>
                             <td>{{ recovery.created_by_name }}</td>
                             <td class="text-center">
@@ -67,12 +70,22 @@
                                 class="form-control" v-model.number="cash.amount" required />
                             <div v-if="errors.amount" class="error-msg">{{ errors.amount }}</div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label>{{ $t('Date:') }} <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" v-model="cash.recovery_date" required />
                             <div v-if="errors.recovery_date" class="error-msg">{{ errors.recovery_date }}</div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <label>{{ $t('Received In:') }} <span class="text-danger">*</span></label>
+                            <select class="form-control" v-model="cash.payment_account_id" required>
+                                <option value="" disabled>{{ $t('Select account') }}</option>
+                                <option v-for="account in paymentAccounts" :key="account.id" :value="account.id">
+                                    {{ accountLabel(account) }}
+                                </option>
+                            </select>
+                            <div v-if="errors.payment_account_id" class="error-msg">{{ errors.payment_account_id }}</div>
+                        </div>
+                        <div class="col-md-2">
                             <label>{{ $t('Remarks:') }}</label>
                             <input type="text" class="form-control" v-model="cash.remarks" maxlength="255" />
                         </div>
@@ -101,7 +114,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import { usePermission } from '@/composables/usePermission';
-import { advanceStatusClass, money, monthLabel } from '../helpers';
+import { accountLabel, advanceStatusClass, fetchPaymentAccounts, money, monthLabel } from '../helpers';
 import { t } from '@/i18n';
 
 const props = defineProps({
@@ -117,8 +130,9 @@ const advance = ref(null)
 const errors = reactive({})
 const isSubmitting = ref(false)
 
-const blankCash = () => ({ amount: '', recovery_date: new Date().toISOString().slice(0, 10), remarks: '' })
+const blankCash = () => ({ amount: '', recovery_date: new Date().toISOString().slice(0, 10), payment_account_id: '', remarks: '' })
 const cash = reactive(blankCash())
+const paymentAccounts = ref([])
 
 const stats = computed(() => [
     { label: 'Advance Amount', value: money(advance.value.amount) },
@@ -143,6 +157,9 @@ watch(() => props.modelValue, (open) => {
     for (const key in errors) delete errors[key]
     Object.assign(cash, blankCash())
     load()
+    if (can(['employee-advances.recover']) && !paymentAccounts.value.length) {
+        fetchPaymentAccounts().then((accounts) => { paymentAccounts.value = accounts }).catch(console.error)
+    }
 })
 
 const recordCash = async () => {

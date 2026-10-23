@@ -42,6 +42,8 @@ class StoreEmployeeRequest extends FormRequest
         return [
             'employee_code' => ['nullable', 'string', 'max:50', Rule::unique('employee_info', 'employee_code')->ignore($ignore)],
             'name' => ['required', 'string', 'max:255'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_photo' => ['nullable', 'boolean'],
             'father_name' => ['nullable', 'string', 'max:255'],
             'mother_name' => ['nullable', 'string', 'max:255'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],

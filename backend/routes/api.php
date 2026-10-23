@@ -413,6 +413,11 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middlewareFor('update', 'permission:employee-works.update')
             ->middlewareFor('destroy', 'permission:employee-works.delete');
 
+        // Cash/bank accounts that advances and salaries are paid from (or repaid into).
+        Route::get('/payment-accounts', [ChartOfAccountController::class, 'paymentAccounts'])
+            ->name('payment-accounts')
+            ->middleware('permission:employee-advances.create|employee-advances.update|employee-advances.recover|payroll.pay');
+
         // Advance salary, recovered by installments at salary generation.
         Route::apiResource('employee-advances', EmployeeAdvanceController::class)
             ->middlewareFor(['index', 'show'], 'permission:employee-advances.view')
@@ -441,6 +446,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/salary-histories/pay', [PayrollController::class, 'pay'])
             ->name('salary-histories.pay')
             ->middleware('permission:payroll.pay');
+        Route::post('/salary-histories/{salary_history}/payments', [PayrollController::class, 'storePayment'])
+            ->whereNumber('salary_history')
+            ->name('salary-histories.payments.store')
+            ->middleware('permission:payroll.pay');
+        Route::delete('/salary-payments/{salary_payment}', [PayrollController::class, 'destroyPayment'])
+            ->name('salary-payments.destroy')
+            ->middleware('permission:payroll.pay');
         Route::get('/salary-histories/{salary_history}', [PayrollController::class, 'show'])
             ->whereNumber('salary_history')
             ->name('salary-histories.show')
@@ -456,6 +468,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/salary-summary', [HrReportController::class, 'salarySummary'])
             ->name('reports.salary-summary')
             ->middleware('permission:hr-reports.view');
+        Route::get('/reports/salary-due', [HrReportController::class, 'salaryDue'])
+            ->name('reports.salary-due')
+            ->middleware('permission:hr-reports.view|payroll.pay');
     });
 
     /* ====================== Asset ====================== */

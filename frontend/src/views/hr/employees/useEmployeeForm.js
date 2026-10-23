@@ -31,6 +31,8 @@ export function useEmployeeForm() {
     const formState = useStoreForm({
         employee_code: '',
         name: '',
+        photo: null,
+        remove_photo: 0,
         father_name: '',
         mother_name: '',
         date_of_birth: '',

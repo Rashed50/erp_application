@@ -11,6 +11,7 @@ use App\Models\Supplier;
 use App\Models\SupplierTransaction;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Services\LedgerPostingService;
 use Database\Seeders\ChartOfAccountSeeder;
 use Spatie\Permission\Models\Permission;
 
@@ -124,6 +125,35 @@ describe('profit and loss', function () {
             ->assertJsonPath('data.total_expense', 400)
             ->assertJsonPath('data.profit_or_loss', 600)
             ->assertJsonPath('data.result', 'Profit: 600.00');
+    });
+
+    it('takes product purchases into Inventory as the cost of goods sold, less the closing stock', function () {
+        postIncomeExpense($this->actor, 'income', $this->revenue, $this->cash, 200, '2026-01-10');
+        $inventory = ChartOfAccount::query()->where('account_number', '1040')->first();
+        $payable = ChartOfAccount::query()->where('account_number', '2010')->first();
+        $this->actingAs($this->actor);
+        app(LedgerPostingService::class)->post($inventory, ['date' => '2026-01-12'], [
+            ['account_id' => $inventory->id, 'debit' => 150],
+            ['account_id' => $payable->id, 'credit' => 150],
+        ]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/profit-loss?from_date=2026-01-01&to_date=2026-01-31')
+            ->assertOk()
+            ->assertJsonPath('data.purchases', 150)
+            ->assertJsonPath('data.cost_of_goods_sold', 150)
+            ->assertJsonPath('data.gross_profit', 50)
+            ->assertJsonPath('data.profit_or_loss', 50);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/profit-loss?from_date=2026-01-01&to_date=2026-01-31&opening_stock=30&closing_stock=100')
+            ->assertOk()
+            ->assertJsonPath('data.cost_of_goods_sold', 80)
+            ->assertJsonPath('data.profit_or_loss', 120);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/profit-loss?from_date=2026-02-01&to_date=2026-02-28')
+            ->assertJsonPath('data.cost_of_goods_sold', 0);
     });
 });
 

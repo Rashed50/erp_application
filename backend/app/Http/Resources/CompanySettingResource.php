@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Services\FileStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class CompanySettingResource extends JsonResource
 {
@@ -20,7 +20,7 @@ class CompanySettingResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'address' => $this->address,
-            'logo_url' => $this->logo ? Storage::disk('public')->url($this->logo) : null,
+            'logo_url' => resolve(FileStorageService::class)->url($this->logo),
             'updated_at' => $this->updated_at,
         ];
     }

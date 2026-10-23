@@ -94,11 +94,16 @@ class AccountReportController extends Controller
         $request->validate([
             'from_date' => ['nullable', 'date'],
             'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+            // Counted stock values for the cost of goods sold.
+            'opening_stock' => ['nullable', 'numeric', 'min:0'],
+            'closing_stock' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         return ApiResponse::success($this->reportService->profitAndLoss(
             $request->date('from_date')?->toDateString(),
             $request->date('to_date')?->toDateString(),
+            (float) $request->input('opening_stock', 0),
+            (float) $request->input('closing_stock', 0),
         ));
     }
 

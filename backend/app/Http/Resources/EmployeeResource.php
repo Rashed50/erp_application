@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\EmployeeBankDetail;
 use App\Models\EmployeeDetail;
+use App\Services\FileStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,6 +21,7 @@ class EmployeeResource extends JsonResource
             'id' => $this->id,
             'employee_code' => $this->employee_code,
             'name' => $this->name,
+            'photo_url' => resolve(FileStorageService::class)->url($this->photo),
             'father_name' => $this->father_name,
             'mother_name' => $this->mother_name,
             'date_of_birth' => $this->date_of_birth?->toDateString(),

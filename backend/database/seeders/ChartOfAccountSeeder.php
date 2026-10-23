@@ -25,6 +25,7 @@ class ChartOfAccountSeeder extends Seeder
                 '1050' => 'Advance to Vendors (Control)',
                 '1060' => 'Prepaid Expenses',
                 '1070' => 'Fixed Assets',
+                '1080' => 'Advance to Employees',
             ],
         ],
         [
