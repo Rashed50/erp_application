@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\DB;
 class EmployeeService
 {
     /**
+     * Request keys that drive the photo and must not be filled onto the employee directly.
+     */
+    private const PHOTO_FIELDS = ['photo', 'remove_photo'];
+
+    public function __construct(private readonly FileStorageService $fileStorage) {}
+
+    /**
      * @param  array{search?: ?string, department?: ?string, designation?: ?string, status?: ?string, employment_type?: ?string}  $filters
      */
     public function paginate(int $perPage, array $filters): LengthAwarePaginator
@@ -76,7 +83,8 @@ class EmployeeService
     {
         return DB::transaction(function () use ($data) {
             $employee = Employee::create([
-                ...Arr::except($data, ['detail', 'bank']),
+                ...Arr::except($data, ['detail', 'bank', ...self::PHOTO_FIELDS]),
+                'photo' => isset($data['photo']) ? $this->fileStorage->store($data['photo'], 'employees/photos') : null,
                 'employee_code' => ($data['employee_code'] ?? null) ?: $this->nextEmployeeCode(),
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
@@ -98,7 +106,8 @@ class EmployeeService
     public function update(Employee $employee, array $data): Employee
     {
         return DB::transaction(function () use ($employee, $data) {
-            $employee->fill([...Arr::except($data, ['detail', 'bank']), 'updated_by' => Auth::id()]);
+            $employee->fill([...Arr::except($data, ['detail', 'bank', ...self::PHOTO_FIELDS]), 'updated_by' => Auth::id()]);
+            $employee->photo = $this->fileStorage->replace($employee->photo, $data['photo'] ?? null, (bool) ($data['remove_photo'] ?? false), 'employees/photos');
             $employee->save();
 
             if (array_key_exists('detail', $data)) {

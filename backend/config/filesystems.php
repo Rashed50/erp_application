@@ -70,6 +70,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Upload Disks
+    |--------------------------------------------------------------------------
+    |
+    | Disks used by App\Services\FileStorageService for every uploaded file.
+    | Public files get a URL (logos, photos, attachments); private files are
+    | only downloaded through authorized controllers (employee documents).
+    | Point these at another disk (e.g. "s3") to move where uploads are kept.
+    |
+    */
+
+    'uploads' => [
+        'public_disk' => env('UPLOADS_PUBLIC_DISK', 'public'),
+        'private_disk' => env('UPLOADS_PRIVATE_DISK', 'local'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Symbolic Links
     |--------------------------------------------------------------------------
     |

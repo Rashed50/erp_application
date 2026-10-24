@@ -15,11 +15,6 @@ class EmployeeFile extends Model
      */
     public const DOCUMENT_TYPES = ['NID', 'Passport', 'CV', 'Joining Document', 'Certificate', 'Other'];
 
-    /**
-     * Private disk the documents are stored on.
-     */
-    public const DISK = 'local';
-
     protected $guarded = [];
 
     public function employee(): BelongsTo

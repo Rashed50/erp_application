@@ -10,7 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class FundTransferService
 {
-    public function __construct(private readonly LedgerPostingService $ledgerPostingService) {}
+    public function __construct(
+        private readonly LedgerPostingService $ledgerPostingService,
+        private readonly AttachmentService $attachmentService,
+    ) {}
 
     public function paginate(int $perPage = 15, ?string $search = null, ?int $accountId = null, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
     {
@@ -54,7 +57,7 @@ class FundTransferService
                 'vat' => $vat,
                 'total_amount' => $amount + $bankCharge + $vat,
                 'remarks' => $data['remarks'] ?? null,
-                'attachment' => isset($data['attachment']) ? $data['attachment']->store('fund-transfers', 'public') : null,
+                'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'fund-transfers'),
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);

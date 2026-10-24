@@ -61,7 +61,7 @@ class SaleService
                 'issue_date' => $data['issue_date'],
                 'due_date' => $data['due_date'] ?? null,
                 'notes' => $data['notes'] ?? null,
-                'attachment' => isset($data['attachment']) ? $data['attachment']->store('sales', 'public') : null,
+                'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'sales'),
                 'debit_account_id' => $data['debit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_RECEIVABLE_NUMBER)?->id,
                 'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::SALES_REVENUE_NUMBER)?->id,
                 'total_amount' => $totals['total_amount'],

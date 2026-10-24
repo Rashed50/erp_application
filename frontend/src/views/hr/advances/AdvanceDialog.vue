@@ -69,7 +69,19 @@
                                 <div v-if="errors.purpose" class="error-msg">{{ errors.purpose }}</div>
                             </div>
                         </div>
-                        <div class="col-md-12">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label>{{ $t('Paid From:') }} <span class="text-danger">*</span></label>
+                                <select class="form-control" v-model="form.payment_account_id" required>
+                                    <option value="" disabled>{{ $t('Select account') }}</option>
+                                    <option v-for="account in paymentAccounts" :key="account.id" :value="account.id">
+                                        {{ accountLabel(account) }}
+                                    </option>
+                                </select>
+                                <div v-if="errors.payment_account_id" class="error-msg">{{ errors.payment_account_id }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label>{{ $t('Remarks:') }}</label>
                                 <input type="text" class="form-control" v-model="form.remarks" />
@@ -100,7 +112,7 @@
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import SearchSelect from '@/components/common/SearchSelect.vue';
-import { currentMonth, money, monthLabel } from '../helpers';
+import { accountLabel, currentMonth, fetchPaymentAccounts, money, monthLabel } from '../helpers';
 import { t } from '@/i18n';
 
 const props = defineProps({
@@ -115,6 +127,7 @@ const emit = defineEmits(['update:modelValue', 'saved'])
 const blank = () => ({
     employee_id: '',
     advance_date: new Date().toISOString().slice(0, 10),
+    payment_account_id: '',
     amount: '',
     installment_count: 1,
     installment_amount: '',
@@ -126,6 +139,7 @@ const blank = () => ({
 const form = reactive(blank())
 const errors = reactive({})
 const isSubmitting = ref(false)
+const paymentAccounts = ref([])
 
 const hasRecoveries = computed(() => Number(props.advance?.recovered_amount || 0) > 0)
 
@@ -157,6 +171,9 @@ watch(() => props.modelValue, (open) => {
         for (const key of Object.keys(form)) {
             if (props.advance[key] !== undefined && props.advance[key] !== null) form[key] = props.advance[key]
         }
+    }
+    if (!paymentAccounts.value.length) {
+        fetchPaymentAccounts().then((accounts) => { paymentAccounts.value = accounts }).catch(console.error)
     }
 })
 

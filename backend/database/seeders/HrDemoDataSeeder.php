@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\ChartOfAccount;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Employee;
@@ -236,6 +237,7 @@ class HrDemoDataSeeder extends Seeder
     private function seedPayroll($months): void
     {
         $payrollService = app(PayrollService::class);
+        $cashAccountId = $this->cashInHandAccountId();
 
         foreach ($months as $monthIndex => $month) {
             $payrollService->generate($month->format('Y-m'));
@@ -247,8 +249,21 @@ class HrDemoDataSeeder extends Seeder
                 $payrollService->approve($ids);
             }
             if ($monthIndex <= 1) {
-                $payrollService->markPaid($ids);
+                $payrollService->markPaid($ids, $cashAccountId, $month->endOfMonth()->toDateString());
             }
         }
+    }
+
+    /**
+     * Salaries are paid from Cash in Hand; the predefined chart of accounts
+     * is seeded first if it is not there yet.
+     */
+    private function cashInHandAccountId(): int
+    {
+        if (! ChartOfAccount::query()->where('account_number', '1010')->exists()) {
+            (new ChartOfAccountSeeder)->run();
+        }
+
+        return ChartOfAccount::query()->where('account_number', '1010')->value('id');
     }
 }

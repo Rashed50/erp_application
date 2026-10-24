@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\AccountTransaction;
+use App\Models\ChartOfAccount;
 use App\Models\Employee;
 use App\Models\EmployeeAdvance;
 use App\Models\EmployeeAdvanceRecovery;
@@ -25,6 +27,7 @@ function advanceEmployee(): Employee
 
 beforeEach(function () {
     $this->actor = adminUser();
+    $this->cashAccountId = cashInHandAccountId();
 });
 
 describe('advance entry', function () {
@@ -35,6 +38,7 @@ describe('advance entry', function () {
             ->postJson('/api/hr/employee-advances', [
                 'employee_id' => $employee->id,
                 'advance_date' => '2026-01-10',
+                'payment_account_id' => $this->cashAccountId,
                 'amount' => 10000,
                 'installment_count' => 3,
                 'deduction_start_month' => '2026-01',
@@ -55,6 +59,7 @@ describe('advance entry', function () {
             ->postJson('/api/hr/employee-advances', [
                 'employee_id' => $employee->id,
                 'advance_date' => '2026-02-10',
+                'payment_account_id' => $this->cashAccountId,
                 'amount' => 1000,
                 'installment_count' => 1,
                 'installment_amount' => 1500,
@@ -67,6 +72,7 @@ describe('advance entry', function () {
             ->postJson('/api/hr/employee-advances', [
                 'employee_id' => $employee->id,
                 'advance_date' => '2026-02-10',
+                'payment_account_id' => $this->cashAccountId,
                 'amount' => 1000,
                 'installment_count' => 1,
                 'deduction_start_month' => '2026-01',
@@ -197,7 +203,7 @@ describe('cash repayment', function () {
         $advance = EmployeeAdvance::factory()->for($employee)->create();
 
         $this->actingAs($this->actor, 'sanctum')
-            ->postJson("/api/hr/employee-advances/{$advance->id}/recoveries", ['amount' => 10000, 'recovery_date' => '2026-01-05'])
+            ->postJson("/api/hr/employee-advances/{$advance->id}/recoveries", ['amount' => 10000, 'recovery_date' => '2026-01-05', 'payment_account_id' => $this->cashAccountId])
             ->assertCreated()
             ->assertJsonPath('data.outstanding_amount', 2000);
 
@@ -211,7 +217,7 @@ describe('cash repayment', function () {
         $advance = EmployeeAdvance::factory()->create(['recovered_amount' => 10000]);
 
         $this->actingAs($this->actor, 'sanctum')
-            ->postJson("/api/hr/employee-advances/{$advance->id}/recoveries", ['amount' => 2500, 'recovery_date' => '2026-01-05'])
+            ->postJson("/api/hr/employee-advances/{$advance->id}/recoveries", ['amount' => 2500, 'recovery_date' => '2026-01-05', 'payment_account_id' => $this->cashAccountId])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['amount'], 'data');
     });
@@ -219,7 +225,7 @@ describe('cash repayment', function () {
     it('deletes a cash repayment but not a salary installment', function () {
         $employee = advanceEmployee();
         $advance = EmployeeAdvance::factory()->for($employee)->create();
-        $this->actingAs($this->actor, 'sanctum')->postJson("/api/hr/employee-advances/{$advance->id}/recoveries", ['amount' => 1000, 'recovery_date' => '2026-01-05']);
+        $this->actingAs($this->actor, 'sanctum')->postJson("/api/hr/employee-advances/{$advance->id}/recoveries", ['amount' => 1000, 'recovery_date' => '2026-01-05', 'payment_account_id' => $this->cashAccountId]);
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/payroll/generate', ['month' => '2026-01']);
 
         $cash = EmployeeAdvanceRecovery::where('type', 'Cash')->sole();
@@ -250,7 +256,7 @@ describe('changing an advance', function () {
         $advance = EmployeeAdvance::factory()->for($employee)->create();
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/payroll/generate', ['month' => '2026-01']);
 
-        $payload = ['advance_date' => '2025-12-20', 'amount' => 12000, 'installment_count' => 4, 'installment_amount' => 2000, 'deduction_start_month' => '2026-01'];
+        $payload = ['advance_date' => '2025-12-20', 'payment_account_id' => $this->cashAccountId, 'amount' => 12000, 'installment_count' => 4, 'installment_amount' => 2000, 'deduction_start_month' => '2026-01'];
 
         $this->actingAs($this->actor, 'sanctum')
             ->putJson("/api/hr/employee-advances/{$advance->id}", $payload)
@@ -269,5 +275,78 @@ describe('changing an advance', function () {
 
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/payroll/generate', ['month' => '2026-02']);
         expect((float) SalaryHistory::query()->forMonth('2026-02')->sole()->advance_deduction)->toBe(2000.0);
+    });
+});
+
+describe('accounting', function () {
+    it('posts an advance from the cash account to Advance to Employees and keeps it in sync', function () {
+        $employee = Employee::factory()->create();
+
+        $id = $this->actingAs($this->actor, 'sanctum')
+            ->postJson('/api/hr/employee-advances', [
+                'employee_id' => $employee->id,
+                'advance_date' => '2026-01-10',
+                'payment_account_id' => $this->cashAccountId,
+                'amount' => 9000,
+                'installment_count' => 3,
+                'deduction_start_month' => '2026-01',
+            ])
+            ->assertCreated()
+            ->json('data.id');
+
+        expect(ledgerBalance('1080'))->toBe(9000.0)
+            ->and(ledgerBalance('1010'))->toBe(-9000.0);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->putJson("/api/hr/employee-advances/{$id}", [
+                'advance_date' => '2026-01-10',
+                'payment_account_id' => $this->cashAccountId,
+                'amount' => 6000,
+                'installment_count' => 3,
+                'deduction_start_month' => '2026-01',
+            ])
+            ->assertOk();
+
+        expect(ledgerBalance('1080'))->toBe(6000.0)
+            ->and(AccountTransaction::count())->toBe(1);
+
+        $this->actingAs($this->actor, 'sanctum')->deleteJson("/api/hr/employee-advances/{$id}")->assertOk();
+
+        expect(ledgerBalance('1080'))->toBe(0.0)
+            ->and(AccountTransaction::count())->toBe(0);
+    });
+
+    it('posts a cash repayment into the cash account and reverses it when deleted', function () {
+        $advance = EmployeeAdvance::factory()->create();
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->postJson("/api/hr/employee-advances/{$advance->id}/recoveries", ['amount' => 2500, 'recovery_date' => '2026-01-05', 'payment_account_id' => $this->cashAccountId])
+            ->assertCreated();
+
+        expect(ledgerBalance('1010'))->toBe(2500.0)
+            ->and(ledgerBalance('1080'))->toBe(-2500.0);
+
+        $recovery = EmployeeAdvanceRecovery::sole();
+        $this->actingAs($this->actor, 'sanctum')->deleteJson("/api/hr/advance-recoveries/{$recovery->id}")->assertOk();
+
+        expect(ledgerBalance('1010'))->toBe(0.0)
+            ->and(AccountTransaction::count())->toBe(0);
+    });
+
+    it('requires an open asset account to pay the advance from', function () {
+        $employee = Employee::factory()->create();
+        $expenseAccountId = ChartOfAccount::query()->where('account_number', '5020')->value('id');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->postJson('/api/hr/employee-advances', [
+                'employee_id' => $employee->id,
+                'advance_date' => '2026-01-10',
+                'payment_account_id' => $expenseAccountId,
+                'amount' => 1000,
+                'installment_count' => 1,
+                'deduction_start_month' => '2026-01',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['payment_account_id'], 'data');
     });
 });

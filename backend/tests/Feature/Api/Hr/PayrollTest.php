@@ -1,11 +1,14 @@
 <?php
 
+use App\Models\AccountTransaction;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Employee;
+use App\Models\EmployeeAdvance;
 use App\Models\EmployeeWork;
 use App\Models\SalaryDetail;
 use App\Models\SalaryHistory;
+use App\Models\SalaryPayment;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 
@@ -163,11 +166,12 @@ describe('status workflow', function () {
         payrollEmployee();
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/payroll/generate', ['month' => '2026-01']);
         $this->salary = SalaryHistory::sole();
+        $this->cashAccountId = cashInHandAccountId();
     });
 
     it('moves Generated -> Approved -> Paid and records who did it', function () {
         $this->actingAs($this->actor, 'sanctum')
-            ->postJson('/api/hr/salary-histories/pay', ['ids' => [$this->salary->id]])
+            ->postJson('/api/hr/salary-histories/pay', ['ids' => [$this->salary->id], 'payment_account_id' => $this->cashAccountId, 'payment_date' => '2026-02-01'])
             ->assertJsonPath('data.updated', 0);
 
         $this->actingAs($this->actor, 'sanctum')
@@ -175,13 +179,117 @@ describe('status workflow', function () {
             ->assertJsonPath('data.updated', 1);
 
         $this->actingAs($this->actor, 'sanctum')
-            ->postJson('/api/hr/salary-histories/pay', ['ids' => [$this->salary->id]])
+            ->postJson('/api/hr/salary-histories/pay', ['ids' => [$this->salary->id], 'payment_account_id' => $this->cashAccountId, 'payment_date' => '2026-02-01'])
             ->assertJsonPath('data.updated', 1);
 
         $this->salary->refresh();
         expect($this->salary->status)->toBe('Paid')
             ->and($this->salary->approved_by)->toBe($this->actor->id)
             ->and($this->salary->paid_by)->toBe($this->actor->id);
+    });
+
+    it('books an approved salary as Salary Payable at the month end and clears it when paid', function () {
+        EmployeeAdvance::factory()->for($this->salary->employee)->create();
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/payroll/generate', ['month' => '2026-01']);
+        $this->salary->refresh();
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/salary-histories/approve', ['ids' => [$this->salary->id]]);
+
+        $accrual = AccountTransaction::query()->whereMorphedTo('source', $this->salary)->sole();
+        expect($accrual->date->toDateString())->toBe('2026-01-31')
+            ->and((float) $accrual->total_amount)->toBe(44000.0)
+            ->and(ledgerBalance('5020'))->toBe(44000.0)
+            ->and(ledgerBalance('1080'))->toBe(-4000.0)
+            ->and(ledgerBalance('2030'))->toBe(-40000.0);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->postJson('/api/hr/salary-histories/pay', ['ids' => [$this->salary->id], 'payment_account_id' => $this->cashAccountId, 'payment_date' => '2026-02-01'])
+            ->assertJsonPath('data.updated', 1);
+
+        $payment = SalaryPayment::sole();
+        expect((float) $payment->amount)->toBe(40000.0)
+            ->and($payment->payment_account_id)->toBe($this->cashAccountId)
+            ->and(ledgerBalance('2030'))->toBe(0.0)
+            ->and(ledgerBalance('1010'))->toBe(-40000.0)
+            ->and(ledgerBalance('5020'))->toBe(44000.0)
+            ->and($this->salary->fresh()->status)->toBe('Paid');
+    });
+
+    it('pays a salary in parts, refuses more than is due and reopens it when a payment is deleted', function () {
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/salary-histories/approve', ['ids' => [$this->salary->id]]);
+        $pay = fn (float $amount) => $this->actingAs($this->actor, 'sanctum')
+            ->postJson("/api/hr/salary-histories/{$this->salary->id}/payments", ['amount' => $amount, 'payment_account_id' => $this->cashAccountId, 'payment_date' => '2026-02-05']);
+
+        $pay(30000)->assertCreated()
+            ->assertJsonPath('data.status', 'Partially Paid')
+            ->assertJsonPath('data.paid_amount', 30000)
+            ->assertJsonPath('data.due_amount', 14000)
+            ->assertJsonCount(1, 'data.payments');
+
+        $pay(15000)->assertUnprocessable()->assertJsonValidationErrors(['amount'], 'data');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->postJson("/api/hr/salary-histories/{$this->salary->id}/cancel", ['reason' => 'Oops'])
+            ->assertUnprocessable();
+
+        $pay(14000)->assertCreated()->assertJsonPath('data.status', 'Paid')->assertJsonPath('data.due_amount', 0);
+        expect(ledgerBalance('2030'))->toBe(0.0)->and(ledgerBalance('1010'))->toBe(-44000.0);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->deleteJson('/api/hr/salary-payments/'.SalaryPayment::latest('id')->first()->id)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'Partially Paid')
+            ->assertJsonPath('data.due_amount', 14000);
+
+        expect(ledgerBalance('2030'))->toBe(-14000.0)->and($this->salary->fresh()->paid_by)->toBeNull();
+    });
+
+    it('reverses the booked salary when an approved salary is cancelled', function () {
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/salary-histories/approve', ['ids' => [$this->salary->id]]);
+        expect(ledgerBalance('5020'))->toBe(44000.0);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->postJson("/api/hr/salary-histories/{$this->salary->id}/cancel", ['reason' => 'Wrong overtime'])
+            ->assertOk();
+
+        expect(ledgerBalance('5020'))->toBe(0.0)->and(AccountTransaction::count())->toBe(0);
+    });
+
+    it('filters paid and unpaid salaries and totals what is paid and due', function () {
+        $other = payrollEmployee();
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/payroll/generate', ['month' => '2026-01']);
+        $otherSalary = SalaryHistory::query()->where('employee_id', $other->id)->sole();
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/salary-histories/approve', ['ids' => [$this->salary->id, $otherSalary->id]]);
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/salary-histories/pay', ['ids' => [$this->salary->id], 'payment_account_id' => $this->cashAccountId, 'payment_date' => '2026-02-01']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/hr/salary-histories?month=2026-01')
+            ->assertJsonPath('data.totals.paid_amount', 44000)
+            ->assertJsonPath('data.totals.due_amount', 44000);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/hr/salary-histories?month=2026-01&payment_status=unpaid')
+            ->assertJsonCount(1, 'data.salaries')
+            ->assertJsonPath('data.salaries.0.id', $otherSalary->id);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/hr/salary-histories?month=2026-01&payment_status=paid')
+            ->assertJsonCount(1, 'data.salaries')
+            ->assertJsonPath('data.salaries.0.id', $this->salary->id);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/hr/reports/salary-due')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.rows')
+            ->assertJsonPath('data.rows.0.id', $otherSalary->id)
+            ->assertJsonPath('data.employees.0.due_amount', 44000)
+            ->assertJsonPath('data.totals.due_amount', 44000);
+    });
+
+    it('requires a cash/bank account and date to pay salaries', function () {
+        $this->actingAs($this->actor, 'sanctum')
+            ->postJson('/api/hr/salary-histories/pay', ['ids' => [$this->salary->id]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['payment_account_id', 'payment_date'], 'data');
     });
 
     it('lets an approved salary be cancelled and generated again, keeping the cancelled record', function () {
@@ -202,7 +310,7 @@ describe('status workflow', function () {
 
     it('refuses to cancel a paid salary', function () {
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/salary-histories/approve', ['ids' => [$this->salary->id]]);
-        $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/salary-histories/pay', ['ids' => [$this->salary->id]]);
+        $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/salary-histories/pay', ['ids' => [$this->salary->id], 'payment_account_id' => $this->cashAccountId, 'payment_date' => '2026-02-01']);
 
         $this->actingAs($this->actor, 'sanctum')
             ->postJson("/api/hr/salary-histories/{$this->salary->id}/cancel", ['reason' => 'Oops'])

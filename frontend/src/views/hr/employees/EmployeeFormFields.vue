@@ -2,6 +2,23 @@
     <!-- Basic Information -->
     <h6 class="section-title">{{ $t('Basic Information') }}</h6>
     <div class="row">
+        <div class="col-md-12">
+            <div class="form-group mb-3 d-flex align-items-center gap-3">
+                <img :src="photoPreview || userPlaceholder" :data-placeholder="userPlaceholder" alt=""
+                    class="employee-photo" />
+                <div>
+                    <label for="photo">{{ $t('Photo:') }}</label>
+                    <input type="file" id="photo" class="form-control" accept=".jpg,.jpeg,.png,.webp"
+                        @change="choosePhoto" />
+                    <small class="text-muted d-block">{{ $t('JPG, PNG or WEBP, max 2MB.') }}</small>
+                    <v-btn v-if="photoPreview" size="small" variant="text" color="error" class="text-none px-0"
+                        @click="removePhoto">
+                        {{ $t('Remove photo') }}
+                    </v-btn>
+                    <div v-if="errors.photo" class="error-msg">{{ errors.photo }}</div>
+                </div>
+            </div>
+        </div>
         <div class="col-md-4">
             <div class="form-group mb-3">
                 <label for="employee_code">{{ $t('Employee ID:') }}</label>
@@ -267,6 +284,7 @@
 <script setup>
 import { t } from '@/i18n';
 import { usePermission } from '@/composables/usePermission';
+import { userPlaceholder } from '@/helpers/imagePlaceholder';
 import LocationSelect from '@/components/common/LocationSelect.vue';
 import QuickAddDialog from '@/components/common/QuickAddDialog.vue';
 import SearchSelect from '@/components/common/SearchSelect.vue';
@@ -277,6 +295,31 @@ const props = defineProps({
     form: { type: Object, required: true },
     errors: { type: Object, required: true },
     options: { type: Object, required: true },
+    // The saved photo, on the edit page.
+    currentPhotoUrl: { type: String, default: '' },
+})
+
+// `form.photo` holds a newly chosen File; `form.remove_photo` (0/1) asks the backend to delete the saved one.
+const chosenPhotoUrl = ref('')
+const photoPreview = computed(() => chosenPhotoUrl.value || (props.form.remove_photo ? '' : props.currentPhotoUrl))
+
+const choosePhoto = (event) => {
+    const file = event.target.files[0] ?? null
+    if (chosenPhotoUrl.value) URL.revokeObjectURL(chosenPhotoUrl.value)
+    props.form.photo = file
+    props.form.remove_photo = 0
+    chosenPhotoUrl.value = file ? URL.createObjectURL(file) : ''
+}
+
+const removePhoto = () => {
+    if (chosenPhotoUrl.value) URL.revokeObjectURL(chosenPhotoUrl.value)
+    chosenPhotoUrl.value = ''
+    props.form.photo = null
+    props.form.remove_photo = 1
+}
+
+onBeforeUnmount(() => {
+    if (chosenPhotoUrl.value) URL.revokeObjectURL(chosenPhotoUrl.value)
 })
 
 const MARITAL_STATUSES = ['Single', 'Married', 'Divorced', 'Widowed']
@@ -329,6 +372,15 @@ watch(
 </script>
 
 <style scoped>
+.employee-photo {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1px solid #dee2e6;
+    flex-shrink: 0;
+}
+
 .section-title {
     font-weight: 700;
     color: #0d47a1;

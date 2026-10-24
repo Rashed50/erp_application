@@ -34,4 +34,21 @@ class HrReportController extends Controller
             'rows' => $this->reportService->salarySummary($request->integer('year'), $request->string('department')->value() ?: null),
         ]);
     }
+
+    /**
+     * Approved salaries not yet fully paid, up to a month when one is given.
+     */
+    public function salaryDue(Request $request): JsonResponse
+    {
+        $request->validate([
+            'month' => ['nullable', 'date_format:Y-m'],
+            'employee_id' => ['nullable', 'integer'],
+        ]);
+
+        return ApiResponse::success($this->reportService->salaryDue(
+            $request->string('month')->value() ?: null,
+            $request->string('department')->value() ?: null,
+            $request->integer('employee_id') ?: null,
+        ));
+    }
 }

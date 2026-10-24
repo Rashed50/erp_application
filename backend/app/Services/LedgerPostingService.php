@@ -26,13 +26,19 @@ class LedgerPostingService
 
     public const INVENTORY_NUMBER = '1040';
 
+    public const EMPLOYEE_ADVANCE_NUMBER = '1080';
+
     public const ACCOUNTS_PAYABLE_NUMBER = '2010';
+
+    public const SALARY_PAYABLE_NUMBER = '2030';
 
     public const CAPITAL_NUMBER = '3010';
 
     public const SALES_REVENUE_NUMBER = '4010';
 
     public const PURCHASE_NUMBER = '5010';
+
+    public const SALARY_EXPENSE_NUMBER = '5020';
 
     /**
      * The payroll module debits bank charges (and fund transfer VAT) to its

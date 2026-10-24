@@ -7,9 +7,9 @@ use App\Http\Requests\Auth\UpdatePasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
+use App\Services\FileStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * The signed-in user's own profile and password.
@@ -21,22 +21,14 @@ class ProfileController extends Controller
         return ApiResponse::success(new UserResource($request->user()->load('roles')));
     }
 
-    public function update(UpdateProfileRequest $request): JsonResponse
+    public function update(UpdateProfileRequest $request, FileStorageService $fileStorage): JsonResponse
     {
         $user = $request->user();
-        $previousImage = $user->image;
 
         $user->fill($request->safe()->only(['name', 'email']));
-
-        if ($request->hasFile('image')) {
-            $user->image = $request->file('image')->store('users', 'public');
-        }
+        $user->image = $fileStorage->replace($user->image, $request->file('image'), false, 'users');
 
         $user->save();
-
-        if ($previousImage && $previousImage !== $user->image) {
-            Storage::disk('public')->delete($previousImage);
-        }
 
         return ApiResponse::success(new UserResource($user->load('roles')), __('Profile updated successfully.'));
     }

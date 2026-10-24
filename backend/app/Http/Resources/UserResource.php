@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Services\FileStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class UserResource extends JsonResource
 {
@@ -19,7 +19,7 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'image_url' => $this->image ? Storage::disk('public')->url($this->image) : null,
+            'image_url' => resolve(FileStorageService::class)->url($this->image),
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')),
             'permissions' => $this->whenLoaded('roles', fn () => $this->getAllPermissions()->pluck('name')),
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),

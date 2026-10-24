@@ -38,7 +38,7 @@ class IncomeExpenseTransactionService
         return DB::transaction(function () use ($data) {
             $transaction = IncomeExpenseTransaction::create([
                 ...collect($data)->except(AttachmentService::FIELDS)->all(),
-                'attachment' => isset($data['attachment']) ? $data['attachment']->store('income-expenses', 'public') : null,
+                'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'income-expenses'),
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);

@@ -17,6 +17,7 @@ class SupplierPaymentService
     public function __construct(
         private readonly SupplierTransactionService $supplierTransactionService,
         private readonly LedgerPostingService $ledgerPostingService,
+        private readonly AttachmentService $attachmentService,
     ) {}
 
     public function paginate(
@@ -84,7 +85,7 @@ class SupplierPaymentService
                 'bank_charge' => $bankCharge,
                 'total_amount' => $billAmount + $bankCharge,
                 'remarks' => $data['remarks'] ?? null,
-                'attachment' => isset($data['attachment']) ? $data['attachment']->store('supplier-payments', 'public') : null,
+                'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'supplier-payments'),
                 'branch_office_id' => $supplier->branch_office_id,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),

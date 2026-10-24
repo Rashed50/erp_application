@@ -163,7 +163,7 @@ it('blocks deleting an employee with salary history but soft deletes one without
 });
 
 it('uploads, downloads and deletes documents on the private disk', function () {
-    Storage::fake(EmployeeFile::DISK);
+    Storage::fake('local');
     $employee = Employee::factory()->create();
 
     $fileId = $this->actingAs($this->actor, 'sanctum')
@@ -177,7 +177,7 @@ it('uploads, downloads and deletes documents on the private disk', function () {
         ->json('data.id');
 
     $file = EmployeeFile::find($fileId);
-    Storage::disk(EmployeeFile::DISK)->assertExists($file->file_path);
+    Storage::disk('local')->assertExists($file->file_path);
 
     $this->actingAs($this->actor, 'sanctum')
         ->get("/api/hr/employee-files/{$fileId}/download")
@@ -185,11 +185,11 @@ it('uploads, downloads and deletes documents on the private disk', function () {
         ->assertDownload('nid.pdf');
 
     $this->actingAs($this->actor, 'sanctum')->deleteJson("/api/hr/employee-files/{$fileId}")->assertOk();
-    Storage::disk(EmployeeFile::DISK)->assertMissing($file->file_path);
+    Storage::disk('local')->assertMissing($file->file_path);
 });
 
 it('rejects a document of a disallowed type', function () {
-    Storage::fake(EmployeeFile::DISK);
+    Storage::fake('local');
     $employee = Employee::factory()->create();
 
     $this->actingAs($this->actor, 'sanctum')
@@ -216,4 +216,40 @@ it('shows salary details only to users who may edit them', function () {
         ->getJson("/api/hr/employees/{$salary->employee_id}")
         ->assertOk()
         ->assertJsonCount(1, 'data.salary_details');
+});
+
+it('uploads an employee photo, replaces it and removes it', function () {
+    Storage::fake('public');
+
+    $response = $this->actingAs($this->actor, 'sanctum')
+        ->post('/api/hr/employees', employeePayload(['photo' => UploadedFile::fake()->image('rahim.jpg')]), ['Accept' => 'application/json'])
+        ->assertStatus(201);
+
+    $employee = Employee::sole();
+    $firstPhoto = $employee->photo;
+    Storage::disk('public')->assertExists($firstPhoto);
+    $response->assertJsonPath('data.photo_url', Storage::disk('public')->url($firstPhoto));
+
+    $this->actingAs($this->actor, 'sanctum')
+        ->post("/api/hr/employees/{$employee->id}", ['_method' => 'PUT', 'photo' => UploadedFile::fake()->image('new.png')], ['Accept' => 'application/json'])
+        ->assertOk();
+
+    Storage::disk('public')->assertMissing($firstPhoto);
+    Storage::disk('public')->assertExists($employee->fresh()->photo);
+
+    $this->actingAs($this->actor, 'sanctum')
+        ->putJson("/api/hr/employees/{$employee->id}", ['remove_photo' => true])
+        ->assertOk()
+        ->assertJsonPath('data.photo_url', null);
+
+    expect($employee->fresh()->photo)->toBeNull();
+});
+
+it('rejects a photo that is not an image', function () {
+    Storage::fake('public');
+
+    $this->actingAs($this->actor, 'sanctum')
+        ->post('/api/hr/employees', employeePayload(['photo' => UploadedFile::fake()->create('cv.pdf', 100, 'application/pdf')]), ['Accept' => 'application/json'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['photo'], 'data');
 });

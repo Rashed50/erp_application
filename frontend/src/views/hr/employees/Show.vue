@@ -8,9 +8,14 @@
 
             <v-card v-else style="padding: 10px; margin-top: 15px;">
                 <div class="d-flex justify-content-between align-items-center px-2 pb-2">
-                    <div>
-                        <span :class="employeeStatusClass(employee.status)">{{ $t(employee.status) }}</span>
-                        <span class="ms-2 text-muted">{{ employee.designation }} · {{ employee.department }}</span>
+                    <div class="d-flex align-items-center gap-3">
+                        <img :src="employee.photo_url || userPlaceholder" :data-placeholder="userPlaceholder"
+                            :alt="employee.name" class="employee-photo" />
+                        <div>
+                            <div class="fw-bold">{{ employee.name }}</div>
+                            <span :class="employeeStatusClass(employee.status)">{{ $t(employee.status) }}</span>
+                            <span class="ms-2 text-muted">{{ employee.designation }} · {{ employee.department }}</span>
+                        </div>
                     </div>
                     <router-link v-if="can(['employees.update'])"
                         :to="{ name: 'admin_hr_employee_edit', params: { id: employee.id } }" class="primary-button">
@@ -287,6 +292,7 @@ import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePermission } from '@/composables/usePermission';
 import { useRoute } from 'vue-router';
 import { employeeStatusClass, money, monthLabel, salaryStatusClass } from '../helpers';
+import { userPlaceholder } from '@/helpers/imagePlaceholder';
 import SalaryDetailDialog from './SalaryDetailDialog.vue';
 import { t } from '@/i18n';
 
@@ -471,6 +477,14 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.employee-photo {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1px solid #dee2e6;
+}
+
 .info-table th {
     width: 220px;
     background: #f8f9fa;

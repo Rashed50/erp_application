@@ -10,7 +10,7 @@
                         <SearchSelect v-model="reportKey" :items="reportItems" item-value="key" :clearable="false" />
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('month')">
-                        <label>{{ $t('Month:') }}</label>
+                        <label>{{ $t(report.monthLabel || 'Month:') }}</label>
                         <input type="month" class="form-control" v-model="filters.month" />
                     </div>
                     <div class="col-md-2" v-if="report.filters.includes('year')">
@@ -100,6 +100,7 @@ import axios from 'axios';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePrintable } from '@/composables/usePrintable';
+import { useRoute } from 'vue-router';
 import { SALARY_STATUSES, currentMonth, money, monthLabel } from '../helpers';
 import { t } from '@/i18n';
 
@@ -166,7 +167,9 @@ const reports = {
             moneyColumn('gross_salary', 'Gross'),
             moneyColumn('total_deduction', 'Deduction'),
             moneyColumn('net_salary', 'Net'),
-            { key: 'status', label: 'Status' },
+            moneyColumn('paid_amount', 'Paid'),
+            moneyColumn('due_amount', 'Due'),
+            { key: 'status', label: 'Status', format: (s) => t(s) },
         ],
     },
     employeeSalary: {
@@ -186,7 +189,42 @@ const reports = {
             moneyColumn('gross_salary', 'Gross'),
             moneyColumn('total_deduction', 'Deduction'),
             moneyColumn('net_salary', 'Net'),
-            { key: 'status', label: 'Status' },
+            moneyColumn('paid_amount', 'Paid'),
+            moneyColumn('due_amount', 'Due'),
+            { key: 'status', label: 'Status', format: (s) => t(s) },
+        ],
+    },
+    // Approved salaries not fully paid, for months up to the one chosen.
+    salaryDue: {
+        title: 'Due Salary',
+        endpoint: '/api/hr/reports/salary-due',
+        filters: ['month', 'employee', 'department'],
+        monthLabel: 'Up to Month:',
+        rows: (data) => data.rows ?? [],
+        columns: [
+            { key: 'index', label: '#' },
+            { key: 'salary_month', label: 'Month', format: monthLabel },
+            { key: 'employee_code', label: 'ID' },
+            { key: 'employee_name', label: 'Name' },
+            { key: 'department', label: 'Department' },
+            moneyColumn('net_salary', 'Net'),
+            moneyColumn('paid_amount', 'Paid'),
+            moneyColumn('due_amount', 'Due'),
+            { key: 'status', label: 'Status', format: (s) => t(s) },
+        ],
+    },
+    salaryDueByEmployee: {
+        title: 'Due Salary by Employee',
+        endpoint: '/api/hr/reports/salary-due',
+        filters: ['month', 'department'],
+        monthLabel: 'Up to Month:',
+        rows: (data) => data.employees ?? [],
+        columns: [
+            { key: 'index', label: '#' },
+            { key: 'employee_code', label: 'ID' },
+            { key: 'employee_name', label: 'Name' },
+            { key: 'months', label: 'Months Due', align: 'right', sum: true },
+            moneyColumn('due_amount', 'Due'),
         ],
     },
     department: {
@@ -223,7 +261,8 @@ const reports = {
     },
 }
 
-const reportKey = ref('payroll')
+const route = useRoute()
+const reportKey = ref(reports[route.query.report] ? route.query.report : 'payroll')
 const report = computed(() => reports[reportKey.value])
 
 const filters = reactive({

@@ -4,12 +4,10 @@ namespace App\Services;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
- * Keeps a model's `attachment` column (a path on the public disk) in sync with
- * an uploaded invoice/voucher file.
+ * Keeps a model's `attachment` column (a path on the public upload disk) in
+ * sync with an uploaded invoice/voucher file.
  */
 class AttachmentService
 {
@@ -17,6 +15,16 @@ class AttachmentService
      * Request keys that drive the attachment and must not be filled onto the model directly.
      */
     public const FIELDS = ['attachment', 'remove_attachment'];
+
+    public function __construct(private readonly FileStorageService $fileStorage) {}
+
+    /**
+     * Store the attachment of a new record, if one was uploaded.
+     */
+    public function store(?UploadedFile $attachment, string $directory): ?string
+    {
+        return $attachment ? $this->fileStorage->store($attachment, $directory) : null;
+    }
 
     /**
      * Store a newly uploaded file, or clear the attachment when `remove_attachment`
@@ -27,16 +35,11 @@ class AttachmentService
      */
     public function sync(Model $model, array $data, string $directory): void
     {
-        $previousAttachment = $model->attachment;
-
-        if (isset($data['attachment'])) {
-            $model->attachment = $data['attachment']->store($directory, 'public');
-        } elseif ($data['remove_attachment'] ?? false) {
-            $model->attachment = null;
-        }
-
-        if ($previousAttachment && $previousAttachment !== $model->attachment) {
-            DB::afterCommit(fn () => Storage::disk('public')->delete($previousAttachment));
-        }
+        $model->attachment = $this->fileStorage->replace(
+            $model->attachment,
+            $data['attachment'] ?? null,
+            $data['remove_attachment'] ?? false,
+            $directory,
+        );
     }
 }

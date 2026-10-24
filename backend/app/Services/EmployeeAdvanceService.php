@@ -25,9 +25,16 @@ use Illuminate\Validation\ValidationException;
  * written when a salary is generated, rewritten when it is regenerated and
  * removed when it is cancelled, so an advance's recovered amount always
  * matches the live salaries.
+ *
+ * The money is also kept in the general ledger: giving an advance debits
+ * "Advance to Employees" and credits the cash/bank account it was paid from,
+ * and a cash repayment does the reverse. Salary installments are posted when
+ * the salary is paid (see PayrollService).
  */
 class EmployeeAdvanceService
 {
+    public function __construct(private readonly LedgerPostingService $ledgerPostingService) {}
+
     /**
      * @param  array{employee_id?: ?int, status?: ?string, search?: ?string, from_date?: ?string, to_date?: ?string}  $filters
      */
@@ -65,17 +72,21 @@ class EmployeeAdvanceService
      */
     public function create(array $data): EmployeeAdvance
     {
-        $advance = EmployeeAdvance::create([
-            ...$data,
-            'installment_amount' => $data['installment_amount'] ?? $this->defaultInstallment($data['amount'], $data['installment_count']),
-            'deduction_start_month' => $data['deduction_start_month'].'-01',
-            'recovered_amount' => 0,
-            'status' => EmployeeAdvance::STATUS_RUNNING,
-            'created_by' => Auth::id(),
-            'updated_by' => Auth::id(),
-        ]);
+        return DB::transaction(function () use ($data) {
+            $advance = EmployeeAdvance::create([
+                ...$data,
+                'installment_amount' => $data['installment_amount'] ?? $this->defaultInstallment($data['amount'], $data['installment_count']),
+                'deduction_start_month' => $data['deduction_start_month'].'-01',
+                'recovered_amount' => 0,
+                'status' => EmployeeAdvance::STATUS_RUNNING,
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
+            ]);
 
-        return $this->withDetail($advance);
+            $this->ledgerPostingService->post($advance, $this->advanceJournalHeader($advance), $this->advanceJournalLines($advance));
+
+            return $this->withDetail($advance);
+        });
     }
 
     /**
@@ -113,6 +124,13 @@ class EmployeeAdvanceService
 
             $this->refreshRecovery($advance);
 
+            // Rewrite the journal entry in place so it always matches the advance.
+            if ($entry = $this->ledgerPostingService->entryFor($advance)) {
+                $this->ledgerPostingService->repost($entry, $this->advanceJournalHeader($advance), $this->advanceJournalLines($advance));
+            } else {
+                $this->ledgerPostingService->post($advance, $this->advanceJournalHeader($advance), $this->advanceJournalLines($advance));
+            }
+
             return $this->withDetail($advance);
         });
     }
@@ -125,13 +143,16 @@ class EmployeeAdvanceService
             ]);
         }
 
-        $advance->delete();
+        DB::transaction(function () use ($advance) {
+            $this->ledgerPostingService->reverse($advance);
+            $advance->delete();
+        });
     }
 
     /**
-     * Record cash paid back by the employee.
+     * Record cash paid back by the employee into a cash/bank account.
      *
-     * @param  array{amount: float|int|string, recovery_date: string, remarks?: ?string}  $data
+     * @param  array{amount: float|int|string, recovery_date: string, payment_account_id: int, remarks?: ?string}  $data
      */
     public function recordCashRecovery(EmployeeAdvance $advance, array $data): EmployeeAdvance
     {
@@ -144,8 +165,9 @@ class EmployeeAdvanceService
                 ]);
             }
 
-            $advance->recoveries()->create([
+            $recovery = $advance->recoveries()->create([
                 'employee_id' => $advance->employee_id,
+                'payment_account_id' => $data['payment_account_id'],
                 'type' => EmployeeAdvanceRecovery::TYPE_CASH,
                 'recovery_date' => $data['recovery_date'],
                 'amount' => $data['amount'],
@@ -153,6 +175,7 @@ class EmployeeAdvanceService
                 'created_by' => Auth::id(),
             ]);
 
+            $this->postCashRecovery($recovery);
             $this->refreshRecovery($advance);
 
             return $this->withDetail($advance);
@@ -173,6 +196,7 @@ class EmployeeAdvanceService
 
         return DB::transaction(function () use ($recovery) {
             $advance = $recovery->advance;
+            $this->ledgerPostingService->reverse($recovery);
             $recovery->delete();
             $this->refreshRecovery($advance);
 
@@ -315,6 +339,57 @@ class EmployeeAdvanceService
     }
 
     /**
+     * @return array{date: string, general_particular: string}
+     */
+    private function advanceJournalHeader(EmployeeAdvance $advance): array
+    {
+        return [
+            'date' => $advance->advance_date->toDateString(),
+            'general_particular' => 'Advance Salary - '.$advance->employee->name,
+        ];
+    }
+
+    /**
+     * The advance leaves the cash/bank account and becomes money the employee owes.
+     *
+     * @return array<int, array{account_id: int, debit?: float, credit?: float, particular: string}>
+     */
+    private function advanceJournalLines(EmployeeAdvance $advance): array
+    {
+        $amount = (float) $advance->amount;
+
+        return [
+            ['account_id' => $this->employeeAdvanceAccountId(), 'debit' => $amount, 'particular' => 'advance salary'],
+            ['account_id' => $advance->payment_account_id, 'credit' => $amount, 'particular' => 'advance salary'],
+        ];
+    }
+
+    /**
+     * Cash paid back comes into the cash/bank account and clears what the employee owes.
+     */
+    private function postCashRecovery(EmployeeAdvanceRecovery $recovery): void
+    {
+        $amount = (float) $recovery->amount;
+
+        $this->ledgerPostingService->post($recovery, [
+            'date' => $recovery->recovery_date->toDateString(),
+            'general_particular' => 'Advance Salary Repayment - '.$recovery->advance->employee->name,
+        ], [
+            ['account_id' => $recovery->payment_account_id, 'debit' => $amount, 'particular' => 'advance salary repayment'],
+            ['account_id' => $this->employeeAdvanceAccountId(), 'credit' => $amount, 'particular' => 'advance salary repayment'],
+        ]);
+    }
+
+    /**
+     * The request validates the account exists, so a missing one here is a bug.
+     */
+    private function employeeAdvanceAccountId(): int
+    {
+        return $this->ledgerPostingService->predefinedAccount(LedgerPostingService::EMPLOYEE_ADVANCE_NUMBER)?->id
+            ?? throw new \RuntimeException('Predefined account '.LedgerPostingService::EMPLOYEE_ADVANCE_NUMBER.' is missing.');
+    }
+
+    /**
      * Load what the detail view shows: the employee and every recovery.
      */
     public function withDetail(EmployeeAdvance $advance): EmployeeAdvance
@@ -322,8 +397,10 @@ class EmployeeAdvanceService
         return $advance->load([
             'employee.department',
             'employee.designation',
+            'paymentAccount:id,account_number,name',
             'recoveries' => fn ($query) => $query->orderBy('recovery_date')->orderBy('id'),
             'recoveries.creator:id,name',
+            'recoveries.paymentAccount:id,account_number,name',
         ]);
     }
 
