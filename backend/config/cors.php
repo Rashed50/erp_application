@@ -26,6 +26,7 @@ return [
         'http://localhost:8088',
         'http://127.0.0.1:8088',
         'http://localhost:8088',
+        'https://erp.snebd.com/',
     ],
 
     'allowed_origins_patterns' => [],
