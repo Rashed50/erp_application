@@ -351,6 +351,8 @@
             <v-list-group value="payroll" v-if="canAny([
                 'employee-works.view', 'employee-works.create', 'employee-works.update',
                 'employee-advances.view', 'payroll.view', 'payroll.generate', 'hr-reports.view',
+                'attendance.view', 'attendance.create', 'attendance.update', 'attendance.delete',
+                'attendance.process', 'attendance.check_in', 'attendance.check_out'
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -406,7 +408,7 @@
                         </span>
                     </router-link>
                     <router-link :to="{ name: 'admin_hr_attendance' }" class="custom_router_sub_link"
-                        v-if="can(['hr-attendance.view'])">
+                        v-if="can(['attendance.view'])">
                         <span class="ml-5">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
                             {{ $t('nav.attendance') }}
@@ -418,7 +420,7 @@
             <!-- Quotation Start -->
 
             <v-list-group value="quotation" v-if="canAny([
-                'quotation.view',
+                'quotation.view', 'quotation.create', 'quotation.update','quotation.delete'
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -435,9 +437,16 @@
                         v-if="can(['quotation.view'])">
                         <span class="ml-5">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
-                            {{ $t('nav.quotation') }}
+                            {{ $t('nav.quotationCreate') }}
                         </span>
-                    </router-link>
+                    </router-link> 
+                    <!-- <router-link :to="{ name: 'admin_quotation' }" class="custom_router_sub_link"
+                        v-if="can(['quotation.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.quotationList') }}
+                        </span>
+                    </router-link> -->
 
                 </div>
             </v-list-group>

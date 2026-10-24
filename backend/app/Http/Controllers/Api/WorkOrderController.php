@@ -82,9 +82,12 @@ class WorkOrderController extends Controller
     }
 
 
-    public function getList()
+    public function getWorkOrderListForDropdownMenu(): JsonResponse
     {
         $workOrders = WorkOrder::select('id', 'work_order_no')->get();
-        return response()->json($workOrders);
+        return ApiResponse::success([
+            'work_orders' => $workOrders,
+        ]);
+        //        return response()->json($workOrders);
     }
 }

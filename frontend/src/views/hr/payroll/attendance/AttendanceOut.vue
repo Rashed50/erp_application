@@ -238,7 +238,7 @@ export default {
             this.employeesList = [];
 
             try {
-                const response = await axios.get('/api/get-employees-for-attendance-out', {
+                const response = await axios.get('/api/attendance/get-employees-for-attendance-out', {
                     params: {
                         date: this.filters.date,
                         shift_id: this.filters.shift_id,

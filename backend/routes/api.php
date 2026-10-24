@@ -62,16 +62,19 @@ use App\Http\Controllers\Api\QuotationController;
 
 
 // Device endpoint: add a dedicated ADMS authentication middleware before production.
-Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
+//Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
 
 
-Route::get('/get-employees-for-attendance-in', [AttendanceController::class, 'getEmployeesForAttendanceIN']);
-Route::get('/get-employees-for-attendance-out', [AttendanceController::class, 'getEmployeesForAttendanceOUT']);
 
-Route::get('/work-orders-list', [WorkOrderController::class, 'getList']);
+
+
+
 Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
-    Route::post('/check-in', [AttendanceController::class, 'checkIn']);
-    Route::post('/check-out', [AttendanceController::class, 'checkOut']);
+    Route::get('/get-employees-for-attendance-in', [AttendanceController::class, 'getEmployeesForAttendanceIN']);
+    Route::get('/get-employees-for-attendance-out', [AttendanceController::class, 'getEmployeesForAttendanceOUT']);
+
+    Route::post('/check-in', [AttendanceController::class, 'checkIn'])->middleware('permission:attendance.check_in');
+    Route::post('/check-out', [AttendanceController::class, 'checkOut'])->middleware('permission:attendance.check_out');
 
     Route::post('/process-logs', [AttendanceController::class, 'processLogs']);
     Route::get('/logs', [AttendanceLogController::class, 'index']);
@@ -84,7 +87,7 @@ Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     Route::put('/{id}', [AttendanceController::class, 'update']);
     Route::delete('/{id}', [AttendanceController::class, 'destroy']);
     Route::get('/{dailyAttendance}', [AttendanceController::class, 'show'])->whereNumber('dailyAttendance');
-    Route::post('/generate-monthly-records', [AttendanceController::class, 'generateMonthlyRecords']);
+    Route::post('/generate-monthly-records', [AttendanceController::class, 'generateMonthlyRecords'])->middleware('permission:attendance.process');
 });
 
 
@@ -185,11 +188,15 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('store', 'permission:work-orders.create')
         ->middlewareFor('update', 'permission:work-orders.update')
         ->middlewareFor('destroy', 'permission:work-orders.delete');
+    
+    Route::get('/work-orders-list', [WorkOrderController::class, 'getWorkOrderListForDropdownMenu'])->middleware('permission:work-orders.view');
 
     // The sale form needs a customer's work orders even without work-orders.view.
     Route::get('/customers/{customer}/work-orders', [WorkOrderController::class, 'forCustomer'])
         ->name('customers.work-orders.index')
         ->middleware('permission:work-orders.view|sales.create|sales.update');
+    
+    
 
     Route::apiResource('products', ProductController::class)
         ->middlewareFor(['index', 'show'], 'permission:products.view')

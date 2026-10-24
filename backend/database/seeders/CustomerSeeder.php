@@ -16,7 +16,7 @@ class CustomerSeeder extends Seeder
         DB::table('customers')->insert([
             [
                 'name'                 => 'ABC Corporation',
-                'email'                => 'info@abccorp.com',
+                'email'                => 'info1@abccorp.com',
                 'phone'                => '+8801700000001',
                 'address'              => 'Dhaka, Bangladesh',
                 'vat_no'               => 'VAT123456789',
@@ -35,7 +35,7 @@ class CustomerSeeder extends Seeder
             ],
             [
                 'name'                 => 'XYZ Enterprise',
-                'email'                => 'contact@xyze.com',
+                'email'                => 'contact2@xyze.com',
                 'phone'                => '+8801900000002',
                 'address'              => 'Chittagong, Bangladesh',
                 'vat_no'               => 'VAT987654321',

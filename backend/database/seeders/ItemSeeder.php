@@ -172,7 +172,7 @@ class ItemSeeder extends Seeder
                     'item_status'   => 1,
                     'create_by_id'  => $userId,
                     'update_by_id'  => null,
-                    'unit_id'       => $unit->unit_id,
+                    'unit_id'       =>  $unit->unit_id,
                     'track_type'    => $row['item']['track_type'],
                     'minimum_stock' => $row['item']['minimum_stock'],
                 ]

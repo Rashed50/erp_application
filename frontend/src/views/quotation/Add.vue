@@ -9,7 +9,7 @@
                         <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label for="customer_id">{{ $t('Customer:') }}</label>
-                                <select id="customer_id" class="form-control" v-model="form.customer_id" required>
+                                <select id="customer_id" class="form-select" v-model="form.customer_id" required>
                                     <option value="" disabled>{{ $t('Select a Customer') }}</option>
                                     <option v-for="customer in customers" :key="customer.id" :value="customer.id">
                                         {{ customer.name }}
@@ -22,7 +22,7 @@
                         <!-- Invoice Number -->
                         <div class="col-md-4">
                             <div class="form-group mb-3">
-                                <label for="invoice_number">{{ $t('Invoice Number:') }}</label>
+                                <label for="invoice_number"> Quotation Number</label>
                                 <input type="text" id="invoice_number" class="form-control"
                                     v-model="form.invoice_number" required />
                                 <div v-if="errors.invoice_number" class="error-msg">{{ errors.invoice_number }}</div>
@@ -80,7 +80,7 @@
                                         </select>
                                     </td>
                                     <td>
-                                        <input type="text" class="form-control" v-model="item.item_name" required />
+                                        <input type="text" class="form-select" v-model="item.item_name" required />
                                         <div v-if="errors[`items.${index}.item_name`]" class="error-msg">
                                             {{ errors[`items.${index}.item_name`] }}
                                         </div>
@@ -94,10 +94,10 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <select class="form-control" v-model="item.unit_id">
-                                            <option value="">{{ $t('Select') }}</option>
+                                        <select class="form-select" v-model="item.unit_id">
+                                            <option value="">{{ $t('Select Unit') }}</option>
                                             <option v-for="unit in units" :key="unit.id" :value="unit.id">
-                                                {{ unit.name }}
+                                                {{ unit.short_name }}
                                             </option>
                                         </select>
                                     </td>

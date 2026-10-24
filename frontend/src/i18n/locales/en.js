@@ -70,6 +70,8 @@ export default {
         customerCollections: 'Customer Collection & Due',
         otherReports: 'Other Reports',
         quotation: 'Quotation',
+        quotationList: 'Search Quotation',
+        quotationCreate: 'New Quotation',
         profile: 'Profile',
         logout: 'Logout',
     },
