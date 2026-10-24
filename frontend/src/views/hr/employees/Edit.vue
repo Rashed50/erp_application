@@ -9,7 +9,8 @@
                 <div class="col-md-10">
                     <v-card style="padding: 15px; margin: 15px 0px;">
                         <form @submit.prevent="handleSubmit">
-                            <EmployeeFormFields :form="form" :errors="errors" :options="options" />
+                            <EmployeeFormFields :form="form" :errors="errors" :options="options"
+                                :current-photo-url="photoUrl" />
                             <div v-if="errorMessage" class="error-msg mb-2">{{ errorMessage }}</div>
                             <v-btn type="submit" class="text-none text-white" color="blue-darken-4" rounded="0"
                                 variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
@@ -35,6 +36,10 @@ const router = useRouter();
 const route = useRoute();
 
 const { form, errors, errorMessage, isSubmitting, submit, options, loadOptions } = useEmployeeForm()
+const photoUrl = ref('')
+
+// Sent by the photo picker only; the API returns the saved photo as `photo_url`.
+const PHOTO_FIELDS = ['photo', 'remove_photo']
 
 const handleSubmit = async () => {
     const resp = await submit(`/api/hr/employees/${route.params.id}`, 'put')
@@ -51,8 +56,9 @@ const loadEmployee = async () => {
         if (data.success) {
             const employee = data.data
             for (const key of Object.keys(form)) {
-                if (key !== 'detail' && key !== 'bank') form[key] = employee[key] ?? ''
+                if (key !== 'detail' && key !== 'bank' && !PHOTO_FIELDS.includes(key)) form[key] = employee[key] ?? ''
             }
+            photoUrl.value = employee.photo_url || ''
             // Keep only the keys the form sends, defaulting any the API left empty.
             const pick = (empty, source) => Object.fromEntries(
                 Object.entries(empty).map(([key, fallback]) => [key, source?.[key] ?? fallback]),

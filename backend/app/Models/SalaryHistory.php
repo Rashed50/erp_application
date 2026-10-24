@@ -17,6 +17,11 @@ class SalaryHistory extends Model
 
     public const STATUS_APPROVED = 'Approved';
 
+    /**
+     * Approved, with part of the net salary paid.
+     */
+    public const STATUS_PARTIALLY_PAID = 'Partially Paid';
+
     public const STATUS_PAID = 'Paid';
 
     public const STATUS_CANCELLED = 'Cancelled';
@@ -24,14 +29,21 @@ class SalaryHistory extends Model
     /**
      * @var array<int, string>
      */
-    public const STATUSES = [self::STATUS_GENERATED, self::STATUS_APPROVED, self::STATUS_PAID, self::STATUS_CANCELLED];
+    public const STATUSES = [self::STATUS_GENERATED, self::STATUS_APPROVED, self::STATUS_PARTIALLY_PAID, self::STATUS_PAID, self::STATUS_CANCELLED];
 
     /**
      * Statuses whose values can no longer be recalculated.
      *
      * @var array<int, string>
      */
-    public const LOCKED_STATUSES = [self::STATUS_APPROVED, self::STATUS_PAID];
+    public const LOCKED_STATUSES = [self::STATUS_APPROVED, self::STATUS_PARTIALLY_PAID, self::STATUS_PAID];
+
+    /**
+     * Statuses a payment can be made in.
+     *
+     * @var array<int, string>
+     */
+    public const PAYABLE_STATUSES = [self::STATUS_APPROVED, self::STATUS_PARTIALLY_PAID];
 
     protected $table = 'salary_history';
 
@@ -46,7 +58,7 @@ class SalaryHistory extends Model
             'overtime_rate', 'basic_salary', 'house_rent', 'medical_allowance', 'transport_allowance',
             'food_allowance', 'other_allowance', 'total_allowance', 'overtime_amount', 'bonus',
             'other_addition', 'gross_salary', 'per_day_rate', 'absence_deduction', 'unpaid_leave_deduction',
-            'other_deduction', 'advance_deduction', 'total_deduction', 'net_salary',
+            'other_deduction', 'advance_deduction', 'total_deduction', 'net_salary', 'paid_amount',
             'working_days', 'present_days', 'absent_days', 'paid_leave_days', 'unpaid_leave_days', 'overtime_hours',
         ])->mapWithKeys(fn (string $column) => [$column => 'decimal:2'])->all();
 
@@ -91,6 +103,22 @@ class SalaryHistory extends Model
     public function payer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'paid_by');
+    }
+
+    /**
+     * The payments made against the net salary.
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SalaryPayment::class);
+    }
+
+    /**
+     * Net salary not paid yet.
+     */
+    public function dueAmount(): float
+    {
+        return round(max(0, (float) $this->net_salary - (float) $this->paid_amount), 2);
     }
 
     public function scopeLive(Builder $query): Builder

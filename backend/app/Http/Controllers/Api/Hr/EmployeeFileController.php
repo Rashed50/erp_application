@@ -10,7 +10,6 @@ use App\Models\Employee;
 use App\Models\EmployeeFile;
 use App\Services\EmployeeFileService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeFileController extends Controller
@@ -31,11 +30,11 @@ class EmployeeFileController extends Controller
 
     public function download(EmployeeFile $employeeFile): StreamedResponse|JsonResponse
     {
-        if (! Storage::disk(EmployeeFile::DISK)->exists($employeeFile->file_path)) {
+        if (! $this->fileService->exists($employeeFile)) {
             return ApiResponse::error(__('The file could not be found.'), 404);
         }
 
-        return Storage::disk(EmployeeFile::DISK)->download($employeeFile->file_path, $employeeFile->file_name);
+        return $this->fileService->download($employeeFile);
     }
 
     public function destroy(EmployeeFile $employeeFile): JsonResponse

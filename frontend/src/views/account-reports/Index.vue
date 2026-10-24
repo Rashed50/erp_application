@@ -46,6 +46,18 @@
                         <label>{{ $t('Statement Balance:') }}</label>
                         <input type="number" step="0.01" class="form-control" v-model="filters.statement_balance" />
                     </div>
+                    <template v-if="has('stock')">
+                        <div class="col-md-2">
+                            <label>{{ $t('Opening Stock:') }}</label>
+                            <input type="number" step="0.01" min="0" class="form-control" v-model="filters.opening_stock"
+                                placeholder="0.00" />
+                        </div>
+                        <div class="col-md-2">
+                            <label>{{ $t('Closing Stock:') }}</label>
+                            <input type="number" step="0.01" min="0" class="form-control" v-model="filters.closing_stock"
+                                placeholder="0.00" :title="$t('Value of unsold stock at the end of the period')" />
+                        </div>
+                    </template>
                     <div class="col-md-4" v-if="has('accounts')">
                         <label>{{ $t(report.accountsLabel || 'Accounts:') }}</label>
                         <v-autocomplete v-model="filters.account_ids" :items="accounts" :item-title="accountTitle"
@@ -277,10 +289,15 @@ const reports = {
     profit_loss: {
         title: 'Profit & Loss',
         endpoint: `${BASE}/profit-loss`,
-        filters: ['fromDate', 'toDate'],
+        filters: ['fromDate', 'toDate', 'stock'],
         columns: () => [column('label', 'Particulars', { format: text }), moneyColumn('amount', 'Amount')],
         rows: (data) => [
-            { label: 'Total Revenue', amount: data.total_revenue },
+            labelRow('label', 'Total Revenue', { amount: data.total_revenue }),
+            { label: 'Opening Stock', amount: data.opening_stock },
+            { label: 'Add: Purchases into Inventory', amount: data.purchases },
+            { label: 'Less: Closing Stock', amount: data.closing_stock },
+            labelRow('label', 'Cost of Goods Sold', { amount: data.cost_of_goods_sold }),
+            labelRow('label', data.gross_profit >= 0 ? 'Gross Profit' : 'Gross Loss', { amount: Math.abs(data.gross_profit) }),
             { label: 'Total Expense', amount: data.total_expense },
         ],
         totals: (data) => labelRow('label', data.profit_or_loss > 0 ? 'Net Profit' : data.profit_or_loss < 0 ? 'Net Loss' : 'Break-Even', {
@@ -533,6 +550,8 @@ const filters = reactive({
     customer_id: '',
     work_order_id: '',
     statement_balance: '',
+    opening_stock: '',
+    closing_stock: '',
     period: 'monthly',
     status: '',
 })
@@ -586,6 +605,10 @@ const params = () => {
     if (current.filters.includes('period')) result.period = filters.period
     if (current.filters.includes('workOrderStatus') && filters.status) result.status = filters.status
     if (current.filters.includes('statementBalance') && filters.statement_balance !== '') result.statement_balance = filters.statement_balance
+    if (current.filters.includes('stock')) {
+        if (filters.opening_stock !== '') result.opening_stock = filters.opening_stock
+        if (filters.closing_stock !== '') result.closing_stock = filters.closing_stock
+    }
     for (const [filter, key] of [['accounts', 'account_ids'], ['suppliers', 'supplier_ids'], ['customers', 'customer_ids']]) {
         if (current.filters.includes(filter) && filters[key].length) result[key] = filters[key]
     }

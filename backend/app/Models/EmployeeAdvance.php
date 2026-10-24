@@ -42,6 +42,14 @@ class EmployeeAdvance extends Model
         return $this->belongsTo(Employee::class)->withTrashed();
     }
 
+    /**
+     * The cash/bank account the advance was paid from.
+     */
+    public function paymentAccount(): BelongsTo
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'payment_account_id');
+    }
+
     public function recoveries(): HasMany
     {
         return $this->hasMany(EmployeeAdvanceRecovery::class);

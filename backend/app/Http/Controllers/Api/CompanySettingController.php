@@ -8,8 +8,8 @@ use App\Http\Resources\CompanySettingResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\CompanySetting;
 use App\Services\CompanySettingService;
+use App\Services\FileStorageService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
 
 class CompanySettingController extends Controller
 {
@@ -29,7 +29,7 @@ class CompanySettingController extends Controller
 
         return ApiResponse::success([
             'company_name' => $setting->company_name,
-            'logo_url' => $setting->logo ? Storage::disk('public')->url($setting->logo) : null,
+            'logo_url' => resolve(FileStorageService::class)->url($setting->logo),
         ]);
     }
 

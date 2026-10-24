@@ -1,8 +1,17 @@
 // Shared formatting for the HR & Payroll screens.
 
+import axios from 'axios'
 import { intlLocale } from '@/i18n'
 
-export const SALARY_STATUSES = ['Generated', 'Approved', 'Paid', 'Cancelled']
+// Open cash/bank accounts that advances and salaries are paid from (or repaid into).
+export const fetchPaymentAccounts = async () => {
+    const { data } = await axios.get('/api/hr/payment-accounts')
+    return data.success ? data.data : []
+}
+
+export const accountLabel = (account) => `${account.account_number} - ${account.name}`
+
+export const SALARY_STATUSES = ['Generated', 'Approved', 'Partially Paid', 'Paid', 'Cancelled']
 
 export const ADVANCE_STATUSES = ['Running', 'Completed']
 
@@ -22,6 +31,7 @@ export const monthLabel = (month) => {
 export const salaryStatusClass = (status) => ({
     Generated: 'badge bg-info text-dark',
     Approved: 'badge bg-primary',
+    'Partially Paid': 'badge bg-warning text-dark',
     Paid: 'badge bg-success',
     Cancelled: 'badge bg-secondary',
 }[status] || 'badge bg-light text-dark')

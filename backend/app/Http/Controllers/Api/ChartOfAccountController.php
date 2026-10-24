@@ -7,8 +7,10 @@ use App\Http\Requests\ChartOfAccount\StoreChartOfAccountRequest;
 use App\Http\Requests\ChartOfAccount\UpdateChartOfAccountRequest;
 use App\Http\Resources\ChartOfAccountResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\AccountType;
 use App\Models\ChartOfAccount;
 use App\Services\ChartOfAccountService;
+use App\Services\LedgerPostingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -37,6 +39,25 @@ class ChartOfAccountController extends Controller
                 'last_page' => $accounts->lastPage(),
             ],
         ]);
+    }
+
+    /**
+     * The open cash/bank (asset transaction) accounts money can be paid from
+     * or received into, for screens whose users cannot browse the chart of
+     * accounts (e.g. advance salary and salary payment).
+     */
+    public function paymentAccounts(): JsonResponse
+    {
+        $accounts = ChartOfAccount::query()
+            ->ofType(AccountType::ASSET)
+            ->active()
+            ->where('is_transaction', true)
+            ->where('is_closed', false)
+            ->whereNot('account_number', LedgerPostingService::EMPLOYEE_ADVANCE_NUMBER)
+            ->orderBy('account_number')
+            ->get(['id', 'account_number', 'name']);
+
+        return ApiResponse::success($accounts);
     }
 
     public function show(ChartOfAccount $ledger_account): JsonResponse

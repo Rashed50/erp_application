@@ -252,15 +252,26 @@ class AccountReportService
     }
 
     /**
-     * Revenue (credit minus debit) less expenses (debit minus credit).
+     * Revenue (credit minus debit) less the cost of goods sold, giving the
+     * gross profit, less expenses (debit minus credit).
      *
-     * @return array{total_revenue: float, total_expense: float, profit_or_loss: float, result: string}
+     * Product purchases are debited to Inventory/Stock, an asset, so they
+     * never reach the expense accounts. Their cost comes in as the cost of
+     * goods sold: opening stock + the period's net purchases into Inventory
+     * (and its sub-accounts) − closing stock. The stock values are counted,
+     * not kept by the ledger, so they are entered for the report; left at
+     * zero, everything bought in the period counts as sold.
+     *
+     * @return array{total_revenue: float, opening_stock: float, purchases: float, closing_stock: float, cost_of_goods_sold: float, gross_profit: float, total_expense: float, profit_or_loss: float, result: string}
      */
-    public function profitAndLoss(?string $fromDate = null, ?string $toDate = null): array
+    public function profitAndLoss(?string $fromDate = null, ?string $toDate = null, float $openingStock = 0, float $closingStock = 0): array
     {
         $revenue = -$this->netOfType(AccountType::REVENUE, $fromDate, $toDate);
+        $purchases = $this->inventoryPurchases($fromDate, $toDate);
+        $costOfGoodsSold = round($openingStock + $purchases - $closingStock, 2);
+        $grossProfit = round($revenue - $costOfGoodsSold, 2);
         $expense = $this->netOfType(AccountType::EXPENSE, $fromDate, $toDate);
-        $profitOrLoss = round($revenue - $expense, 2);
+        $profitOrLoss = round($grossProfit - $expense, 2);
 
         $result = match (true) {
             $profitOrLoss > 0 => 'Profit: '.number_format($profitOrLoss, 2),
@@ -270,10 +281,37 @@ class AccountReportService
 
         return [
             'total_revenue' => $revenue,
+            'opening_stock' => round($openingStock, 2),
+            'purchases' => $purchases,
+            'closing_stock' => round($closingStock, 2),
+            'cost_of_goods_sold' => $costOfGoodsSold,
+            'gross_profit' => $grossProfit,
             'total_expense' => $expense,
             'profit_or_loss' => $profitOrLoss,
             'result' => $result,
         ];
+    }
+
+    /**
+     * Debit minus credit posted to Inventory/Stock and its sub-accounts in
+     * the period: what was bought into stock, less any returns.
+     */
+    private function inventoryPurchases(?string $fromDate, ?string $toDate): float
+    {
+        $accountIds = $this->accountTree(LedgerPostingService::INVENTORY_NUMBER)->modelKeys();
+
+        if (! $accountIds) {
+            return 0.0;
+        }
+
+        $net = $this->lines()
+            ->whereIn('account_transaction_details.chart_of_account_id', $accountIds)
+            ->when($fromDate, fn (Builder $query) => $query->where('account_transactions.date', '>=', $fromDate))
+            ->when($toDate, fn (Builder $query) => $query->where('account_transactions.date', '<=', $toDate))
+            ->selectRaw('COALESCE(SUM(account_transaction_details.debit), 0) - COALESCE(SUM(account_transaction_details.credit), 0) as net')
+            ->value('net');
+
+        return round((float) $net, 2);
     }
 
     /**
@@ -331,7 +369,17 @@ class AccountReportService
      */
     private function bankAccounts(): EloquentCollection
     {
-        $accounts = ChartOfAccount::query()->where('account_number', LedgerPostingService::BANK_ACCOUNTS_NUMBER)->get(['id', 'name', 'account_number']);
+        return $this->accountTree(LedgerPostingService::BANK_ACCOUNTS_NUMBER);
+    }
+
+    /**
+     * An account and all of its descendants.
+     *
+     * @return EloquentCollection<int, ChartOfAccount>
+     */
+    private function accountTree(string $accountNumber): EloquentCollection
+    {
+        $accounts = ChartOfAccount::query()->where('account_number', $accountNumber)->get(['id', 'name', 'account_number']);
         $parentIds = $accounts->modelKeys();
 
         while ($parentIds) {

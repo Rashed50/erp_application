@@ -68,6 +68,9 @@
                             <td>{{ item.employee_code }}</td>
                             <td>
                                 <router-link :to="{ name: 'admin_hr_employee_show', params: { id: item.id } }">
+                                    <img :src="item.photo_url || userPlaceholder" :data-placeholder="userPlaceholder"
+                                        alt="" class="rounded-circle me-2"
+                                        style="width: 32px; height: 32px; object-fit: cover;" />
                                     {{ item.name }}
                                 </router-link>
                             </td>
@@ -129,6 +132,7 @@ import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
 import { usePrintable } from '@/composables/usePrintable';
 import { employeeStatusClass } from '../helpers';
+import { userPlaceholder } from '@/helpers/imagePlaceholder';
 import { t } from '@/i18n';
 
 const { can } = usePermission()

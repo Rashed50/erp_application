@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Services\FileStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class SaleResource extends JsonResource
 {
@@ -23,7 +23,7 @@ class SaleResource extends JsonResource
             'work_order_no' => $this->whenLoaded('workOrder', fn () => $this->workOrder?->work_order_no),
             'invoice_number' => $this->invoice_number,
             'description' => $this->description,
-            'attachment_url' => $this->attachment ? Storage::disk('public')->url($this->attachment) : null,
+            'attachment_url' => resolve(FileStorageService::class)->url($this->attachment),
             'issue_date' => $this->issue_date?->toDateString(),
             'due_date' => $this->due_date?->toDateString(),
             'total_amount' => (float) $this->total_amount,

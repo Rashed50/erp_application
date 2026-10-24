@@ -6,34 +6,26 @@ use App\Models\CompanySetting;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class CompanySettingService
 {
+    public function __construct(private readonly FileStorageService $fileStorage) {}
+
     /**
      * @param  array{company_name: string, email?: ?string, phone?: ?string, address?: ?string, logo?: ?UploadedFile, remove_logo?: bool}  $data
      */
     public function update(array $data): CompanySetting
     {
         $setting = CompanySetting::current();
-        $previousLogo = $setting->logo;
 
         $setting->fill([
             ...Arr::only($data, ['company_name', 'email', 'phone', 'address']),
             'updated_by' => Auth::id(),
         ]);
 
-        if (isset($data['logo'])) {
-            $setting->logo = $data['logo']->store('company', 'public');
-        } elseif ($data['remove_logo'] ?? false) {
-            $setting->logo = null;
-        }
+        $setting->logo = $this->fileStorage->replace($setting->logo, $data['logo'] ?? null, $data['remove_logo'] ?? false, 'company');
 
         $setting->save();
-
-        if ($previousLogo && $previousLogo !== $setting->logo) {
-            Storage::disk('public')->delete($previousLogo);
-        }
 
         return $setting;
     }

@@ -36,6 +36,14 @@ class EmployeeAdvanceRecovery extends Model
         return $this->belongsTo(EmployeeAdvance::class, 'employee_advance_id');
     }
 
+    /**
+     * The cash/bank account a cash repayment was received into.
+     */
+    public function paymentAccount(): BelongsTo
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'payment_account_id');
+    }
+
     public function salaryHistory(): BelongsTo
     {
         return $this->belongsTo(SalaryHistory::class);
