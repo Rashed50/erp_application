@@ -223,7 +223,8 @@ export default {
         async fetchWorkOrders() {
             try {
                 const response = await axios.get('/api/work-orders-list'); 
-                this.workOrders = response.data?.data || response.data || [];
+                console.log('Work Orders API Response:', response.data);
+                this.workOrders = response.data?.data.work_orders || response.data || [];
             } catch (error) {
                 console.error('Failed to fetch work orders:', error);
             }
