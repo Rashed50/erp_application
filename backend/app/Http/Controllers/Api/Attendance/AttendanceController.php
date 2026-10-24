@@ -47,23 +47,39 @@ class AttendanceController extends Controller
 
     public function getEmployeesForAttendanceIN(Request $request): JsonResponse
     {
-        $employees = $this->employeeService->getActiveEmployees();
+        $employee_ids = explode(',', $request->input('employee_code', ''));
 
-        return ApiResponse::success([
-            'employees' => EmployeeResource::collection($employees),
-        ]);
-    }
-    public function getEmployeesForAttendanceOUT(Request $request): JsonResponse
-    {
-        $employees = DailyAttendance::query()
+        // Trim, remove empties,  
+        $employee_ids = collect($employee_ids)->map(fn ($id) => trim($id))->filter()->values()->all();
+
+       $presentIds = DailyAttendance::query()
             ->whereDate('attendance_date', $request->date)
             ->where('status', 'present')
-            ->with('employee')
-            ->get()
-            ->pluck('employee');
+            ->pluck('employee_auto_id')
+            ->toArray();
+
+        $not_in_Employees = $this->employeeService
+            ->getActiveEmployeesForAttendanceIN($employee_ids)
+            ->whereNotIn('id', $presentIds)
+            ->values();
 
         return ApiResponse::success([
-            'employees' => EmployeeResource::collection($employees),
+            'employees' => EmployeeResource::collection($not_in_Employees),
+            'form_data' =>$request->all(),
+            'presentIds' => $presentIds,
+        ]);
+    }
+    public function getEmployeesForAttendanceOUT(Request $request,AttendanceCalculationService $service): JsonResponse
+    {
+        
+        $employee_ids = explode(',', $request->input('employee_code', ''));
+        $employee_ids = collect($employee_ids)->map(fn ($id) => trim($id))->filter()->values()->all();
+
+        $pendingEmployees = $service->getDailyAttendancePunchOutPendingEmployees($employee_ids, $request->date);
+        return ApiResponse::success([
+            'employees' => EmployeeResource::collection($pendingEmployees),
+            'form_data' =>$request->all(),
+            'ids' => $employee_ids,
         ]);
     }
 
@@ -134,7 +150,7 @@ class AttendanceController extends Controller
                 $data['attendance_date'],
                 $data['last_punch_at'],
                 $request->user()?->id,
-                isset($data['break_minutes']) ? (int) $data['break_minutes'] : null
+                isset($data['break_minutes']) ? (int) $data['break_minutes'] : 0
             );
         }
 

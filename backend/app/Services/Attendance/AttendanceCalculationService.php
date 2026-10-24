@@ -401,4 +401,26 @@ class AttendanceCalculationService
             ];
         });
     }
+
+
+
+    public function getDailyAttendancePunchOutPendingEmployees(array $employeeIds=[], string $date, string $workOrderId = null){
+         $query = DailyAttendance::query()
+            ->whereDate('attendance_date', $date)
+            ->where('status', 'present')
+            ->whereNull('last_punch_at')
+            ->with('employee'); 
+        
+        if (!empty($employeeIds)) {
+            $query->whereHas('employee', function ($q) use ($employeeIds) {
+                $q->whereIn('employee_code', $employeeIds);
+            });
+        } 
+        if($workOrderId){
+            $query->where('work_order_id', $workOrderId);
+        }     
+        // returns a collection of Employee models by plucking the 'employee' relationship from the DailyAttendance records 
+        return $query->get()
+            ->pluck('employee');
+    }
 }

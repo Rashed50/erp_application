@@ -34,7 +34,8 @@ return [
 
     'exposed_headers' => [],
 
-    'max_age' => 0,
+    'max_age' => 86400, // 24 hours, 0 means no caching
+
 
     'supports_credentials' => false,
 

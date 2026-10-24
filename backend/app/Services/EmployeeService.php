@@ -30,9 +30,24 @@ class EmployeeService
             ->orderBy('employee_code')
             ->paginate($perPage);
     }
-  
 
-        public function getActiveEmployees():Collection
+
+     
+    public function getActiveEmployeesForAttendanceIN($employee_ids=[]):Collection
+    {
+        if(is_null($employee_ids) || empty($employee_ids)){
+            return Employee::query()
+            ->where('status', 'active')
+            ->orderBy('employee_code')
+            ->get();
+        }
+        return Employee::query()
+            ->whereIn('employee_code', $employee_ids)
+            ->orderBy('employee_code')
+            ->get();
+    }
+
+    public function getActiveEmployees():Collection
     {
         return Employee::
         //    with(['department', 'designation'])
