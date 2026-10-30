@@ -15,7 +15,7 @@ class LineItemTotalCalculator
      * per-line amounts, so `discount_amount` and `vat_amount` are the full
      * invoice totals.
      *
-     * @param  array<int, array{product_id?: ?int, item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>  $items
+     * @param  array<int, array{product_id?: ?int, item_name?: ?string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>  $items
      * @return array{items: array<int, array<string, mixed>>, total_amount: float, overall_discount: float, overall_vat: float, discount_amount: float, vat_amount: float, net_total: float}
      *
      * @throws ValidationException when the discounts exceed the invoice amount, or the invoice total is zero.
@@ -33,7 +33,6 @@ class LineItemTotalCalculator
             $discount = (float) ($item['discount'] ?? 0);
             $vat = (float) ($item['vat'] ?? 0);
             $gross = $qty * $unitPrice;
-            $lineTotal = $gross - $discount + $vat;
 
             $totalAmount += $gross;
             $discountAmount += $discount;
@@ -41,14 +40,15 @@ class LineItemTotalCalculator
 
             $computedItems[] = [
                 'product_id' => $item['product_id'] ?? null,
-                'item_name' => $item['item_name'],
+                // A product line is named by its product, so only a
+                // free-text line keeps a name of its own.
+                'item_name' => empty($item['product_id']) ? $item['item_name'] : null,
                 'description' => $item['description'] ?? null,
                 'qty' => $qty,
                 'unit' => $item['unit'] ?? null,
                 'unit_price' => $unitPrice,
                 'discount' => $discount,
                 'vat' => $vat,
-                'total_amount' => $lineTotal,
             ];
         }
 

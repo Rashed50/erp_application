@@ -138,7 +138,7 @@ describe('update', function () {
 
     it('ignores an opening_balance sent in the update payload', function () {
         $actor = adminUser();
-        $target = Customer::factory()->create(['opening_balance' => 100, 'current_balance' => 100]);
+        $target = Customer::factory()->create(['opening_balance' => 100]);
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/customers/{$target->id}", ['opening_balance' => 9999])

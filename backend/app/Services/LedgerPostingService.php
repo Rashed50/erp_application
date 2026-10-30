@@ -68,7 +68,7 @@ class LedgerPostingService
      * Record a journal entry. Zero-amount lines are skipped, and the entry is
      * refused unless its debits equal its credits.
      *
-     * @param  array{tr_no?: ?string, date: string, general_particular?: ?string, sale_id?: ?int, purchase_id?: ?int}  $header
+     * @param  array{tr_no?: ?string, date: string, general_particular?: ?string}  $header
      * @param  array<int, array{account_id: int, debit?: float, credit?: float, particular?: ?string}>  $lines
      */
     public function post(?Model $source, array $header, array $lines): AccountTransaction
@@ -78,7 +78,6 @@ class LedgerPostingService
 
             $entry = new AccountTransaction([
                 ...$header,
-                'total_amount' => $this->totalDebit($lines),
                 'approved_by' => Auth::id(),
                 'created_by' => Auth::id(),
             ]);
@@ -96,7 +95,7 @@ class LedgerPostingService
      * was edited, so the ledger holds one entry per document rather than a
      * trail of adjustments.
      *
-     * @param  array{tr_no?: ?string, date?: string, general_particular?: ?string, sale_id?: ?int, purchase_id?: ?int}  $header
+     * @param  array{tr_no?: ?string, date?: string, general_particular?: ?string}  $header
      * @param  array<int, array{account_id: int, debit?: float, credit?: float, particular?: ?string}>  $lines
      */
     public function repost(AccountTransaction $entry, array $header, array $lines): AccountTransaction
@@ -104,11 +103,11 @@ class LedgerPostingService
         return DB::transaction(function () use ($entry, $header, $lines) {
             $lines = $this->balancedLines($lines);
 
-            $entry->update([...$header, 'total_amount' => $this->totalDebit($lines)]);
+            $entry->update($header);
             $entry->details()->delete();
             $entry->details()->createMany($lines);
 
-            return $entry;
+            return $entry->unsetRelation('details');
         });
     }
 
@@ -151,7 +150,7 @@ class LedgerPostingService
             ->values()
             ->all();
 
-        $debit = $this->totalDebit($lines);
+        $debit = round(array_sum(array_column($lines, 'debit')), 2);
         $credit = round(array_sum(array_column($lines, 'credit')), 2);
 
         if ($lines === [] || $debit !== $credit) {
@@ -159,13 +158,5 @@ class LedgerPostingService
         }
 
         return $lines;
-    }
-
-    /**
-     * @param  array<int, array{debit: float}>  $lines
-     */
-    private function totalDebit(array $lines): float
-    {
-        return round(array_sum(array_column($lines, 'debit')), 2);
     }
 }

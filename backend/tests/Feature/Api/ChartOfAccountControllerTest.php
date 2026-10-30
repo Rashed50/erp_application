@@ -33,7 +33,7 @@ describe('index', function () {
     it('filters accounts by parent and transaction flag', function () {
         $actor = adminUser();
         $group = ChartOfAccount::factory()->asset()->group()->create();
-        ChartOfAccount::factory()->asset()->create(['parent_id' => $group->id, 'sibling_level' => 1]);
+        ChartOfAccount::factory()->asset()->create(['parent_id' => $group->id]);
         ChartOfAccount::factory()->asset()->create();
 
         $this->actingAs($actor, 'sanctum')->getJson("/api/ledger-accounts?parent_id={$group->id}")
@@ -242,9 +242,9 @@ describe('update', function () {
     it('moves an account and re-levels its subtree', function () {
         $actor = adminUser();
         $root = ChartOfAccount::factory()->asset()->group()->create();
-        $other = ChartOfAccount::factory()->asset()->group()->create(['parent_id' => $root->id, 'sibling_level' => 1]);
+        $other = ChartOfAccount::factory()->asset()->group()->create(['parent_id' => $root->id]);
         $moving = ChartOfAccount::factory()->asset()->group()->create();
-        $child = ChartOfAccount::factory()->asset()->create(['parent_id' => $moving->id, 'sibling_level' => 1]);
+        $child = ChartOfAccount::factory()->asset()->create(['parent_id' => $moving->id]);
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$moving->id}", ['parent_id' => $other->id])
@@ -257,7 +257,7 @@ describe('update', function () {
     it('rejects moving an account beneath its own child', function () {
         $actor = adminUser();
         $parent = ChartOfAccount::factory()->asset()->group()->create();
-        $child = ChartOfAccount::factory()->asset()->group()->create(['parent_id' => $parent->id, 'sibling_level' => 1]);
+        $child = ChartOfAccount::factory()->asset()->group()->create(['parent_id' => $parent->id]);
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$parent->id}", ['parent_id' => $child->id])
@@ -268,7 +268,7 @@ describe('update', function () {
     it('rejects turning an account with children into a transaction account', function () {
         $actor = adminUser();
         $parent = ChartOfAccount::factory()->asset()->group()->create();
-        ChartOfAccount::factory()->asset()->create(['parent_id' => $parent->id, 'sibling_level' => 1]);
+        ChartOfAccount::factory()->asset()->create(['parent_id' => $parent->id]);
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$parent->id}", ['is_transaction' => true])
@@ -317,7 +317,7 @@ describe('destroy', function () {
     it('rejects deleting an account that has child accounts', function () {
         $actor = adminUser();
         $parent = ChartOfAccount::factory()->asset()->group()->create();
-        ChartOfAccount::factory()->asset()->create(['parent_id' => $parent->id, 'sibling_level' => 1]);
+        ChartOfAccount::factory()->asset()->create(['parent_id' => $parent->id]);
 
         $this->actingAs($actor, 'sanctum')
             ->deleteJson("/api/ledger-accounts/{$parent->id}")

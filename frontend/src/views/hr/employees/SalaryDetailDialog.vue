@@ -30,6 +30,20 @@
                             </div>
                         </div>
                         <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label>{{ $t('Change Reason:') }}</label>
+                                <SearchSelect v-model="form.change_reason" :items="changeReasons" />
+                                <div v-if="errors.change_reason" class="error-msg">{{ errors.change_reason }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4" v-if="needsDesignation || form.designation_id">
+                            <div class="form-group mb-3">
+                                <label>{{ $t('New Designation:') }} <span class="text-danger" v-if="needsDesignation">*</span></label>
+                                <SearchSelect v-model="form.designation_id" :items="designationItems" />
+                                <div v-if="errors.designation_id" class="error-msg">{{ errors.designation_id }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <div class="form-group mb-3 mt-4">
                                 <div class="form-check">
                                     <input type="checkbox" class="form-check-input" id="salary_status"
@@ -78,6 +92,25 @@ const deductionBases = computed(() => [
     { id: 'gross', name: t('Basic + allowances') },
 ])
 
+// Same list as SalaryDetail::CHANGE_REASONS.
+const changeReasons = computed(() => ['Joining', 'Promotion', 'Demotion', 'Annual Increment', 'Performance Increment', 'Adjustment', 'Other']
+    .map((reason) => ({ id: reason, name: t(reason) })))
+
+// A promotion or demotion comes with the employee's new designation.
+const needsDesignation = computed(() => ['Promotion', 'Demotion'].includes(form.change_reason))
+const designations = ref([])
+const designationItems = computed(() => designations.value.filter((row) => row.status || row.id === form.designation_id))
+
+const loadDesignations = async () => {
+    if (designations.value.length) return
+    try {
+        const { data } = await axios.get('/api/hr/employees/options')
+        designations.value = data.data?.designations ?? []
+    } catch {
+        designations.value = []
+    }
+}
+
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
     employeeId: { type: [Number, String], required: true },
@@ -110,6 +143,8 @@ const blank = () => ({
     overtime_rate: 0,
     other_deduction: 0,
     deduction_basis: 'basic',
+    change_reason: null,
+    designation_id: null,
     status: true,
     remarks: '',
 })
@@ -133,9 +168,12 @@ watch(() => props.modelValue, (open) => {
         }
         if (!props.revision) {
             form.effective_date = new Date().toISOString().slice(0, 10)
+            form.change_reason = null
+            form.designation_id = null
             form.remarks = ''
         }
     }
+    loadDesignations()
 })
 
 const handleSubmit = async () => {

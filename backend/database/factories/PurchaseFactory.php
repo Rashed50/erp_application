@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Purchase;
+use App\Models\PurchaseItem;
 use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,10 +19,6 @@ class PurchaseFactory extends Factory
      */
     public function definition(): array
     {
-        $totalAmount = fake()->randomFloat(2, 500, 5000);
-        $vat = fake()->randomFloat(2, 0, 100);
-        $discount = fake()->randomFloat(2, 0, 50);
-
         return [
             'supplier_id' => Supplier::factory(),
             'purchase_type' => 'product',
@@ -29,11 +26,33 @@ class PurchaseFactory extends Factory
             'description' => fake()->sentence(),
             'issue_date' => fake()->date(),
             'purchase_date' => fake()->date(),
-            'total_amount' => $totalAmount,
-            'discount_amount' => $discount,
-            'vat_amount' => $vat,
-            'net_total' => $totalAmount - $discount + $vat,
             'notes' => fake()->optional()->sentence(),
         ];
+    }
+
+    /**
+     * Totals come from the line items, so every purchase gets one line
+     * unless a state gave it its own.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Purchase $model) {
+            if ($model->items()->doesntExist()) {
+                PurchaseItem::factory()->for($model)->create();
+            }
+        });
+    }
+
+    /**
+     * One line making the net total $netTotal, $vat of it VAT.
+     */
+    public function withTotal(float $netTotal, float $vat = 0): static
+    {
+        return $this->has(PurchaseItem::factory()->state([
+            'qty' => 1,
+            'unit_price' => $netTotal - $vat,
+            'discount' => 0,
+            'vat' => $vat,
+        ]), 'items');
     }
 }

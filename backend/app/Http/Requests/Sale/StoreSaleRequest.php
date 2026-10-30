@@ -46,7 +46,7 @@ class StoreSaleRequest extends FormRequest
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->withoutTrashed()],
-            'items.*.item_name' => ['required', 'string', 'max:255'],
+            'items.*.item_name' => ['required_without:items.*.product_id', 'nullable', 'string', 'max:255'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],

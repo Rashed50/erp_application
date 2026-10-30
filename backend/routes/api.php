@@ -391,6 +391,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/employees/{employee}/salary-details', [SalaryDetailController::class, 'index'])
             ->name('employees.salary-details.index')
             ->middleware('permission:salary-configs.view');
+        Route::get('/employees/{employee}/salary-detail-logs', [SalaryDetailController::class, 'logs'])
+            ->name('employees.salary-detail-logs.index')
+            ->middleware('permission:salary-configs.view');
         Route::post('/employees/{employee}/salary-details', [SalaryDetailController::class, 'store'])
             ->name('employees.salary-details.store')
             ->middleware('permission:salary-configs.create');
@@ -467,6 +470,9 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('permission:hr-reports.view');
         Route::get('/reports/salary-summary', [HrReportController::class, 'salarySummary'])
             ->name('reports.salary-summary')
+            ->middleware('permission:hr-reports.view');
+        Route::get('/reports/salary-changes', [HrReportController::class, 'salaryChanges'])
+            ->name('reports.salary-changes')
             ->middleware('permission:hr-reports.view');
         Route::get('/reports/salary-due', [HrReportController::class, 'salaryDue'])
             ->name('reports.salary-due')

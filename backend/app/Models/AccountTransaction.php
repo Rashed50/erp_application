@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,8 +26,15 @@ class AccountTransaction extends Model
     {
         return [
             'date' => 'date',
-            'total_amount' => 'decimal:2',
         ];
+    }
+
+    /**
+     * The entry's size: the sum of its debit lines (they equal its credits).
+     */
+    protected function totalAmount(): Attribute
+    {
+        return Attribute::get(fn () => round((float) ($this->relationLoaded('details') ? $this->details->sum('debit') : $this->details()->sum('debit')), 2));
     }
 
     public function details(): HasMany
@@ -40,16 +48,6 @@ class AccountTransaction extends Model
     public function source(): MorphTo
     {
         return $this->morphTo();
-    }
-
-    public function sale(): BelongsTo
-    {
-        return $this->belongsTo(Sale::class)->withTrashed();
-    }
-
-    public function purchase(): BelongsTo
-    {
-        return $this->belongsTo(Purchase::class)->withTrashed();
     }
 
     public function creator(): BelongsTo

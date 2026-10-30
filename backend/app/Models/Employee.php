@@ -95,6 +95,11 @@ class Employee extends Model
         return $this->hasMany(SalaryDetail::class);
     }
 
+    public function salaryDetailLogs(): HasMany
+    {
+        return $this->hasMany(SalaryDetailLog::class);
+    }
+
     public function works(): HasMany
     {
         return $this->hasMany(EmployeeWork::class);

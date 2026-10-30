@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\Approvable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,6 +46,11 @@ class SalaryHistory extends Model
      */
     public const PAYABLE_STATUSES = [self::STATUS_APPROVED, self::STATUS_PARTIALLY_PAID];
 
+    /**
+     * The paid total of a salary_history row, for SQL filters and sums.
+     */
+    public const PAID_SQL = '(select coalesce(sum(salary_payments.amount), 0) from salary_payments where salary_payments.salary_history_id = salary_history.id)';
+
     protected $table = 'salary_history';
 
     protected $guarded = [];
@@ -58,7 +64,7 @@ class SalaryHistory extends Model
             'overtime_rate', 'basic_salary', 'house_rent', 'medical_allowance', 'transport_allowance',
             'food_allowance', 'other_allowance', 'total_allowance', 'overtime_amount', 'bonus',
             'other_addition', 'gross_salary', 'per_day_rate', 'absence_deduction', 'unpaid_leave_deduction',
-            'other_deduction', 'advance_deduction', 'total_deduction', 'net_salary', 'paid_amount',
+            'other_deduction', 'advance_deduction', 'total_deduction', 'net_salary',
             'working_days', 'present_days', 'absent_days', 'paid_leave_days', 'unpaid_leave_days', 'overtime_hours',
         ])->mapWithKeys(fn (string $column) => [$column => 'decimal:2'])->all();
 
@@ -114,6 +120,29 @@ class SalaryHistory extends Model
     }
 
     /**
+     * The sum of the payments: from withPaidAmount() when the query added
+     * it, else from the loaded or queried payments.
+     */
+    protected function paidAmount(): Attribute
+    {
+        return Attribute::get(fn (mixed $value) => round((float) ($value
+            ?? ($this->relationLoaded('payments') ? $this->payments->sum('amount') : $this->payments()->sum('amount'))), 2));
+    }
+
+    public function scopeWithPaidAmount(Builder $query): Builder
+    {
+        return $query->withSum('payments as paid_amount', 'amount');
+    }
+
+    /**
+     * Salaries with part of the net salary still unpaid.
+     */
+    public function scopeUnpaid(Builder $query): Builder
+    {
+        return $query->whereRaw('salary_history.net_salary > '.self::PAID_SQL);
+    }
+
+    /**
      * Net salary not paid yet.
      */
     public function dueAmount(): float
@@ -129,6 +158,23 @@ class SalaryHistory extends Model
     public function scopeForMonth(Builder $query, string $month): Builder
     {
         return $query->whereDate('salary_month', $month.'-01');
+    }
+
+    public function scopeInDepartment(Builder $query, string $name): Builder
+    {
+        return $query->whereHas('employee', fn (Builder $query) => $query->inDepartment($name));
+    }
+
+    public function scopeWithDesignation(Builder $query, string $name): Builder
+    {
+        return $query->whereHas('employee', fn (Builder $query) => $query->withDesignation($name));
+    }
+
+    public function scopeOrderByEmployeeCode(Builder $query): Builder
+    {
+        return $query->orderBy(
+            Employee::withTrashed()->select('employee_code')->whereColumn('employee_info.id', 'salary_history.employee_id')
+        );
     }
 
     public function isLocked(): bool

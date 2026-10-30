@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\EmployeeBankDetail;
 use App\Models\EmployeeDetail;
+use App\Models\SalaryDetail;
 use App\Services\FileStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -53,6 +54,7 @@ class EmployeeResource extends JsonResource
             'files' => EmployeeFileResource::collection($this->whenLoaded('files')),
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'salary_details' => SalaryDetailResource::collection($this->whenLoaded('salaryDetails')),
+            'salary_change_summary' => $this->whenLoaded('salaryDetails', fn () => SalaryDetail::changeSummary($this->salaryDetails)),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -18,6 +18,7 @@ class CustomerService
     {
         return Customer::query()
             ->with(['creator:id,name', 'approver:id,name'])
+            ->withCurrentBalance()
             ->when($search, fn ($query) => $query->search($search))
             ->when(! is_null($active), fn ($query) => $query->where('active_status', $active))
             ->latest()
@@ -42,7 +43,6 @@ class CustomerService
                 // The running balance starts out equal to the opening balance; it only
                 // moves afterwards through ledger transactions.
                 'opening_balance' => $openingBalance,
-                'current_balance' => $openingBalance,
                 'active_status' => $data['active_status'] ?? true,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),

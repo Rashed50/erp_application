@@ -23,6 +23,8 @@ class PurchaseService
     {
         return Purchase::query()
             ->with(['supplier:id,name', 'workOrder:id,work_order_no', 'purchasedBy:id,employee_code,name', 'creator:id,name', 'approver:id,name'])
+            ->withLineTotals()
+            ->withPaidAmount()
             ->when($search, fn ($query) => $query->where('invoice_number', 'like', "%{$search}%"))
             ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
             ->latest('purchase_date')
@@ -67,12 +69,8 @@ class PurchaseService
                 'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'purchases'),
                 'debit_account_id' => $data['debit_account_id'] ?? $this->defaultDebitAccountId($data['purchase_type']),
                 'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)?->id,
-                'total_amount' => $totals['total_amount'],
                 'overall_discount' => $totals['overall_discount'],
                 'overall_vat' => $totals['overall_vat'],
-                'discount_amount' => $totals['discount_amount'],
-                'vat_amount' => $totals['vat_amount'],
-                'net_total' => $totals['net_total'],
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
@@ -127,12 +125,8 @@ class PurchaseService
             $purchase->credit_account_id ??= $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)?->id;
 
             if ($totals) {
-                $purchase->total_amount = $totals['total_amount'];
                 $purchase->overall_discount = $totals['overall_discount'];
                 $purchase->overall_vat = $totals['overall_vat'];
-                $purchase->discount_amount = $totals['discount_amount'];
-                $purchase->vat_amount = $totals['vat_amount'];
-                $purchase->net_total = $totals['net_total'];
             }
 
             $purchase->save();
@@ -140,6 +134,7 @@ class PurchaseService
             if (isset($data['items'])) {
                 $purchase->items()->delete();
                 $purchase->items()->createMany($totals['items']);
+                $purchase->unsetRelation('items');
             }
 
             // Rewrite the journal entry in place, or post it now if the purchase was
@@ -232,7 +227,7 @@ class PurchaseService
     }
 
     /**
-     * @return array{tr_no: string, date: string, general_particular: ?string, purchase_id: int}
+     * @return array{tr_no: string, date: string, general_particular: ?string}
      */
     private function journalHeader(Purchase $purchase): array
     {
@@ -240,7 +235,6 @@ class PurchaseService
             'tr_no' => $purchase->invoice_number,
             'date' => $purchase->purchase_date->toDateString(),
             'general_particular' => $purchase->notes,
-            'purchase_id' => $purchase->id,
         ];
     }
 

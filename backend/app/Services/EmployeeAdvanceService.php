@@ -42,6 +42,7 @@ class EmployeeAdvanceService
     {
         return $this->filteredQuery($filters)
             ->with(['employee:id,employee_code,name,department_id,designation_id', 'employee.department', 'employee.designation', 'creator:id,name'])
+            ->withRecoveredAmount()
             ->orderByDesc('advance_date')
             ->orderByDesc('id')
             ->paginate($perPage);
@@ -56,7 +57,7 @@ class EmployeeAdvanceService
     public function totals(array $filters): array
     {
         $totals = $this->filteredQuery($filters)
-            ->selectRaw('COUNT(*) as count, SUM(amount) as amount, SUM(recovered_amount) as recovered_amount')
+            ->selectRaw('COUNT(*) as count, SUM(amount) as amount, SUM('.EmployeeAdvance::RECOVERED_SQL.') as recovered_amount')
             ->first();
 
         return [
@@ -77,8 +78,6 @@ class EmployeeAdvanceService
                 ...$data,
                 'installment_amount' => $data['installment_amount'] ?? $this->defaultInstallment($data['amount'], $data['installment_count']),
                 'deduction_start_month' => $data['deduction_start_month'].'-01',
-                'recovered_amount' => 0,
-                'status' => EmployeeAdvance::STATUS_RUNNING,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
@@ -122,8 +121,6 @@ class EmployeeAdvanceService
             ]);
             $advance->save();
 
-            $this->refreshRecovery($advance);
-
             // Rewrite the journal entry in place so it always matches the advance.
             if ($entry = $this->ledgerPostingService->entryFor($advance)) {
                 $this->ledgerPostingService->repost($entry, $this->advanceJournalHeader($advance), $this->advanceJournalLines($advance));
@@ -166,7 +163,6 @@ class EmployeeAdvanceService
             }
 
             $recovery = $advance->recoveries()->create([
-                'employee_id' => $advance->employee_id,
                 'payment_account_id' => $data['payment_account_id'],
                 'type' => EmployeeAdvanceRecovery::TYPE_CASH,
                 'recovery_date' => $data['recovery_date'],
@@ -176,7 +172,6 @@ class EmployeeAdvanceService
             ]);
 
             $this->postCashRecovery($recovery);
-            $this->refreshRecovery($advance);
 
             return $this->withDetail($advance);
         });
@@ -198,7 +193,6 @@ class EmployeeAdvanceService
             $advance = $recovery->advance;
             $this->ledgerPostingService->reverse($recovery);
             $recovery->delete();
-            $this->refreshRecovery($advance);
 
             return $this->withDetail($advance);
         });
@@ -215,12 +209,12 @@ class EmployeeAdvanceService
         $monthStart = CarbonImmutable::parse($month)->startOfMonth()->toDateString();
         $isThisMonthsInstallment = fn (Builder $query) => $query
             ->where('type', EmployeeAdvanceRecovery::TYPE_SALARY)
-            ->whereDate('salary_month', $monthStart);
+            ->whereHas('salaryHistory', fn (Builder $query) => $query->whereDate('salary_month', $monthStart));
 
         return $query
             ->whereDate('deduction_start_month', '<=', $monthStart)
             ->where(fn (Builder $query) => $query
-                ->where('status', EmployeeAdvance::STATUS_RUNNING)
+                ->running()
                 ->orWhereHas('recoveries', $isThisMonthsInstallment))
             ->withSum(['recoveries as recovered_outside_month' => fn (Builder $query) => $query
                 ->whereNot($isThisMonthsInstallment)], 'amount')
@@ -284,22 +278,17 @@ class EmployeeAdvanceService
      */
     public function syncSalaryRecoveries(SalaryHistory $salary, array $allocations): void
     {
-        $advanceIds = $salary->advanceRecoveries()->pluck('employee_advance_id');
         $salary->advanceRecoveries()->delete();
 
         foreach ($allocations as $allocation) {
             $salary->advanceRecoveries()->create([
                 'employee_advance_id' => $allocation['employee_advance_id'],
-                'employee_id' => $salary->employee_id,
                 'type' => EmployeeAdvanceRecovery::TYPE_SALARY,
                 'recovery_date' => $salary->salary_month->copy()->endOfMonth()->toDateString(),
-                'salary_month' => $salary->salary_month->toDateString(),
                 'amount' => $allocation['amount'],
                 'created_by' => Auth::id(),
             ]);
         }
-
-        $this->refreshAdvances($advanceIds->merge(array_column($allocations, 'employee_advance_id'))->unique()->all());
     }
 
     /**
@@ -308,29 +297,6 @@ class EmployeeAdvanceService
     public function removeSalaryRecoveries(SalaryHistory $salary): void
     {
         $this->syncSalaryRecoveries($salary, []);
-    }
-
-    /**
-     * @param  array<int, int>  $advanceIds
-     */
-    private function refreshAdvances(array $advanceIds): void
-    {
-        EmployeeAdvance::query()->whereIn('id', $advanceIds)->get()
-            ->each(fn (EmployeeAdvance $advance) => $this->refreshRecovery($advance));
-    }
-
-    /**
-     * Recalculate the recovered amount from the recoveries and mark the
-     * advance completed once nothing is outstanding.
-     */
-    private function refreshRecovery(EmployeeAdvance $advance): void
-    {
-        $recovered = round((float) $advance->recoveries()->sum('amount'), 2);
-
-        $advance->update([
-            'recovered_amount' => $recovered,
-            'status' => $recovered >= (float) $advance->amount ? EmployeeAdvance::STATUS_COMPLETED : EmployeeAdvance::STATUS_RUNNING,
-        ]);
     }
 
     private function defaultInstallment(float|int|string $amount, int|string $installmentCount): float
@@ -401,6 +367,7 @@ class EmployeeAdvanceService
             'recoveries' => fn ($query) => $query->orderBy('recovery_date')->orderBy('id'),
             'recoveries.creator:id,name',
             'recoveries.paymentAccount:id,account_number,name',
+            'recoveries.salaryHistory:id,salary_month',
         ]);
     }
 
@@ -411,7 +378,7 @@ class EmployeeAdvanceService
     {
         return EmployeeAdvance::query()
             ->when($filters['employee_id'] ?? null, fn (Builder $query, int $employeeId) => $query->where('employee_id', $employeeId))
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
+            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->inStatus($status))
             ->when($filters['from_date'] ?? null, fn (Builder $query, string $date) => $query->whereDate('advance_date', '>=', $date))
             ->when($filters['to_date'] ?? null, fn (Builder $query, string $date) => $query->whereDate('advance_date', '<=', $date))
             ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query

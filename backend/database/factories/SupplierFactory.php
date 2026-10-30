@@ -30,7 +30,6 @@ class SupplierFactory extends Factory
             'contact_person_phone' => fake()->phoneNumber(),
             'contact_person_email' => fake()->unique()->safeEmail(),
             'opening_balance' => $openingBalance,
-            'current_balance' => $openingBalance,
             'active_status' => true,
         ];
     }

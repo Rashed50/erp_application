@@ -22,7 +22,6 @@ class ChartOfAccountFactory extends Factory
             'account_type_id' => fake()->randomElement([AccountType::ASSET, AccountType::REVENUE, AccountType::EXPENSE]),
             'name' => fake()->unique()->words(2, true),
             'account_number' => null,
-            'sibling_level' => 0,
             'opening_balance' => 0,
             'opening_date' => fake()->date(),
             'active_status' => true,

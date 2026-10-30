@@ -47,9 +47,10 @@ class PayrollService
     public function paginate(int $perPage, array $filters): LengthAwarePaginator
     {
         return $this->filteredQuery($filters)
-            ->with(['generator:id,name', 'approver:id,name'])
+            ->with(['employee:id,employee_code,name,department_id,designation_id', 'employee.department:id,name', 'employee.designation:id,name', 'generator:id,name', 'approver:id,name'])
+            ->withPaidAmount()
             ->orderByDesc('salary_month')
-            ->orderBy('employee_code')
+            ->orderByEmployeeCode()
             ->paginate($perPage);
     }
 
@@ -62,7 +63,7 @@ class PayrollService
     public function totals(array $filters): array
     {
         $totals = $this->filteredQuery($filters)
-            ->selectRaw('COUNT(*) as count, SUM(gross_salary) as gross_salary, SUM(total_deduction) as total_deduction, SUM(net_salary) as net_salary, SUM(paid_amount) as paid_amount')
+            ->selectRaw('COUNT(*) as count, SUM(gross_salary) as gross_salary, SUM(total_deduction) as total_deduction, SUM(net_salary) as net_salary, SUM('.SalaryHistory::PAID_SQL.') as paid_amount')
             ->first();
 
         return [
@@ -226,6 +227,9 @@ class PayrollService
     public function withPayments(SalaryHistory $salary): SalaryHistory
     {
         return $salary->load([
+            'employee:id,employee_code,name,department_id,designation_id',
+            'employee.department:id,name',
+            'employee.designation:id,name',
             'generator:id,name',
             'approver:id,name',
             'payments' => fn ($query) => $query->orderBy('payment_date')->orderBy('id'),
@@ -251,7 +255,6 @@ class PayrollService
 
         if ($amount > 0) {
             $payment = $salary->payments()->create([
-                'employee_id' => $salary->employee_id,
                 'payment_account_id' => $data['payment_account_id'],
                 'payment_date' => $data['payment_date'],
                 'amount' => $amount,
@@ -266,8 +269,8 @@ class PayrollService
     }
 
     /**
-     * Recalculate the paid total from the payments and move the status
-     * between Approved, Partially Paid and Paid to match.
+     * Move the status between Approved, Partially Paid and Paid to match
+     * the payments made.
      */
     private function refreshPaid(SalaryHistory $salary): void
     {
@@ -275,7 +278,6 @@ class PayrollService
         $isPaid = $paid >= (float) $salary->net_salary;
 
         $salary->update([
-            'paid_amount' => $paid,
             'status' => match (true) {
                 $isPaid => SalaryHistory::STATUS_PAID,
                 $paid > 0 => SalaryHistory::STATUS_PARTIALLY_PAID,
@@ -313,9 +315,9 @@ class PayrollService
         $month = $salary->salary_month->format('F Y');
 
         $this->ledgerPostingService->post($salary, [
-            'tr_no' => $salary->employee_code,
+            'tr_no' => $salary->employee->employee_code,
             'date' => $salary->salary_month->copy()->endOfMonth()->toDateString(),
-            'general_particular' => "Salary - {$salary->employee_name} ({$month})",
+            'general_particular' => "Salary - {$salary->employee->name} ({$month})",
         ], [
             ['account_id' => $accounts[LedgerPostingService::SALARY_EXPENSE_NUMBER], 'debit' => $netSalary + $advanceDeduction, 'particular' => "salary {$month}"],
             ['account_id' => $accounts[LedgerPostingService::EMPLOYEE_ADVANCE_NUMBER], 'credit' => $advanceDeduction, 'particular' => 'advance salary installment'],
@@ -334,9 +336,9 @@ class PayrollService
             ?? throw new \RuntimeException('Predefined account '.LedgerPostingService::SALARY_PAYABLE_NUMBER.' is missing.');
 
         $this->ledgerPostingService->post($payment, [
-            'tr_no' => $salary->employee_code,
+            'tr_no' => $salary->employee->employee_code,
             'date' => $payment->payment_date->toDateString(),
-            'general_particular' => "Salary Payment - {$salary->employee_name} ({$month})",
+            'general_particular' => "Salary Payment - {$salary->employee->name} ({$month})",
         ], [
             ['account_id' => $payableId, 'debit' => $amount, 'particular' => "salary payment {$month}"],
             ['account_id' => $payment->payment_account_id, 'credit' => $amount, 'particular' => "salary payment {$month}"],
@@ -427,13 +429,13 @@ class PayrollService
         return SalaryHistory::query()
             ->when($filters['month'] ?? null, fn (Builder $query, string $month) => $query->forMonth($month))
             ->when($filters['employee_id'] ?? null, fn (Builder $query, int $employeeId) => $query->where('employee_id', $employeeId))
-            ->when($filters['department'] ?? null, fn (Builder $query, string $department) => $query->where('department', $department))
-            ->when($filters['designation'] ?? null, fn (Builder $query, string $designation) => $query->where('designation', $designation))
+            ->when($filters['department'] ?? null, fn (Builder $query, string $department) => $query->inDepartment($department))
+            ->when($filters['designation'] ?? null, fn (Builder $query, string $designation) => $query->withDesignation($designation))
             ->when($status, fn (Builder $query) => $query->where('status', $status))
             ->when(($filters['payment_status'] ?? null) === 'paid', fn (Builder $query) => $query->where('status', SalaryHistory::STATUS_PAID))
             ->when(($filters['payment_status'] ?? null) === 'unpaid', fn (Builder $query) => $query
                 ->whereNot('status', SalaryHistory::STATUS_PAID)
-                ->whereColumn('paid_amount', '<', 'net_salary'))
+                ->unpaid())
             // Cancelled salaries only show up when explicitly asked for.
             ->when(! $status && ! ($filters['include_cancelled'] ?? false), fn (Builder $query) => $query->live());
     }

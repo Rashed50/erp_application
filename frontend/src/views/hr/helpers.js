@@ -11,7 +11,33 @@ export const fetchPaymentAccounts = async () => {
 
 export const accountLabel = (account) => `${account.account_number} - ${account.name}`
 
-export const SALARY_STATUSES = ['Generated', 'Approved', 'Partially Paid', 'Paid', 'Cancelled']
+// Labels for the salary revision fields named in field changes and the edit log.
+export const SALARY_FIELD_LABELS = {
+    effective_date: 'Effective Date',
+    basic_salary: 'Basic Salary',
+    house_rent: 'House Rent',
+    medical_allowance: 'Medical Allowance',
+    transport_allowance: 'Transport Allowance',
+    food_allowance: 'Food Allowance',
+    other_allowance: 'Other Allowance',
+    overtime_rate: 'Overtime Rate (per hour)',
+    other_deduction: 'Fixed Monthly Deduction',
+    deduction_basis: 'Absence Deduction Based On',
+    change_reason: 'Change Reason',
+    designation: 'Designation',
+    status: 'Status',
+    remarks: 'Remarks',
+}
+
+// +1,500.00 / -500.00
+export const signedMoney = (value) => `${Number(value) > 0 ? '+' : ''}${money(value)}`
+
+// "House Rent +2,000.00, Medical Allowance -500.00"
+export const fieldChangesText = (changes, translate) => (changes || [])
+    .map((change) => `${translate(SALARY_FIELD_LABELS[change.field] || change.field)} ${signedMoney(change.difference)}`)
+    .join(', ')
+
+export const SALARY_STATUSES =['Generated', 'Approved', 'Partially Paid', 'Paid', 'Cancelled']
 
 export const ADVANCE_STATUSES = ['Running', 'Completed']
 
