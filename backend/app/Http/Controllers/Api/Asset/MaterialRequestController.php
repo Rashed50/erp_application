@@ -40,7 +40,7 @@ class MaterialRequestController extends Controller
 
     public function show(MaterialRequest $materialRequest): JsonResponse
     {
-        $materialRequest->load(['warehouse', 'workOrder', 'requester', 'approver', 'items.item', 'purchaseOrders.supplier']);
+        $materialRequest->load(['warehouse', 'workOrder', 'requester', 'approver', 'items' => fn ($query) => $query->withOrderedQuantity(), 'items.item', 'purchaseOrders.supplier']);
 
         return ApiResponse::success([
             'material_request' => new MaterialRequestResource($materialRequest),

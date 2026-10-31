@@ -97,7 +97,7 @@ describe('store', function () {
 
     it('posts a Purchase ledger entry that increases the supplier balance', function () {
         $actor = adminUser();
-        $supplier = Supplier::factory()->create(['opening_balance' => 100, 'current_balance' => 100]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 100]);
 
         $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
@@ -130,7 +130,7 @@ describe('store with products', function () {
             ->assertJsonPath('data.items.0.product_id', $product->id)
             ->assertJsonPath('data.items.1.product_id', null);
 
-        $this->assertDatabaseHas('purchase_items', ['product_id' => $product->id, 'item_name' => 'Cement Bag']);
+        $this->assertDatabaseHas('purchase_items', ['product_id' => $product->id, 'item_name' => null]);
     });
 
     it('rejects a deleted product', function () {
@@ -163,7 +163,7 @@ describe('update', function () {
 
     it('recomputes totals and keeps the linked ledger entry in sync when items change', function () {
         $actor = adminUser();
-        $supplier = Supplier::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 0]);
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
@@ -233,7 +233,7 @@ describe('payments', function () {
 
     it('records a partial payment, reduces the due amount, and decreases the supplier balance', function () {
         $actor = adminUser();
-        $supplier = Supplier::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 0]);
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
@@ -316,7 +316,7 @@ describe('payments', function () {
             'purchase_id' => $purchase['id'],
             'payment_account_id' => $this->cash->id,
             'bill_amount' => 30,
-            'total_amount' => 30,
+            'bank_charge' => 0,
         ]);
     });
 });
@@ -324,7 +324,7 @@ describe('payments', function () {
 describe('destroy', function () {
     it('soft-deletes the purchase and reverses its ledger entry', function () {
         $actor = adminUser();
-        $supplier = Supplier::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 0]);
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
@@ -361,7 +361,7 @@ describe('chart of account posting', function () {
 
         expect((float) $this->inventory->fresh()->balance)->toBe(88.0)
             ->and((float) $this->payable->fresh()->balance)->toBe(88.0)
-            ->and($purchase->journalEntry->purchase_id)->toBe($purchase->id)
+            ->and($purchase->journalEntry->source->is($purchase))->toBeTrue()
             ->and($purchase->ledgerTransaction->account_transaction_id)->toBe($purchase->journalEntry->id);
     });
 
@@ -503,7 +503,7 @@ describe('work order', function () {
 describe('units, overall discount/VAT and purchased by', function () {
     it('stores line units and adds the overall discount and VAT to the totals', function () {
         $actor = adminUser();
-        $supplier = Supplier::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 0]);
         $buyer = Employee::factory()->create();
 
         // Lines: 90 gross, 5 discount, 3 VAT (see the totals test). Overall: -8 discount, +10 VAT.

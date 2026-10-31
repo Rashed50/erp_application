@@ -32,7 +32,6 @@ class CustomerFactory extends Factory
             'country' => fake()->country(),
             'opening_date' => fake()->date(),
             'opening_balance' => $openingBalance,
-            'current_balance' => $openingBalance,
             'active_status' => true,
         ];
     }

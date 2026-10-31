@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\Approvable;
 use App\Models\Concerns\RecordsDeleter;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,8 +25,15 @@ class SupplierPayment extends Model
             'payment_date' => 'date',
             'bill_amount' => 'decimal:2',
             'bank_charge' => 'decimal:2',
-            'total_amount' => 'decimal:2',
         ];
+    }
+
+    /**
+     * What leaves the payment account: the bill plus the bank charge.
+     */
+    protected function totalAmount(): Attribute
+    {
+        return Attribute::get(fn () => round((float) $this->bill_amount + (float) $this->bank_charge, 2));
     }
 
     public function supplier(): BelongsTo

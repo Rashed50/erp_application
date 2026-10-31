@@ -100,8 +100,6 @@ class InventoryTransferService
                         'remarks' => __('Transfer dispatched.'),
                     ]);
                 }
-
-                $line->update(['sent_qty' => $quantity]);
             }
 
             $transfer->update([
@@ -120,7 +118,8 @@ class InventoryTransferService
             $this->ensureStatus($transfer, InventoryTransfer::STATUS_IN_TRANSIT, __('Only an in-transit transfer can be received.'));
 
             foreach ($transfer->items()->with('item')->get() as $line) {
-                $quantity = (float) $line->sent_qty;
+                // Everything requested was sent on dispatch.
+                $quantity = (float) $line->requested_qty;
 
                 if ($line->item->isSerialTracked()) {
                     $this->receiveUnits($transfer, $line->item);
@@ -130,8 +129,6 @@ class InventoryTransferService
                         'remarks' => __('Transfer received.'),
                     ]);
                 }
-
-                $line->update(['received_qty' => $quantity]);
             }
 
             $transfer->update([
@@ -200,10 +197,7 @@ class InventoryTransferService
 
     private function moveUnit(InventoryItemSerial $serial, ?int $warehouseId, string $status): void
     {
-        $location = ['current_warehouse_id' => $warehouseId, 'status' => $status];
-
-        $serial->update($location);
-        InventoryAsset::query()->where('serial_id', $serial->id)->update($location);
+        $serial->update(['current_warehouse_id' => $warehouseId, 'status' => $status]);
     }
 
     private function ensureStatus(InventoryTransfer $transfer, string $status, string $message): void

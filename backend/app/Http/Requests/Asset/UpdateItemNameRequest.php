@@ -36,7 +36,7 @@ class UpdateItemNameRequest extends FormRequest
             'icatg_id' => [
                 'required', 'integer',
                 Rule::exists('item_categories', 'icatg_id')->where(function (Builder $query) use ($item) {
-                    $query->where('status', true)->orWhere('icatg_id', $item->icatg_id);
+                    $query->where('status', true)->orWhere('icatg_id', $item->subCategory?->icatg_id);
                 }),
             ],
             'iscatg_id' => [

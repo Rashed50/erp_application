@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Employee;
 use App\Models\EmployeeAdvance;
+use App\Models\EmployeeAdvanceRecovery;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -26,8 +27,18 @@ class EmployeeAdvanceFactory extends Factory
             'installment_amount' => 4000,
             'deduction_start_month' => '2026-01-01',
             'purpose' => fake()->randomElement(['Medical', 'Family need', 'House rent']),
-            'recovered_amount' => 0,
-            'status' => EmployeeAdvance::STATUS_RUNNING,
         ];
+    }
+
+    /**
+     * Already repaid $amount in cash.
+     */
+    public function recovered(float $amount): static
+    {
+        return $this->afterCreating(fn (EmployeeAdvance $advance) => $advance->recoveries()->create([
+            'type' => EmployeeAdvanceRecovery::TYPE_CASH,
+            'recovery_date' => '2026-01-05',
+            'amount' => $amount,
+        ]));
     }
 }

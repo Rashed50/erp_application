@@ -136,13 +136,10 @@ class InventoryDisposalService
             'remarks' => $disposal->reason,
         ]);
 
-        $location = [
+        $serial->update([
             'current_warehouse_id' => null,
             'current_employee_id' => null,
             'status' => InventoryAsset::STATUS_DISPOSED,
-        ];
-
-        $serial->update($location);
-        InventoryAsset::query()->where('serial_id', $serial->id)->update($location);
+        ]);
     }
 }

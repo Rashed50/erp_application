@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AccountTransaction;
 use App\Models\Customer;
+use App\Models\CustomerTransaction;
 use App\Models\Sale;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -23,6 +24,8 @@ class SaleService
     {
         return Sale::query()
             ->with(['customer:id,name', 'workOrder:id,work_order_no', 'creator:id,name', 'approver:id,name'])
+            ->withLineTotals()
+            ->withPaidAmount()
             ->when($search, fn ($query) => $query->where('invoice_number', 'like', "%{$search}%"))
             ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
             ->latest('issue_date')
@@ -64,12 +67,8 @@ class SaleService
                 'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'sales'),
                 'debit_account_id' => $data['debit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_RECEIVABLE_NUMBER)?->id,
                 'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::SALES_REVENUE_NUMBER)?->id,
-                'total_amount' => $totals['total_amount'],
                 'overall_discount' => $totals['overall_discount'],
                 'overall_vat' => $totals['overall_vat'],
-                'discount_amount' => $totals['discount_amount'],
-                'vat_amount' => $totals['vat_amount'],
-                'net_total' => $totals['net_total'],
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
@@ -124,12 +123,17 @@ class SaleService
             $sale->credit_account_id ??= $this->ledgerPostingService->predefinedAccount(LedgerPostingService::SALES_REVENUE_NUMBER)?->id;
 
             if ($totals) {
-                $sale->total_amount = $totals['total_amount'];
                 $sale->overall_discount = $totals['overall_discount'];
                 $sale->overall_vat = $totals['overall_vat'];
-                $sale->discount_amount = $totals['discount_amount'];
-                $sale->vat_amount = $totals['vat_amount'];
-                $sale->net_total = $totals['net_total'];
+            }
+
+            // Payments are matched to the sale by invoice number, so they follow a renumbered invoice.
+            if ($sale->isDirty('invoice_number')) {
+                CustomerTransaction::query()
+                    ->where('transaction_type', CustomerTransaction::TYPE_PAYMENT_RECEIVED)
+                    ->where('customer_id', $sale->customer_id)
+                    ->where('invoice_no', $sale->getOriginal('invoice_number'))
+                    ->update(['invoice_no' => $sale->invoice_number]);
             }
 
             $sale->save();
@@ -137,6 +141,7 @@ class SaleService
             if (isset($data['items'])) {
                 $sale->items()->delete();
                 $sale->items()->createMany($totals['items']);
+                $sale->unsetRelation('items');
             }
 
             // Rewrite the journal entry in place, or post it now if the sale was
@@ -212,19 +217,13 @@ class SaleService
     {
         return DB::transaction(function () use ($sale, $data) {
             $this->customerTransactionService->create($sale->customer, [
-                'transaction_type' => 'Payment Received',
+                'transaction_type' => CustomerTransaction::TYPE_PAYMENT_RECEIVED,
                 'work_order_id' => $sale->work_order_id,
                 'invoice_no' => $sale->invoice_number,
                 'credit' => $data['amount'],
                 'payment_account_id' => $data['payment_account_id'],
-                'sale_id' => $sale->id,
                 'transaction_date' => $data['payment_date'],
                 'notes' => $data['notes'] ?? null,
-            ]);
-
-            $sale->update([
-                'paid_amount' => $sale->paid_amount + $data['amount'],
-                'updated_by' => Auth::id(),
             ]);
 
             return $sale->load(['items', 'customer', 'workOrder']);
@@ -251,7 +250,7 @@ class SaleService
     }
 
     /**
-     * @return array{tr_no: string, date: string, general_particular: ?string, sale_id: int}
+     * @return array{tr_no: string, date: string, general_particular: ?string}
      */
     private function journalHeader(Sale $sale): array
     {
@@ -259,7 +258,6 @@ class SaleService
             'tr_no' => $sale->invoice_number,
             'date' => $sale->issue_date->toDateString(),
             'general_particular' => $sale->notes,
-            'sale_id' => $sale->id,
         ];
     }
 

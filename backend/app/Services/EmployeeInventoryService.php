@@ -29,8 +29,9 @@ class EmployeeInventoryService
     {
         return EmployeeInventory::query()
             ->with(['employee', 'item', 'serial', 'warehouse', 'workOrder', 'issuer'])
+            ->withReturnedQuantity()
             ->when($filters['employee_id'] ?? null, fn ($query, int $id) => $query->where('employee_id', $id))
-            ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
+            ->when($filters['status'] ?? null, fn ($query, string $status) => $query->inStatus($status))
             ->when($filters['warehouse_id'] ?? null, fn ($query, int $id) => $query->where('warehouse_id', $id))
             ->when($filters['work_order_id'] ?? null, fn ($query, int $id) => $query->where('work_order_id', $id))
             ->latest()
@@ -67,7 +68,6 @@ class EmployeeInventoryService
                 'quantity' => $quantity,
                 'issue_date' => now()->toDateString(),
                 'expected_return_date' => $data['expected_return_date'] ?? null,
-                'status' => EmployeeInventory::STATUS_ISSUED,
                 'condition' => $serial?->condition ?? 'good',
                 'remarks' => $data['remarks'] ?? null,
                 'issued_by' => Auth::id(),
@@ -111,9 +111,6 @@ class EmployeeInventoryService
             }
 
             $return = $issued->returns()->create([
-                'employee_id' => $issued->employee_id,
-                'item_id' => $issued->item_id,
-                'serial_id' => $issued->serial_id,
                 'destination_warehouse_id' => $data['destination_warehouse_id'],
                 'quantity' => $quantity,
                 'return_date' => now()->toDateString(),
@@ -138,16 +135,9 @@ class EmployeeInventoryService
                 ]);
             }
 
-            $issued->returned_qty = (float) $issued->returned_qty + $quantity;
-            $issued->condition = $data['condition'];
+            $issued->update(['condition' => $data['condition']]);
 
-            if ($issued->outstandingQuantity() <= 0) {
-                $issued->status = EmployeeInventory::STATUS_RETURNED;
-            }
-
-            $issued->save();
-
-            return $return->load(['employee', 'item', 'destinationWarehouse']);
+            return $return->load(['employeeInventory', 'employee', 'item', 'destinationWarehouse']);
         });
     }
 

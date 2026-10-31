@@ -6,10 +6,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 /**
  * Asset register entry: one per serial of an asset item, created when the
- * unit is received against a purchase order.
+ * unit is received against a purchase order. Only what is particular to an
+ * asset (tag and cost) is kept here; the item, store, custodian, status and
+ * condition belong to the serial.
  */
 class InventoryAsset extends Model
 {
@@ -49,19 +53,9 @@ class InventoryAsset extends Model
     protected function casts(): array
     {
         return [
-            'item_id' => 'integer',
             'serial_id' => 'integer',
-            'current_warehouse_id' => 'integer',
-            'current_employee_id' => 'integer',
             'purchase_cost' => 'decimal:2',
-            'purchase_date' => 'date',
-            'warranty_expiry' => 'date',
         ];
-    }
-
-    public function item(): BelongsTo
-    {
-        return $this->belongsTo(ItemName::class, 'item_id');
     }
 
     public function serial(): BelongsTo
@@ -69,14 +63,36 @@ class InventoryAsset extends Model
         return $this->belongsTo(InventoryItemSerial::class, 'serial_id');
     }
 
-    public function currentWarehouse(): BelongsTo
+    /**
+     * The serial's item.
+     */
+    public function item(): HasOneThrough
     {
-        return $this->belongsTo(InventoryWarehouse::class, 'current_warehouse_id');
+        return $this->hasOneThrough(ItemName::class, InventoryItemSerial::class, 'id', 'item_id', 'serial_id', 'item_id');
     }
 
-    public function currentEmployee(): BelongsTo
+    /**
+     * The store the serial is in.
+     */
+    public function currentWarehouse(): HasOneThrough
     {
-        return $this->belongsTo(Employee::class, 'current_employee_id');
+        return $this->hasOneThrough(InventoryWarehouse::class, InventoryItemSerial::class, 'id', 'id', 'serial_id', 'current_warehouse_id');
+    }
+
+    /**
+     * The employee holding the serial.
+     */
+    public function currentEmployee(): HasOneThrough
+    {
+        return $this->hasOneThrough(Employee::class, InventoryItemSerial::class, 'id', 'id', 'serial_id', 'current_employee_id');
+    }
+
+    /**
+     * Assets whose serial matches the constraint (status, store, custodian...).
+     */
+    public function scopeWhereSerial(Builder $query, string $column, mixed $value): Builder
+    {
+        return $query->whereHas('serial', fn (Builder $query) => $query->where($column, $value));
     }
 
     public function assignments(): HasMany
@@ -84,9 +100,12 @@ class InventoryAsset extends Model
         return $this->hasMany(AssetAssignment::class, 'asset_id');
     }
 
-    public function returns(): HasMany
+    /**
+     * Returns of this asset, through its assignments.
+     */
+    public function returns(): HasManyThrough
     {
-        return $this->hasMany(AssetReturn::class, 'asset_id');
+        return $this->hasManyThrough(AssetReturn::class, AssetAssignment::class, 'asset_id', 'asset_assignment_id');
     }
 
     /**

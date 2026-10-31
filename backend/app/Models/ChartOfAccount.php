@@ -48,6 +48,27 @@ class ChartOfAccount extends Model
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    /**
+     * Depth in the chart: 0 for a top-level account, its parent's depth + 1
+     * otherwise, found by walking up the parents.
+     */
+    protected function siblingLevel(): Attribute
+    {
+        return Attribute::get(function () {
+            $level = 0;
+            $parentId = $this->parent_id;
+            $seen = [];
+
+            while ($parentId && ! isset($seen[$parentId])) {
+                $seen[$parentId] = true;
+                $level++;
+                $parentId = self::withTrashed()->whereKey($parentId)->value('parent_id');
+            }
+
+            return $level;
+        });
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

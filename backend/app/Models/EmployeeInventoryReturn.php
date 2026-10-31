@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class EmployeeInventoryReturn extends Model
 {
@@ -25,14 +26,20 @@ class EmployeeInventoryReturn extends Model
         return $this->belongsTo(EmployeeInventory::class);
     }
 
-    public function employee(): BelongsTo
+    /**
+     * The employee the item was issued to.
+     */
+    public function employee(): HasOneThrough
     {
-        return $this->belongsTo(Employee::class);
+        return $this->hasOneThrough(Employee::class, EmployeeInventory::class, 'id', 'id', 'employee_inventory_id', 'employee_id');
     }
 
-    public function item(): BelongsTo
+    /**
+     * The issued item.
+     */
+    public function item(): HasOneThrough
     {
-        return $this->belongsTo(ItemName::class, 'item_id');
+        return $this->hasOneThrough(ItemName::class, EmployeeInventory::class, 'id', 'item_id', 'employee_inventory_id', 'item_id');
     }
 
     public function destinationWarehouse(): BelongsTo

@@ -6,6 +6,7 @@ use App\Models\InventoryAsset;
 use App\Models\InventoryStock;
 use App\Models\InventoryWarehouse;
 use App\Models\ItemName;
+use App\Models\MaterialRequestItem;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\User;
@@ -170,7 +171,7 @@ describe('procurement', function () {
             ->assertJsonPath('data.grand_total', 90);
 
         $this->assertDatabaseHas('material_requests', ['id' => $request['id'], 'status' => 'partially_purchased']);
-        $this->assertDatabaseHas('material_request_items', ['id' => $request['items'][0]['id'], 'purchased_qty' => 5]);
+        expect(MaterialRequestItem::find($request['items'][0]['id'])->purchased_qty)->toBe(5.0);
     });
 
     it('refuses to receive an order that is not approved', function () {
@@ -233,7 +234,7 @@ describe('procurement', function () {
 
         expect($order->status)->toBe(PurchaseOrder::STATUS_RECEIVED)
             ->and(stockOf($store, $item))->toBe(2.0)
-            ->and(InventoryAsset::where('current_warehouse_id', $store->id)->where('status', 'in_stock')->count())->toBe(2);
+            ->and(InventoryAsset::whereSerial('current_warehouse_id', $store->id)->whereSerial('status', 'in_stock')->count())->toBe(2);
     });
 
     it('requires one serial number per unit of a serial-tracked item', function () {
@@ -282,7 +283,7 @@ describe('transfers', function () {
 
         expect(stockOf($center, $cement))->toBe(30.0)
             ->and(stockOf($project, $cement))->toBe(0.0)
-            ->and(InventoryAsset::where('status', 'in_transit')->count())->toBe(1);
+            ->and(InventoryAsset::whereSerial('status', 'in_transit')->count())->toBe(1);
 
         $this->actingAs($actor, 'sanctum')->postJson("/api/asset/transfers/{$transferId}/receive")
             ->assertOk()
@@ -291,7 +292,7 @@ describe('transfers', function () {
         expect(stockOf($project, $cement))->toBe(20.0)
             ->and(stockOf($project, $laptop))->toBe(1.0)
             ->and(stockOf($center, $laptop))->toBe(1.0)
-            ->and(InventoryAsset::where('current_warehouse_id', $project->id)->where('status', 'in_stock')->count())->toBe(1);
+            ->and(InventoryAsset::whereSerial('current_warehouse_id', $project->id)->whereSerial('status', 'in_stock')->count())->toBe(1);
     });
 
     it('rejects a transfer the source store cannot cover', function () {
@@ -326,8 +327,8 @@ describe('custody', function () {
             ->assertJsonPath('data.employee_name', $employee->name)
             ->json('data.id');
 
-        expect($asset->fresh()->status)->toBe(InventoryAsset::STATUS_ASSIGNED)
-            ->and($asset->fresh()->current_employee_id)->toBe($employee->id)
+        expect($asset->fresh()->serial->status)->toBe(InventoryAsset::STATUS_ASSIGNED)
+            ->and($asset->fresh()->serial->current_employee_id)->toBe($employee->id)
             ->and(stockOf($store, $item))->toBe(0.0);
 
         $this->actingAs($actor, 'sanctum')
@@ -341,8 +342,8 @@ describe('custody', function () {
             ])
             ->assertOk();
 
-        expect($asset->fresh()->status)->toBe(InventoryAsset::STATUS_DAMAGED)
-            ->and($asset->fresh()->current_employee_id)->toBeNull()
+        expect($asset->fresh()->serial->status)->toBe(InventoryAsset::STATUS_DAMAGED)
+            ->and($asset->fresh()->serial->current_employee_id)->toBeNull()
             ->and(AssetAssignment::find($assignmentId)->status)->toBe(AssetAssignment::STATUS_RETURNED)
             ->and(stockOf($store, $item))->toBe(1.0);
     });
@@ -432,7 +433,7 @@ describe('disposal', function () {
             ->assertOk()
             ->assertJsonPath('data.status', 'disposed');
 
-        expect($asset->fresh()->status)->toBe(InventoryAsset::STATUS_DISPOSED)
+        expect($asset->fresh()->serial->status)->toBe(InventoryAsset::STATUS_DISPOSED)
             ->and(stockOf($store, $item))->toBe(0.0);
     });
 });

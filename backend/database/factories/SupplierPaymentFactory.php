@@ -28,7 +28,6 @@ class SupplierPaymentFactory extends Factory
             'payment_date' => fake()->date(),
             'bill_amount' => $billAmount,
             'bank_charge' => 0,
-            'total_amount' => $billAmount,
             'remarks' => fake()->optional()->sentence(),
         ];
     }

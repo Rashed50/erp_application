@@ -34,7 +34,8 @@ class PurchaseOrderService
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return PurchaseOrder::query()
-            ->with(['supplier', 'materialRequest', 'items.item', 'creator:id,name', 'approver:id,name'])
+            ->with(['supplier', 'materialRequest', 'items' => fn ($query) => $query->withReceivedQuantity(), 'items.item', 'creator:id,name', 'approver:id,name'])
+            ->withLineTotals()
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->when($filters['supplier_id'] ?? null, fn ($query, int $id) => $query->where('supplier_id', $id))
             ->when($filters['material_request_id'] ?? null, fn ($query, int $id) => $query->where('material_request_id', $id))
@@ -61,26 +62,6 @@ class PurchaseOrderService
                 }
             }
 
-            $lines = collect($data['items'])->map(function (array $line) {
-                $discount = (float) ($line['discount'] ?? 0);
-                $tax = (float) ($line['tax'] ?? 0);
-                $base = round((float) $line['quantity'] * (float) $line['unit_price'], 2);
-
-                return [
-                    'item_id' => $line['item_id'],
-                    'quantity' => $line['quantity'],
-                    'unit_price' => $line['unit_price'],
-                    'discount' => $discount,
-                    'tax' => $tax,
-                    'base' => $base,
-                    'total' => $base - $discount + $tax,
-                ];
-            });
-
-            $subtotal = $lines->sum('base');
-            $discount = $lines->sum('discount');
-            $tax = $lines->sum('tax');
-
             $order = PurchaseOrder::create([
                 'po_no' => InventoryStockService::documentNumber('PO'),
                 'supplier_id' => $data['supplier_id'],
@@ -88,18 +69,21 @@ class PurchaseOrderService
                 'purchase_date' => $data['purchase_date'],
                 'expected_date' => $data['expected_date'] ?? null,
                 'status' => PurchaseOrder::STATUS_SUBMITTED,
-                'subtotal' => $subtotal,
-                'discount' => $discount,
-                'tax' => $tax,
-                'grand_total' => $subtotal - $discount + $tax,
                 'remarks' => $data['remarks'] ?? null,
                 'created_by' => Auth::id(),
             ]);
 
-            $order->items()->createMany($lines->map(fn (array $line) => collect($line)->except('base')->all())->all());
+            // The order's subtotal, discount, tax and grand total come from these lines.
+            $order->items()->createMany(collect($data['items'])->map(fn (array $line) => [
+                'item_id' => $line['item_id'],
+                'quantity' => $line['quantity'],
+                'unit_price' => $line['unit_price'],
+                'discount' => (float) ($line['discount'] ?? 0),
+                'tax' => (float) ($line['tax'] ?? 0),
+            ])->all());
 
             if ($materialRequest) {
-                $this->materialRequestService->recordPurchase($materialRequest, $data['items']);
+                $this->materialRequestService->recordPurchase($materialRequest);
             }
 
             return $order->load(['supplier', 'materialRequest', 'items.item']);
@@ -178,9 +162,6 @@ class PurchaseOrderService
                     'expiry_date' => $line['expiry_date'] ?? null,
                 ]);
 
-                $orderItem->received_qty = (float) $orderItem->received_qty + $quantity;
-                $orderItem->save();
-
                 if (! $orderItem->item->isSerialTracked()) {
                     $this->stockService->increase($receipt->warehouse_id, $orderItem->item, $quantity, InventoryTransaction::TYPE_PURCHASE, $receipt, [
                         'remarks' => __('Purchase received.'),
@@ -227,16 +208,9 @@ class PurchaseOrderService
 
         if ($item->isAsset()) {
             InventoryAsset::create([
-                'item_id' => $item->item_id,
                 'serial_id' => $serial->id,
                 'asset_tag' => $serialData['asset_tag'] ?? $item->item_code.'-'.Str::upper(Str::random(8)),
-                'purchase_receipt_item_id' => $receiptItemId,
                 'purchase_cost' => $unitCost,
-                'purchase_date' => $receipt->received_date,
-                'warranty_expiry' => $serial->warranty_expiry,
-                'current_warehouse_id' => $receipt->warehouse_id,
-                'status' => InventoryAsset::STATUS_IN_STOCK,
-                'condition' => 'new',
             ]);
         }
 

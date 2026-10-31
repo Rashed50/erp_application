@@ -24,9 +24,9 @@ it('seeds employees, work records and payroll at every stage, and can be run twi
         ->and($statuses['Approved'])->toBe(8)
         ->and($statuses['Generated'])->toBe(6)
         // The employee who left on 20 August is prorated for August.
-        ->and(SalaryHistory::where('employee_code', 'EMP-1009')->whereDate('salary_month', '2026-08-01')->value('employed_days'))->toBe(20)
+        ->and(SalaryHistory::whereRelation('employee', 'employee_code', 'EMP-1009')->whereDate('salary_month', '2026-08-01')->value('employed_days'))->toBe(20)
         // The raise from August does not touch the paid June salary
         // (45,000 basic, paid for 25 of 26 working days after one absence).
-        ->and((float) SalaryHistory::where('employee_code', 'EMP-1001')->whereDate('salary_month', '2026-06-01')->value('basic_salary'))->toBe(43269.23)
-        ->and((float) SalaryHistory::where('employee_code', 'EMP-1001')->whereDate('salary_month', '2026-08-01')->value('basic_salary'))->toBe(50000.0);
+        ->and((float) SalaryHistory::whereRelation('employee', 'employee_code', 'EMP-1001')->whereDate('salary_month', '2026-06-01')->value('basic_salary'))->toBe(43269.23)
+        ->and((float) SalaryHistory::whereRelation('employee', 'employee_code', 'EMP-1001')->whereDate('salary_month', '2026-08-01')->value('basic_salary'))->toBe(50000.0);
 });

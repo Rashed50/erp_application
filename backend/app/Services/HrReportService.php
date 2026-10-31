@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Employee;
+use App\Models\SalaryDetail;
 use App\Models\SalaryHistory;
 use Illuminate\Support\Collection;
 
@@ -40,8 +41,7 @@ class HrReportService
     }
 
     /**
-     * Payroll totals per department for a month, from the salary snapshot
-     * (so a later department change does not move past salaries).
+     * Payroll totals per department (the employee's current one) for a month.
      *
      * @return Collection<int, array<string, mixed>>
      */
@@ -50,10 +50,12 @@ class HrReportService
         return SalaryHistory::query()
             ->live()
             ->forMonth($month)
-            ->when($status, fn ($query) => $query->where('status', $status))
-            ->selectRaw('department, COUNT(*) as employees, SUM(basic_salary) as basic_salary, SUM(total_allowance) as total_allowance, SUM(overtime_amount) as overtime_amount, SUM(gross_salary) as gross_salary, SUM(total_deduction) as total_deduction, SUM(net_salary) as net_salary')
-            ->groupBy('department')
-            ->orderBy('department')
+            ->when($status, fn ($query) => $query->where('salary_history.status', $status))
+            ->join('employee_info', 'employee_info.id', '=', 'salary_history.employee_id')
+            ->leftJoin('departments', 'departments.id', '=', 'employee_info.department_id')
+            ->selectRaw('departments.name as department, COUNT(*) as employees, SUM(basic_salary) as basic_salary, SUM(total_allowance) as total_allowance, SUM(overtime_amount) as overtime_amount, SUM(gross_salary) as gross_salary, SUM(total_deduction) as total_deduction, SUM(net_salary) as net_salary')
+            ->groupBy('departments.name')
+            ->orderBy('departments.name')
             ->get()
             ->map(fn ($row) => [
                 'department' => $row->department ?: 'Unassigned',
@@ -77,8 +79,10 @@ class HrReportService
         return SalaryHistory::query()
             ->live()
             ->whereYear('salary_month', $year)
-            ->when($department, fn ($query) => $query->where('department', $department))
-            ->get(['salary_month', 'status', 'gross_salary', 'total_deduction', 'net_salary'])
+            ->when($department, fn ($query) => $query->inDepartment($department))
+            ->select(['id', 'salary_month', 'status', 'gross_salary', 'total_deduction', 'net_salary'])
+            ->withPaidAmount()
+            ->get()
             ->groupBy(fn (SalaryHistory $salary) => $salary->salary_month->format('Y-m'))
             ->sortKeys()
             ->map(fn (Collection $salaries, string $month) => [
@@ -94,6 +98,56 @@ class HrReportService
     }
 
     /**
+     * Every salary increment and decrement (an active revision compared with
+     * the one before it) effective within the dates, newest first, with the
+     * amounts that changed field by field.
+     *
+     * @return array{rows: array<int, array<string, mixed>>, totals: array{changes: int, increments: int, decrements: int}}
+     */
+    public function salaryChanges(?string $from = null, ?string $to = null, ?string $department = null, ?int $employeeId = null): array
+    {
+        // Each employee's full revision list is needed to find the revision
+        // before the first one inside the dates.
+        $rows = SalaryDetail::query()
+            ->when($employeeId, fn ($query) => $query->where('employee_id', $employeeId))
+            ->when($department, fn ($query) => $query->whereHas('employee', fn ($query) => $query->inDepartment($department)))
+            ->with(['employee:id,employee_code,name,department_id', 'employee.department:id,name', 'designation:id,name'])
+            ->get()
+            ->groupBy('employee_id')
+            ->flatMap(fn (Collection $revisions) => SalaryDetail::linkRevisions($revisions))
+            ->filter(fn (SalaryDetail $revision) => in_array($revision->changeType(), [SalaryDetail::CHANGE_INCREMENT, SalaryDetail::CHANGE_DECREMENT, SalaryDetail::CHANGE_NONE], true))
+            ->filter(fn (SalaryDetail $revision) => (! $from || $revision->effective_date->toDateString() >= $from)
+                && (! $to || $revision->effective_date->toDateString() <= $to))
+            ->sortByDesc(fn (SalaryDetail $revision) => [$revision->effective_date->toDateString(), $revision->id])
+            ->map(fn (SalaryDetail $revision) => [
+                'id' => $revision->id,
+                'employee_id' => $revision->employee_id,
+                'employee_code' => $revision->employee?->employee_code,
+                'employee_name' => $revision->employee?->name,
+                'department' => $revision->employee?->department?->name,
+                'effective_date' => $revision->effective_date->toDateString(),
+                'change_type' => $revision->changeType(),
+                'change_reason' => $revision->change_reason,
+                'designation' => $revision->designation?->name,
+                'previous_monthly_gross' => $revision->previousRevision->monthly_gross,
+                'monthly_gross' => $revision->monthly_gross,
+                'change_amount' => $revision->changeAmount(),
+                'field_changes' => $revision->fieldChanges(),
+                'remarks' => $revision->remarks,
+            ])
+            ->values();
+
+        return [
+            'rows' => $rows->all(),
+            'totals' => [
+                'changes' => $rows->count(),
+                'increments' => $rows->where('change_type', SalaryDetail::CHANGE_INCREMENT)->count(),
+                'decrements' => $rows->where('change_type', SalaryDetail::CHANGE_DECREMENT)->count(),
+            ],
+        ];
+    }
+
+    /**
      * Every approved salary that is not fully paid (for months up to `$month`
      * when given, so older dues show too), oldest first, with the total due
      * per employee and overall.
@@ -105,21 +159,24 @@ class HrReportService
         $salaries = SalaryHistory::query()
             ->live()
             ->whereIn('status', SalaryHistory::PAYABLE_STATUSES)
-            ->whereColumn('paid_amount', '<', 'net_salary')
+            ->unpaid()
             ->when($month, fn ($query) => $query->whereDate('salary_month', '<=', $month.'-01'))
-            ->when($department, fn ($query) => $query->where('department', $department))
+            ->when($department, fn ($query) => $query->inDepartment($department))
             ->when($employeeId, fn ($query) => $query->where('employee_id', $employeeId))
+            ->with(['employee:id,employee_code,name,department_id,designation_id', 'employee.department:id,name', 'employee.designation:id,name'])
             ->orderBy('salary_month')
-            ->orderBy('employee_code')
-            ->get(['id', 'employee_id', 'employee_code', 'employee_name', 'department', 'designation', 'salary_month', 'status', 'net_salary', 'paid_amount']);
+            ->orderByEmployeeCode()
+            ->select(['id', 'employee_id', 'salary_month', 'status', 'net_salary'])
+            ->withPaidAmount()
+            ->get();
 
         $rows = $salaries->map(fn (SalaryHistory $salary) => [
             'id' => $salary->id,
             'employee_id' => $salary->employee_id,
-            'employee_code' => $salary->employee_code,
-            'employee_name' => $salary->employee_name,
-            'department' => $salary->department,
-            'designation' => $salary->designation,
+            'employee_code' => $salary->employee?->employee_code,
+            'employee_name' => $salary->employee?->name,
+            'department' => $salary->employee?->department?->name,
+            'designation' => $salary->employee?->designation?->name,
             'salary_month' => $salary->salary_month->format('Y-m'),
             'status' => $salary->status,
             'net_salary' => (float) $salary->net_salary,

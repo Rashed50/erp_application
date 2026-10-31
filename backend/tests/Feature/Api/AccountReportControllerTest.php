@@ -173,15 +173,15 @@ describe('balance sheet', function () {
             ->assertJsonPath('data.is_balanced', true);
 
         expect(ChartOfAccount::query()->where('account_number', '1030')->first()->balance)->toBe(500.0)
-            ->and(Customer::query()->where('name', 'Opening Customer')->value('current_balance'))->toEqual('500.00');
+            ->and(Customer::query()->where('name', 'Opening Customer')->first()->current_balance)->toEqual(500.0);
     });
 });
 
 describe('dashboard', function () {
     it('totals sales and purchases and reads receivable, payable and bank balances from the ledger', function () {
-        Sale::factory()->create(['issue_date' => '2026-05-02', 'net_total' => 1000]);
-        Sale::factory()->create(['issue_date' => '2026-06-01', 'net_total' => 250]);
-        Purchase::factory()->create(['purchase_date' => '2026-05-03', 'net_total' => 400]);
+        Sale::factory()->withTotal(1000)->create(['issue_date' => '2026-05-02']);
+        Sale::factory()->withTotal(250)->create(['issue_date' => '2026-06-01']);
+        Purchase::factory()->withTotal(400)->create(['purchase_date' => '2026-05-03']);
 
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/customers', ['name' => 'Due Customer', 'opening_balance' => 500])->assertStatus(201);
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/suppliers', ['name' => 'Due Supplier', 'opening_balance' => 300])->assertStatus(201);
@@ -229,7 +229,7 @@ describe('cash transactions', function () {
 
 describe('supplier reports', function () {
     it('brings the balance forward and keeps a running due, skipping reversed entries', function () {
-        $supplier = Supplier::factory()->create(['opening_balance' => 100, 'current_balance' => 100]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 100]);
         SupplierTransaction::factory()->for($supplier)->create(['credit' => 400, 'debit' => 0, 'transaction_date' => '2026-01-05']);
         SupplierTransaction::factory()->for($supplier)->create(['credit' => 1000, 'debit' => 0, 'transaction_date' => '2026-02-01']);
         SupplierTransaction::factory()->for($supplier)->create(['credit' => 0, 'debit' => 600, 'transaction_date' => '2026-02-10', 'transaction_type' => 'Bill Payment']);
@@ -252,9 +252,11 @@ describe('supplier reports', function () {
     });
 
     it("lists active suppliers' current balances", function () {
-        Supplier::factory()->create(['name' => 'A Supplier', 'opening_balance' => 100, 'current_balance' => 250]);
-        Supplier::factory()->create(['name' => 'B Supplier', 'opening_balance' => 0, 'current_balance' => 50]);
-        Supplier::factory()->create(['active_status' => false, 'current_balance' => 999]);
+        $a = Supplier::factory()->create(['name' => 'A Supplier', 'opening_balance' => 100]);
+        SupplierTransaction::factory()->for($a)->create(['credit' => 150, 'debit' => 0]);
+        $b = Supplier::factory()->create(['name' => 'B Supplier', 'opening_balance' => 0]);
+        SupplierTransaction::factory()->for($b)->create(['credit' => 50, 'debit' => 0]);
+        Supplier::factory()->create(['active_status' => false, 'opening_balance' => 999]);
 
         $this->actingAs($this->actor, 'sanctum')
             ->getJson('/api/accounting/reports/supplier-balances')
@@ -274,7 +276,7 @@ describe('supplier reports', function () {
 
 describe('customer statement', function () {
     it('raises the due with invoices and lowers it with payments', function () {
-        $customer = Customer::factory()->create(['opening_balance' => 200, 'current_balance' => 200]);
+        $customer = Customer::factory()->create(['opening_balance' => 200]);
         CustomerTransaction::factory()->for($customer)->create(['debit' => 500, 'credit' => 0, 'transaction_date' => '2026-03-01']);
         CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 300, 'transaction_date' => '2026-03-05', 'transaction_type' => 'Payment Received']);
 
@@ -291,8 +293,8 @@ describe('customer statement', function () {
 describe('purchase and sales reports', function () {
     it('lists purchases by credit account with VAT and net totals', function () {
         $payable = ChartOfAccount::query()->where('account_number', '2010')->first();
-        Purchase::factory()->create(['credit_account_id' => $payable->id, 'purchase_date' => '2026-04-02', 'vat_amount' => 10, 'net_total' => 110]);
-        Purchase::factory()->create(['credit_account_id' => $payable->id, 'purchase_date' => '2026-04-20', 'vat_amount' => 5, 'net_total' => 55]);
+        Purchase::factory()->withTotal(110, 10)->create(['credit_account_id' => $payable->id, 'purchase_date' => '2026-04-02']);
+        Purchase::factory()->withTotal(55, 5)->create(['credit_account_id' => $payable->id, 'purchase_date' => '2026-04-20']);
         Purchase::factory()->create(['credit_account_id' => $this->cash->id, 'purchase_date' => '2026-04-03']);
         Purchase::factory()->create(['credit_account_id' => $payable->id, 'purchase_date' => '2026-05-01']);
 
@@ -306,10 +308,10 @@ describe('purchase and sales reports', function () {
     });
 
     it('summarises sales against purchases with a running balance', function () {
-        Sale::factory()->create(['issue_date' => '2026-05-02', 'net_total' => 1000]);
-        Purchase::factory()->create(['purchase_date' => '2026-05-02', 'net_total' => 400]);
-        Sale::factory()->create(['issue_date' => '2026-05-10', 'net_total' => 250]);
-        Sale::factory()->create(['issue_date' => '2026-06-01', 'net_total' => 999]);
+        Sale::factory()->withTotal(1000)->create(['issue_date' => '2026-05-02']);
+        Purchase::factory()->withTotal(400)->create(['purchase_date' => '2026-05-02']);
+        Sale::factory()->withTotal(250)->create(['issue_date' => '2026-05-10']);
+        Sale::factory()->withTotal(999)->create(['issue_date' => '2026-06-01']);
 
         $this->actingAs($this->actor, 'sanctum')
             ->getJson('/api/accounting/reports/sales-purchase-summary?from_date=2026-05-01&to_date=2026-05-31')
@@ -333,8 +335,9 @@ describe('purchase and sales reports', function () {
 
     it("lists a customer's sales with paid and due totals", function () {
         $customer = Customer::factory()->create();
-        Sale::factory()->for($customer)->create(['issue_date' => '2026-06-01', 'total_amount' => 1000, 'discount_amount' => 0, 'vat_amount' => 0, 'net_total' => 1000, 'paid_amount' => 400]);
-        Sale::factory()->for($customer)->create(['issue_date' => '2026-06-15', 'total_amount' => 500, 'discount_amount' => 0, 'vat_amount' => 0, 'net_total' => 500, 'paid_amount' => 0]);
+        $paid = Sale::factory()->for($customer)->withTotal(1000)->create(['issue_date' => '2026-06-01']);
+        CustomerTransaction::factory()->for($customer)->create(['transaction_type' => 'Payment Received', 'invoice_no' => $paid->invoice_number, 'debit' => 0, 'credit' => 400]);
+        Sale::factory()->for($customer)->withTotal(500)->create(['issue_date' => '2026-06-15']);
         Sale::factory()->create(['issue_date' => '2026-06-10']);
 
         $this->actingAs($this->actor, 'sanctum')
@@ -561,12 +564,12 @@ describe('customer collections', function () {
 describe('work order profitability', function () {
     beforeEach(function () {
         $this->workOrder = WorkOrder::factory()->create(['work_order_no' => 'WO-PL-1', 'issue_date' => '2026-05-01', 'total_amount' => 20000]);
-        Sale::factory()->create(['customer_id' => $this->workOrder->customer_id, 'work_order_id' => $this->workOrder->id, 'issue_date' => '2026-05-10', 'net_total' => 12000]);
-        Purchase::factory()->create(['work_order_id' => $this->workOrder->id, 'purchase_date' => '2026-05-05', 'net_total' => 4000]);
-        Purchase::factory()->create(['work_order_id' => $this->workOrder->id, 'purchase_date' => '2026-07-05', 'net_total' => 999]);
+        Sale::factory()->withTotal(12000)->create(['customer_id' => $this->workOrder->customer_id, 'work_order_id' => $this->workOrder->id, 'issue_date' => '2026-05-10']);
+        Purchase::factory()->withTotal(4000)->create(['work_order_id' => $this->workOrder->id, 'purchase_date' => '2026-05-05']);
+        Purchase::factory()->withTotal(999)->create(['work_order_id' => $this->workOrder->id, 'purchase_date' => '2026-07-05']);
         IncomeExpenseTransaction::factory()->create(['work_order_id' => $this->workOrder->id, 'transaction_date' => '2026-05-06', 'amount' => 1500]);
         IncomeExpenseTransaction::factory()->income()->create(['work_order_id' => $this->workOrder->id, 'transaction_date' => '2026-05-07', 'amount' => 500]);
-        Purchase::factory()->create(['purchase_date' => '2026-05-05', 'net_total' => 7777]);
+        Purchase::factory()->withTotal(7777)->create(['purchase_date' => '2026-05-05']);
     });
 
     it("sums each work order's sales, purchases and expenses in the range", function () {

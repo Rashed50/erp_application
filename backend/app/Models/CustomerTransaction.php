@@ -10,6 +10,8 @@ class CustomerTransaction extends Model
 {
     use HasFactory;
 
+    public const TYPE_PAYMENT_RECEIVED = 'Payment Received';
+
     protected $guarded = [];
 
     /**

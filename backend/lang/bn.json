@@ -89,6 +89,8 @@
     "This purchase does not belong to the selected supplier.": "এই ক্রয়টি নির্বাচিত সরবরাহকারীর নয়।",
     "This record has already been approved.": "এই রেকর্ডটি ইতিমধ্যে অনুমোদিত হয়েছে।",
     "This salary configuration was used to generate salaries. Add a new revision with a later effective date instead.": "এই বেতন কনফিগারেশন দিয়ে বেতন তৈরি করা হয়েছে। এর পরিবর্তে পরবর্তী কার্যকর তারিখসহ একটি নতুন সংস্করণ যোগ করুন।",
+    "Select the new designation for a promotion or demotion.": "পদোন্নতি বা পদাবনতির জন্য নতুন পদবি নির্বাচন করুন।",
+    "A later salary revision exists, so this one is kept as salary history and cannot be changed.":"এর পরে নতুন বেতন সংস্করণ আছে, তাই এটি বেতন ইতিহাস হিসেবে সংরক্ষিত এবং পরিবর্তন করা যাবে না।",
     "This salary is already cancelled.": "এই বেতনটি ইতিমধ্যে বাতিল করা হয়েছে।",
     "This supplier has ledger transactions or purchases and cannot be deleted.": "এই সরবরাহকারীর লেজার লেনদেন বা ক্রয় আছে, তাই মুছে ফেলা যাবে না।",
     "This transaction has already been reversed.": "এই লেনদেনটি ইতিমধ্যে রিভার্স করা হয়েছে।",
