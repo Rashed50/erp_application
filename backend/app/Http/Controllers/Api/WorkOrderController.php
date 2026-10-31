@@ -80,4 +80,14 @@ class WorkOrderController extends Controller
 
         return ApiResponse::success(message: __('Work order deleted successfully.'));
     }
+
+
+    public function getWorkOrderListForDropdownMenu(): JsonResponse
+    {
+        $workOrders = WorkOrder::select('id', 'work_order_no')->get();
+        return ApiResponse::success([
+            'work_orders' => $workOrders,
+        ]);
+        //        return response()->json($workOrders);
+    }
 }

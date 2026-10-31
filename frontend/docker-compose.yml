@@ -1,14 +1,29 @@
 # This file Created to run project in the container locally
-version: '3.8'
+# version: '3.8'
+
+# services:
+#   vue-app:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: vue_app
+#     ports:
+#       - "8088:80"
+#     volumes:
+#       # Mount local dist directory to pull built files out of the container
+#       - ./dist:/app/dist
 
 services:
-  vue-app:
+  vue_app:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production-stage
+
     container_name: vue_app
+
     ports:
       - "8088:80"
-    volumes:
-      # Mount local dist directory to pull built files out of the container
-      - ./dist:/app/dist
+
+    restart: unless-stopped
+ 

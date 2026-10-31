@@ -19,15 +19,6 @@ const routes = [
         }
     },
 
-          {
-                path: '/attendance',
-                name: 'admin_attendance',
-                component: () => import('@/views/attendance/Add.vue'),
-                meta: {
-                    title: 'New Attendance',
-                }
-            },
-
     {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
@@ -612,7 +603,17 @@ const routes = [
                 }
             },
             /* ====================== Sale Route END ====================== */
+            {
+                path: 'quotation',
+                name: 'admin_quotation',
+                component: () => import('@/views/quotation/Index.vue'),
+                meta: {
+                    title: 'quoation',
+                  permissions: ['quotation.view']
 
+                    
+                }
+            },
             /* ====================== Ledger Account Route START ====================== */
             {
                 path: 'ledger-accounts',

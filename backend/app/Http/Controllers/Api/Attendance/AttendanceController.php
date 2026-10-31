@@ -3,14 +3,28 @@
 namespace App\Http\Controllers\Api\Attendance;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Attendance\StoreManualAttendanceRequest;
+// use App\Http\Requests\Attendance\StoreManualAttendanceRequest;
+// use App\Models\DailyAttendance;
+// use App\Models\Employee;
+// use App\Services\Attendance\AttendanceCalculationService;
+// use Illuminate\Http\Request;
+
 use App\Models\DailyAttendance;
-use App\Models\EmployeeInfo;
+use App\Models\Employee;
 use App\Services\Attendance\AttendanceCalculationService;
+use App\Http\Resources\EmployeeResource;
+use App\Services\EmployeeService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use App\Http\Responses\ApiResponse;
+use Illuminate\Validation\Rule;
+
 
 class AttendanceController extends Controller
 {
+
+    public function __construct(private readonly EmployeeService $employeeService) {}
+
     public function index(Request $request)
     {
         $query = DailyAttendance::query()->with('employee');
@@ -20,30 +34,176 @@ class AttendanceController extends Controller
         if ($request->filled('date_to')) $query->whereDate('attendance_date', '<=', $request->date_to);
         if ($request->filled('status')) $query->where('status', $request->status);
         if ($request->filled('employee_id')) {
-            $employee = EmployeeInfo::query()->where('employee_id', $request->employee_id)->first();
+
+            $employee = Employee::query()->where('employee_code', $request->employee_id)->first();
             if (!$employee) return response()->json(['data' => [], 'message' => 'Employee not found.']);
-            $query->where('employee_auto_id', $employee->emp_auto_id);
+            $query->where('employee_auto_id', $employee->id);
         }
 
         return $query->orderByDesc('attendance_date')
             ->paginate(min(max((int) $request->input('per_page', 25), 1), 200));
     }
 
+
+    public function getEmployeesForAttendanceIN(Request $request): JsonResponse
+    {
+        $employee_ids = explode(',', $request->input('employee_code', ''));
+
+        // Trim, remove empties,  
+        $employee_ids = collect($employee_ids)->map(fn ($id) => trim($id))->filter()->values()->all();
+
+       $presentIds = DailyAttendance::query()
+            ->whereDate('attendance_date', $request->date)
+            ->where('status', 'present')
+            ->pluck('employee_auto_id')
+            ->toArray();
+
+        $not_in_Employees = $this->employeeService
+            ->getActiveEmployeesForAttendanceIN($employee_ids)
+            ->whereNotIn('id', $presentIds)
+            ->values();
+
+        return ApiResponse::success([
+            'employees' => EmployeeResource::collection($not_in_Employees),
+            'form_data' =>$request->all(),
+            'presentIds' => $presentIds,
+        ]);
+    }
+    public function getEmployeesForAttendanceOUT(Request $request,AttendanceCalculationService $service): JsonResponse
+    {
+        
+        $employee_ids = explode(',', $request->input('employee_code', ''));
+        $employee_ids = collect($employee_ids)->map(fn ($id) => trim($id))->filter()->values()->all();
+
+        $pendingEmployees = $service->getDailyAttendancePunchOutPendingEmployees($employee_ids, $request->date);
+        return ApiResponse::success([
+            'employees' => EmployeeResource::collection($pendingEmployees),
+            'form_data' =>$request->all(),
+            'ids' => $employee_ids,
+        ]);
+    }
+
+
     public function show(DailyAttendance $dailyAttendance)
     {
         return $dailyAttendance->load('employee', 'shift', 'adjustments');
     }
 
-    public function manual(StoreManualAttendanceRequest $request, AttendanceCalculationService $service)
+    public function checkIn(Request $request, AttendanceCalculationService $service): JsonResponse
     {
-        $employee = EmployeeInfo::query()->where('employee_id', $request->validated('employee_id'))->firstOrFail();
+        $data = $request->validate([
+            'ids'             => ['required', 'array', 'min:1'],
+            'ids.*'           => ['required', 'integer'],
+            'attendance_date' => ['required', 'date_format:Y-m-d'],
+            'first_punch_at'  => ['required', 'date_format:Y-m-d H:i:s'],
+            'shift_id'        => ['nullable'],
+            'status' => [
+                'required',
+                'string',
+                'in:present,absent,late,half_day,leave,holiday,weekly_off,incomplete,offsite'
+            ],
+            'work_order_id'   => ['nullable', 'exists:work_orders,id'],
+        ]);
 
-        $actor = $this->actorEmployeeAutoId($request);
-        $record = $service->recalculateManual($request->validated(), (int) $employee->emp_auto_id, $actor);
+        foreach ($data['ids'] as $employeeId) {
+            $service->manualCheckIn(
+                $employeeId,
+                $data['attendance_date'],
+                $data['first_punch_at'],
+                $request->user()?->id,
+                $data['status'],
+                $data['work_order_id'] ?? 0
+            );
+        }
 
-        return response()->json(['message' => 'Manual attendance saved.', 'data' => $record->load('employee')], 201);
+        return response()->json([
+            'message' => count($data['ids']) . ' employee(s) IN recorded. OUT is pending.',
+        ], 201);
     }
 
+
+
+    public function checkOut(Request $request, AttendanceCalculationService $service): JsonResponse
+    {
+
+        // return response()->json(['status' => 200, 'success' => true, 'dd' => $request->all()]);
+
+        $data = $request->validate([
+            'ids'             => ['required', 'array', 'min:1'],
+            'ids.*'           => ['required', 'integer'],
+            'attendance_date' => ['required', 'date_format:Y-m-d'],
+            'last_punch_at'   => ['required', 'date_format:Y-m-d H:i:s'],
+            'shift_id'        => ['nullable'],
+            'status' => [
+                'required',
+                'string',
+                'in:present,absent,late,half_day,leave,holiday,weekly_off,incomplete,offsite'
+            ],
+            'break_minutes'   => ['nullable', 'integer', 'min:0', 'max:720'],
+        ]);
+
+
+
+        foreach ($data['ids'] as $employeeId) {
+            $service->manualCheckOut(
+                $employeeId,
+                $data['attendance_date'],
+                $data['last_punch_at'],
+                $request->user()?->id,
+                isset($data['break_minutes']) ? (int) $data['break_minutes'] : 0
+            );
+        }
+
+        return response()->json([
+            'message' => count($data['ids']) . ' employee(s) OUT recorded; hours and overtime calculated.',
+        ]);
+    }
+
+
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $attendance = DailyAttendance::findOrFail($id);
+
+        $data = $request->validate([
+            'status' => ['required', 'string', Rule::in([
+                'present',
+                'absent',
+                'late',
+                'half_day',
+                'leave',
+                'holiday',
+                'weekly_off',
+                'incomplete',
+                'offsite',
+            ])],
+            'first_punch_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'last_punch_at'  => ['nullable', 'date_format:Y-m-d H:i:s'],
+        ]);
+
+        if (
+            $data['first_punch_at'] && $data['last_punch_at']
+            && $data['last_punch_at'] < $data['first_punch_at']
+        ) {
+            return response()->json([
+                'message' => 'Last punch cannot be before first punch.',
+            ], 422);
+        }
+
+        $attendance->update($data);
+
+        return response()->json([
+            'message' => 'Attendance updated successfully.',
+            'data'    => $attendance->load('employee'),
+        ]);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        DailyAttendance::findOrFail($id)->delete();
+
+        return response()->json(['message' => 'Attendance deleted successfully.']);
+    }
     public function processLogs(
         \App\Http\Requests\Attendance\ProcessAttendanceLogsRequest $request,
         AttendanceCalculationService $service
@@ -51,6 +211,27 @@ class AttendanceController extends Controller
         return response()->json([
             'message' => 'Attendance log processing completed.',
             'data' => $service->processDate($request->validated('date'), $request->validated('device_serial_number')),
+        ]);
+    }
+
+
+    public function generateMonthlyRecords(
+        Request $request,
+        \App\Services\Attendance\AttendanceCalculationService $service
+    ) {
+        $data = $request->validate([
+            'year' => ['required', 'integer', 'min:2000', 'max:2200'],
+            'month' => ['required', 'integer', 'between:1,12'],
+        ]);
+
+        $result = $service->generateMonthlyWorkRecords(
+            $data['year'],
+            $data['month']
+        );
+
+        return response()->json([
+            'message' => 'Monthly work records generated successfully.',
+            'data' => $result,
         ]);
     }
 

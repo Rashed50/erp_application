@@ -25,6 +25,7 @@ return [
         'http://localhost:5173',
         'http://localhost:8088',
         'http://127.0.0.1:8088',
+        'http://localhost:8088',
     ],
 
     'allowed_origins_patterns' => [],
@@ -33,7 +34,8 @@ return [
 
     'exposed_headers' => [],
 
-    'max_age' => 0,
+    'max_age' => 86400, // 24 hours, 0 means no caching
+
 
     'supports_credentials' => false,
 

@@ -69,7 +69,9 @@ export default {
         workOrderDetails: 'Work Order Sales & Expense Details',
         customerCollections: 'Customer Collection & Due',
         otherReports: 'Other Reports',
-        settings: 'Settings',
+        quotation: 'Quotation',
+        quotationList: 'Search Quotation',
+        quotationCreate: 'New Quotation',
         profile: 'Profile',
         logout: 'Logout',
     },
@@ -112,4 +114,6 @@ export default {
         by: 'by {name}',
         pending: 'Pending',
     },
+
+   
 }

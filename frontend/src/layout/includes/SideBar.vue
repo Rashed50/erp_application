@@ -345,10 +345,14 @@
             </v-list-group>
             <!-- HR Menu END -->
 
+
+
             <!-- Payroll Menu START -->
             <v-list-group value="payroll" v-if="canAny([
                 'employee-works.view', 'employee-works.create', 'employee-works.update',
                 'employee-advances.view', 'payroll.view', 'payroll.generate', 'hr-reports.view',
+                'attendance.view', 'attendance.create', 'attendance.update', 'attendance.delete',
+                'attendance.process', 'attendance.check_in', 'attendance.check_out'
             ])">
                 <template v-slot:activator="{ props }">
                     <v-list-item v-bind="props">
@@ -404,7 +408,7 @@
                         </span>
                     </router-link>
                     <router-link :to="{ name: 'admin_hr_attendance' }" class="custom_router_sub_link"
-                        v-if="can(['hr-attendance.view'])">
+                        v-if="can(['attendance.view'])">
                         <span class="ml-5">
                             <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
                             {{ $t('nav.attendance') }}
@@ -413,6 +417,40 @@
                 </div>
             </v-list-group>
             <!-- Payroll Menu END -->
+            <!-- Quotation Start -->
+
+            <v-list-group value="quotation" v-if="canAny([
+                'quotation.view', 'quotation.create', 'quotation.update','quotation.delete'
+            ])">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props">
+                        <div class="custom_dropdown_router_link custom_mb_10">
+                            <span class="sidebar-menu-icon">
+                                <i class="fa-solid fa-money-check-dollar"></i>
+                            </span>
+                            {{ $t('nav.quotation') }}
+                        </div>
+                    </v-list-item>
+                </template>
+                <div>
+                    <router-link :to="{ name: 'admin_quotation' }" class="custom_router_sub_link"
+                        v-if="can(['quotation.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.quotationCreate') }}
+                        </span>
+                    </router-link> 
+                    <!-- <router-link :to="{ name: 'admin_quotation' }" class="custom_router_sub_link"
+                        v-if="can(['quotation.view'])">
+                        <span class="ml-5">
+                            <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                            {{ $t('nav.quotationList') }}
+                        </span>
+                    </router-link> -->
+
+                </div>
+            </v-list-group>
+            <!-- Quotation Menu END -->
 
             <!-- Asset Menu START -->
             <v-list-group value="asset" v-if="canAny(assetMenuPermissions)">
@@ -552,14 +590,14 @@ const canAny = (perms) => perms.some((p) => can([p]))
 // Asset menu entries after the setup screens (categories, sub categories, items).
 const assetMenuLinks = [
     { name: 'admin_asset_units', title: 'Units', permission: 'inventory-units.view' },
-    { name: 'admin_asset_warehouses', title: 'Warehouses', permission: 'warehouses.view' },
-    { name: 'admin_asset_material_requests', title: 'Material Requests', permission: 'material-requests.view' },
-    { name: 'admin_asset_purchase_orders', title: 'Purchase Orders', permission: 'purchase-orders.view' },
-    { name: 'admin_asset_transfers', title: 'Store Transfers', permission: 'inventory-transfers.view' },
-    { name: 'admin_asset_stocks', title: 'Inventory Stock', permission: 'inventory-stocks.view' },
-    { name: 'admin_asset_register', title: 'Asset Register', permission: 'assets.view' },
-    { name: 'admin_asset_employee_issues', title: 'Employee Issues', permission: 'employee-inventory.view' },
-    { name: 'admin_asset_disposals', title: 'Disposals', permission: 'inventory-disposals.view' },
+    // { name: 'admin_asset_warehouses', title: 'Warehouses', permission: 'warehouses.view' },
+    // { name: 'admin_asset_material_requests', title: 'Material Requests', permission: 'material-requests.view' },
+    // { name: 'admin_asset_purchase_orders', title: 'Purchase Orders', permission: 'purchase-orders.view' },
+    // { name: 'admin_asset_transfers', title: 'Store Transfers', permission: 'inventory-transfers.view' },
+    // { name: 'admin_asset_stocks', title: 'Inventory Stock', permission: 'inventory-stocks.view' },
+    // { name: 'admin_asset_register', title: 'Asset Register', permission: 'assets.view' },
+    // { name: 'admin_asset_employee_issues', title: 'Employee Issues', permission: 'employee-inventory.view' },
+    // { name: 'admin_asset_disposals', title: 'Disposals', permission: 'inventory-disposals.view' },
 ]
 const visibleAssetMenuLinks = computed(() => assetMenuLinks.filter((link) => can([link.permission])))
 const assetMenuPermissions = ['item-categories.view', 'item-sub-categories.view', 'item-names.view', ...assetMenuLinks.map((link) => link.permission)]

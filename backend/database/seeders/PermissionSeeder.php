@@ -199,6 +199,22 @@ class PermissionSeeder extends Seeder
             'inventory-disposals.approve',
             'inventory-disposals.dispose',
         ],
+         'Quotation' => [
+            'quotation.view',
+            'quotation.create',
+            'quotation.update',
+            'quotation.delete',
+        ],
+        'Attendance' => [
+            'attendance.view',
+            'attendance.create',
+            'attendance.update',
+            'attendance.delete',
+            'attendance.process',
+            'attendance.check_in',
+            'attendance.check_out',
+        ],
+         
     ];
 
     /**

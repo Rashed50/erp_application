@@ -70,6 +70,10 @@ export default {
         workOrderDetails: 'ওয়ার্ক অর্ডারভিত্তিক বিক্রয় ও খরচের বিবরণ',
         customerCollections: 'গ্রাহকভিত্তিক আদায় ও বকেয়া',
         settings: 'সেটিংস',
+        quotation: 'সেটিংস',
+        quotation: 'Quotation',
+        quotationList: 'Search Quotation',
+        quotationCreate: 'New Quotation',
         profile: 'প্রোফাইল',
         logout: 'লগআউট',
     },
@@ -469,6 +473,11 @@ export default {
         'Purchase Date': 'ক্রয়ের তারিখ',
         'Purchase Date:': 'ক্রয়ের তারিখ:',
         'Items': 'আইটেমসমূহ',
+        'Discount:':'ছাড়',
+        'VAT:':'ভ্যাট',
+        'Attachment:':'ফাইল সমুহ',
+        'Subtotal':'সাব মোট',
+         
         'Item Name': 'আইটেমের নাম',
         'Qty': 'পরিমাণ',
         'Unit Price': 'একক মূল্য',
@@ -858,6 +867,8 @@ export default {
         'Save Work Record': 'কাজের রেকর্ড সংরক্ষণ করুন',
         'Working Days': 'কর্মদিবস',
         'Present Days': 'উপস্থিতির দিন',
+        'Attendance Date:': 'উপস্থিতির তারিখ',
+        'Shift:': 'শিফট',
         'Absent Days': 'অনুপস্থিতির দিন',
         'Overtime Hours': 'ওভারটাইম ঘণ্টা',
         'Other Addition': 'অন্যান্য সংযোজন',
@@ -866,6 +877,7 @@ export default {
         'Failed to save the work record.': 'কাজের রেকর্ড সংরক্ষণ করা যায়নি।',
         'Delete this work record?': 'এই কাজের রেকর্ড ডিলিট করবেন?',
         'Employee ID or name...': 'কর্মচারী আইডি বা নাম...',
+        'Employee ID ': 'কর্মচারী আইডি ',
 
         // HR: payroll
         'Salary Month:': 'বেতনের মাস:',
@@ -1003,6 +1015,8 @@ export default {
         'As of date': 'নির্দিষ্ট তারিখ পর্যন্ত',
         'For the period': 'নির্দিষ্ট সময়কালের জন্য',
         'From Date:': 'শুরুর তারিখ:',
+        'From:': 'শুরু:',
+        'To:': 'শেষ:',
         'To Date:': 'শেষ তারিখ:',
         'As of Date:': 'যে তারিখ পর্যন্ত:',
         'Account:': 'অ্যাকাউন্ট:',
@@ -1394,4 +1408,6 @@ export default {
         'Expense By:': 'ব্যয়কারী:',
         'Expense / Received By': 'ব্যয়কারী / গ্রহণকারী',
     },
+
+   
 }
