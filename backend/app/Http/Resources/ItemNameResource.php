@@ -16,7 +16,7 @@ class ItemNameResource extends JsonResource
     {
         return [
             'item_id' => $this->item_id,
-            'icatg_id' => $this->icatg_id,
+            'icatg_id' => $this->subCategory?->icatg_id,
             'icatg_name' => $this->whenLoaded('category', fn () => $this->category?->icatg_name),
             'iscatg_id' => $this->iscatg_id,
             'iscatg_name' => $this->whenLoaded('subCategory', fn () => $this->subCategory?->iscatg_name),

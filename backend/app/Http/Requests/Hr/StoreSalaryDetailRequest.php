@@ -46,6 +46,13 @@ class StoreSalaryDetailRequest extends FormRequest
             'overtime_rate' => $amount,
             'other_deduction' => $amount,
             'deduction_basis' => ['required', Rule::in(SalaryDetail::DEDUCTION_BASES)],
+            'change_reason' => ['nullable', Rule::in(SalaryDetail::CHANGE_REASONS)],
+            'designation_id' => [
+                Rule::requiredIf(in_array($this->input('change_reason'), SalaryDetail::DESIGNATION_CHANGE_REASONS, true)),
+                'nullable',
+                'integer',
+                Rule::exists('designations', 'id'),
+            ],
             'status' => ['required', 'boolean'],
             'remarks' => ['nullable', 'string', 'max:1000'],
         ];
@@ -58,6 +65,7 @@ class StoreSalaryDetailRequest extends FormRequest
     {
         return [
             'effective_date.unique' => __('This employee already has a salary configuration with this effective date.'),
+            'designation_id.required' => __('Select the new designation for a promotion or demotion.'),
         ];
     }
 

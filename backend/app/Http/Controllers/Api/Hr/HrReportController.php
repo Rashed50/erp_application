@@ -36,6 +36,25 @@ class HrReportController extends Controller
     }
 
     /**
+     * Salary increments and decrements effective within a date range.
+     */
+    public function salaryChanges(Request $request): JsonResponse
+    {
+        $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'employee_id' => ['nullable', 'integer'],
+        ]);
+
+        return ApiResponse::success($this->reportService->salaryChanges(
+            $request->string('from')->value() ?: null,
+            $request->string('to')->value() ?: null,
+            $request->string('department')->value() ?: null,
+            $request->integer('employee_id') ?: null,
+        ));
+    }
+
+    /**
      * Approved salaries not yet fully paid, up to a month when one is given.
      */
     public function salaryDue(Request $request): JsonResponse

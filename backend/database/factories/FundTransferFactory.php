@@ -28,7 +28,6 @@ class FundTransferFactory extends Factory
             'amount' => $amount,
             'bank_charge' => 0,
             'vat' => 0,
-            'total_amount' => $amount,
             'remarks' => fake()->optional()->sentence(),
         ];
     }

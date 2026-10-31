@@ -20,7 +20,7 @@ class EmployeeAdvanceRecoveryResource extends JsonResource
             'salary_history_id' => $this->salary_history_id,
             'type' => $this->type,
             'recovery_date' => $this->recovery_date?->toDateString(),
-            'salary_month' => $this->salary_month?->format('Y-m'),
+            'salary_month' => $this->salaryHistory?->salary_month?->format('Y-m'),
             'amount' => (float) $this->amount,
             'payment_account_id' => $this->payment_account_id,
             'payment_account_name' => $this->whenLoaded('paymentAccount', fn () => $this->paymentAccount ? "{$this->paymentAccount->account_number} - {$this->paymentAccount->name}" : null),

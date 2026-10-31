@@ -68,7 +68,7 @@ describe('store', function () {
     });
 
     it('records the payment and posts the double entry and supplier ledger', function () {
-        $supplier = Supplier::factory()->create(['opening_balance' => 3000, 'current_balance' => 3000]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 3000]);
 
         $response = $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload($supplier, $this->cash));
@@ -94,7 +94,7 @@ describe('store', function () {
     });
 
     it('settles a linked purchase and takes its invoice number', function () {
-        $purchase = Purchase::factory()->create(['net_total' => 1500, 'paid_amount' => 0]);
+        $purchase = Purchase::factory()->withTotal(1500)->create();
 
         $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload($purchase->supplier, $this->cash, [
@@ -108,7 +108,7 @@ describe('store', function () {
     });
 
     it('rejects a bill amount above the purchase due amount', function () {
-        $purchase = Purchase::factory()->create(['net_total' => 500, 'paid_amount' => 0]);
+        $purchase = Purchase::factory()->withTotal(500)->create();
 
         $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload($purchase->supplier, $this->cash, ['purchase_id' => $purchase->id]))
@@ -117,7 +117,7 @@ describe('store', function () {
     });
 
     it('rejects a purchase of another supplier', function () {
-        $purchase = Purchase::factory()->create(['net_total' => 5000]);
+        $purchase = Purchase::factory()->withTotal(5000)->create();
 
         $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload(Supplier::factory()->create(), $this->cash, ['purchase_id' => $purchase->id]))
@@ -159,7 +159,7 @@ describe('store', function () {
 describe('destroy', function () {
     it('reverses every posting and soft deletes the payment', function () {
         $actor = adminUser();
-        $purchase = Purchase::factory()->create(['net_total' => 1500, 'paid_amount' => 0]);
+        $purchase = Purchase::factory()->withTotal(1500)->create();
         $supplier = $purchase->supplier;
         $balanceBefore = (float) $supplier->current_balance;
 

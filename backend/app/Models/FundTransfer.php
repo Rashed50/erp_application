@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\Approvable;
 use App\Models\Concerns\RecordsDeleter;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,8 +26,15 @@ class FundTransfer extends Model
             'amount' => 'decimal:2',
             'bank_charge' => 'decimal:2',
             'vat' => 'decimal:2',
-            'total_amount' => 'decimal:2',
         ];
+    }
+
+    /**
+     * What leaves the sender account: the amount plus bank charge and VAT.
+     */
+    protected function totalAmount(): Attribute
+    {
+        return Attribute::get(fn () => round((float) $this->amount + (float) $this->bank_charge + (float) $this->vat, 2));
     }
 
     /**

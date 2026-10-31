@@ -50,8 +50,6 @@ class SupplierTransactionService
                 'updated_by' => Auth::id(),
             ]);
 
-            $this->recalculateBalance($supplier);
-
             return $transaction;
         });
     }
@@ -70,8 +68,6 @@ class SupplierTransactionService
             $transaction->fill([...$data, 'updated_by' => Auth::id()]);
             $transaction->save();
 
-            $this->recalculateBalance($transaction->supplier);
-
             return $transaction;
         });
     }
@@ -88,31 +84,8 @@ class SupplierTransactionService
             $transaction->updated_by = Auth::id();
             $transaction->save();
 
-            $this->recalculateBalance($transaction->supplier);
-
             return $transaction;
         });
-    }
-
-    /**
-     * Recompute the supplier's running balance from its opening balance plus
-     * every non-reversed ledger entry, rather than trusting incremental
-     * updates that could drift out of sync.
-     *
-     * A credit increases what is owed to the supplier (a purchase); a debit
-     * decreases it (a bill payment) — the inverse of the customer ledger,
-     * where a debit is what is owed *to* the business.
-     */
-    private function recalculateBalance(Supplier $supplier): void
-    {
-        $totals = $supplier->transactions()
-            ->where('status', true)
-            ->selectRaw('SUM(debit) as total_debit, SUM(credit) as total_credit')
-            ->first();
-
-        $supplier->update([
-            'current_balance' => $supplier->opening_balance + ($totals->total_credit ?? 0) - ($totals->total_debit ?? 0),
-        ]);
     }
 
     private function today(): string

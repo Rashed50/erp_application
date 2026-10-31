@@ -104,7 +104,7 @@ describe('store', function () {
 
     it('posts an Invoice ledger entry that increases the customer balance', function () {
         $actor = adminUser();
-        $customer = Customer::factory()->create(['opening_balance' => 100, 'current_balance' => 100]);
+        $customer = Customer::factory()->create(['opening_balance' => 100]);
 
         $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
@@ -137,7 +137,7 @@ describe('store with products', function () {
             ->assertJsonPath('data.items.0.product_id', $product->id)
             ->assertJsonPath('data.items.1.product_id', null);
 
-        $this->assertDatabaseHas('sale_items', ['product_id' => $product->id, 'item_name' => 'Cement Bag']);
+        $this->assertDatabaseHas('sale_items', ['product_id' => $product->id, 'item_name' => null]);
     });
 
     it('rejects a deleted product', function () {
@@ -170,7 +170,7 @@ describe('update', function () {
 
     it('recomputes totals and keeps the linked ledger entry in sync when items change', function () {
         $actor = adminUser();
-        $customer = Customer::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $customer = Customer::factory()->create(['opening_balance' => 0]);
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
@@ -218,7 +218,7 @@ describe('update', function () {
 describe('destroy', function () {
     it('soft-deletes the sale and reverses its ledger entry', function () {
         $actor = adminUser();
-        $customer = Customer::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $customer = Customer::factory()->create(['opening_balance' => 0]);
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
@@ -251,7 +251,7 @@ describe('payments', function () {
 
     it('records a partial payment, reduces the due amount, and decreases the customer balance', function () {
         $actor = adminUser();
-        $customer = Customer::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $customer = Customer::factory()->create(['opening_balance' => 0]);
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
@@ -275,6 +275,23 @@ describe('payments', function () {
             'transaction_type' => 'Payment Received',
             'credit' => 30,
         ]);
+    });
+
+    it('keeps the payments of a sale whose invoice number changes', function () {
+        $actor = adminUser();
+        $customer = Customer::factory()->create(['opening_balance' => 0]);
+        $sale = $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id))->json('data');
+        $this->actingAs($actor, 'sanctum')->postJson("/api/sales/{$sale['id']}/payments", [
+            'payment_account_id' => saleCashAccountId(),
+            'amount' => 30,
+            'payment_date' => now()->toDateString(),
+        ])->assertStatus(201);
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/sales/{$sale['id']}", ['invoice_number' => 'RENUMBERED-1'])
+            ->assertOk()
+            ->assertJsonPath('data.paid_amount', 30)
+            ->assertJsonPath('data.due_amount', 58);
     });
 
     it('allows paying off the remaining due amount across multiple partial payments', function () {
@@ -318,7 +335,7 @@ describe('chart of account posting', function () {
 
         expect((float) $this->receivable->fresh()->balance)->toBe(88.0)
             ->and((float) $this->revenue->fresh()->balance)->toBe(88.0)
-            ->and($entry->sale_id)->toBe($sale->id)
+            ->and($entry->source->is($sale))->toBeTrue()
             ->and($entry->tr_no)->toBe($sale->invoice_number)
             ->and((float) $entry->total_amount)->toBe(88.0)
             ->and($entry->details)->toHaveCount(2)
@@ -394,7 +411,7 @@ describe('chart of account posting', function () {
 
         expect((float) $this->cash->fresh()->balance)->toBe(88.0)
             ->and((float) $this->receivable->fresh()->balance)->toBe(0.0)
-            ->and($payment->accountTransaction->sale_id)->toBe($saleId);
+            ->and($payment->accountTransaction->source->is($payment))->toBeTrue();
 
         $this->assertDatabaseHas('customer_transactions', [
             'transaction_type' => 'Payment Received',

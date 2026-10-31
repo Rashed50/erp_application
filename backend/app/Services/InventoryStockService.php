@@ -8,6 +8,7 @@ use App\Models\ItemName;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -27,7 +28,6 @@ class InventoryStockService
             ?? new InventoryStock(['warehouse_id' => $warehouseId, 'item_id' => $item->item_id]);
 
         $stock->quantity = (float) $stock->quantity + $quantity;
-        $stock->available_quantity = (float) $stock->quantity - (float) $stock->reserved_quantity;
         $stock->save();
 
         $this->record($item, $quantity, $type, $reference, [
@@ -48,14 +48,13 @@ class InventoryStockService
     {
         $stock = $this->lockedStock($warehouseId, $item->item_id);
 
-        if (! $stock || (float) $stock->available_quantity < $quantity) {
+        if (! $stock || $stock->availableQuantity() < $quantity) {
             throw ValidationException::withMessages([
                 'quantity' => __('Insufficient stock of :item in the selected store.', ['item' => $item->item_name]),
             ]);
         }
 
         $stock->quantity = (float) $stock->quantity - $quantity;
-        $stock->available_quantity = (float) $stock->quantity - (float) $stock->reserved_quantity;
         $stock->save();
 
         $this->record($item, $quantity, $type, $reference, [
@@ -78,7 +77,7 @@ class InventoryStockService
             ->when($filters['item_id'] ?? null, fn ($query, int $id) => $query->where('item_id', $id))
             ->when($filters['low_stock'] ?? false, fn ($query) => $query->whereHas(
                 'item',
-                fn ($query) => $query->whereColumn('inventory_stocks.available_quantity', '<=', 'item_names.minimum_stock'),
+                fn ($query) => $query->whereRaw('inventory_stocks.quantity - inventory_stocks.reserved_quantity <= item_names.minimum_stock'),
             ))
             ->orderBy('warehouse_id')
             ->orderBy('item_id')
@@ -113,7 +112,7 @@ class InventoryStockService
         return (float) InventoryStock::query()
             ->where('warehouse_id', $warehouseId)
             ->where('item_id', $itemId)
-            ->value('available_quantity');
+            ->value(DB::raw('quantity - reserved_quantity'));
     }
 
     /**

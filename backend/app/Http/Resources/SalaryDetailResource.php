@@ -29,9 +29,17 @@ class SalaryDetailResource extends JsonResource
             'overtime_rate' => (float) $this->overtime_rate,
             'other_deduction' => (float) $this->other_deduction,
             'deduction_basis' => $this->deduction_basis,
+            'change_reason' => $this->change_reason,
+            'designation_id' => $this->designation_id,
+            'designation' => $this->whenLoaded('designation', fn () => $this->designation?->name),
+            'change_type' => $this->changeType(),
+            'change_amount' => $this->changeAmount(),
+            'field_changes' => $this->fieldChanges(),
+            'previous_monthly_gross' => $this->relationLoaded('previousRevision') ? $this->previousRevision?->monthly_gross : null,
             'status' => $this->status,
             'remarks' => $this->remarks,
             'is_used_by_payroll' => $this->when(isset($this->salary_histories_count), fn () => $this->salary_histories_count > 0),
+            'is_locked' => $this->when(isset($this->salary_histories_count) && $this->relationLoaded('nextRevision'), fn () => $this->resource->isLocked()),
             'created_at' => $this->created_at,
         ];
     }

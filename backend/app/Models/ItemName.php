@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class ItemName extends Model
 {
@@ -43,7 +45,6 @@ class ItemName extends Model
     protected function casts(): array
     {
         return [
-            'icatg_id' => 'integer',
             'iscatg_id' => 'integer',
             'itype_id' => 'integer',
             'unit_id' => 'integer',
@@ -67,9 +68,9 @@ class ItemName extends Model
         return $this->hasMany(InventoryItemSerial::class, 'item_id');
     }
 
-    public function assets(): HasMany
+    public function assets(): HasManyThrough
     {
-        return $this->hasMany(InventoryAsset::class, 'item_id');
+        return $this->hasManyThrough(InventoryAsset::class, InventoryItemSerial::class, 'item_id', 'serial_id', 'item_id', 'id');
     }
 
     public function isAsset(): bool
@@ -82,9 +83,12 @@ class ItemName extends Model
         return $this->track_type === self::TRACK_SERIAL;
     }
 
-    public function category(): BelongsTo
+    /**
+     * The sub category's category.
+     */
+    public function category(): HasOneThrough
     {
-        return $this->belongsTo(ItemCategory::class, 'icatg_id');
+        return $this->hasOneThrough(ItemCategory::class, ItemSubCategory::class, 'iscatg_id', 'icatg_id', 'iscatg_id', 'icatg_id');
     }
 
     public function subCategory(): BelongsTo

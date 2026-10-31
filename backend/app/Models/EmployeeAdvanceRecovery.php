@@ -26,7 +26,6 @@ class EmployeeAdvanceRecovery extends Model
     {
         return [
             'recovery_date' => 'date',
-            'salary_month' => 'date',
             'amount' => 'decimal:2',
         ];
     }

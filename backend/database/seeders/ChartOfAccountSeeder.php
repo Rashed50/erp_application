@@ -91,7 +91,6 @@ class ChartOfAccountSeeder extends Seeder
                 'name' => $name,
                 'account_type_id' => $accountTypeId,
                 'parent_id' => $parent?->id,
-                'sibling_level' => $parent ? $parent->sibling_level + 1 : 0,
                 'opening_date' => today(),
                 'is_transaction' => $isTransaction,
                 'is_predefined' => true,

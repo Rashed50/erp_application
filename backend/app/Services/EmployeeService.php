@@ -7,6 +7,7 @@ use App\Models\Designation;
 use App\Models\Employee;
 use App\Models\EmployeeBankDetail;
 use App\Models\EmployeeDetail;
+use App\Models\SalaryDetail;
 use Illuminate\Database\Eloquent\{Collection,Builder};
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
@@ -83,7 +84,8 @@ class EmployeeService
         ]);
 
         if (Auth::user()?->can('salary-configs.update')) {
-            $employee->load(['salaryDetails' => fn ($query) => $query->withCount('salaryHistories')->orderByDesc('effective_date')]);
+            $employee->load(['salaryDetails' => fn ($query) => $query->with('designation:id,name')->withCount('salaryHistories')->orderByDesc('effective_date')]);
+            SalaryDetail::linkRevisions($employee->salaryDetails);
         }
 
         return $employee;

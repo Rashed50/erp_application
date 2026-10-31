@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class InventoryWarehouse extends Model
 {
@@ -67,9 +68,9 @@ class InventoryWarehouse extends Model
         return $this->hasMany(InventoryStock::class, 'warehouse_id');
     }
 
-    public function assets(): HasMany
+    public function assets(): HasManyThrough
     {
-        return $this->hasMany(InventoryAsset::class, 'current_warehouse_id');
+        return $this->hasManyThrough(InventoryAsset::class, InventoryItemSerial::class, 'current_warehouse_id', 'serial_id');
     }
 
     public function getTypeNameAttribute(): ?string

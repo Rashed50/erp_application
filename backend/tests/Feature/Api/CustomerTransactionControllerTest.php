@@ -47,7 +47,7 @@ describe('store', function () {
 
     it('records a debit transaction and increases the customer balance', function () {
         $actor = adminUser();
-        $customer = Customer::factory()->create(['opening_balance' => 100, 'current_balance' => 100]);
+        $customer = Customer::factory()->create(['opening_balance' => 100]);
 
         $response = $this->actingAs($actor, 'sanctum')
             ->postJson("/api/customers/{$customer->id}/transactions", [
@@ -70,7 +70,7 @@ describe('store', function () {
 
     it('records a credit transaction and decreases the customer balance', function () {
         $actor = adminUser();
-        $customer = Customer::factory()->create(['opening_balance' => 500, 'current_balance' => 500]);
+        $customer = Customer::factory()->create(['opening_balance' => 500]);
 
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/customers/{$customer->id}/transactions", [
@@ -87,9 +87,9 @@ describe('store', function () {
 describe('destroy (reverse)', function () {
     it('reverses a transaction and restores the customer balance', function () {
         $actor = adminUser();
-        $customer = Customer::factory()->create(['opening_balance' => 100, 'current_balance' => 100]);
+        $customer = Customer::factory()->create(['opening_balance' => 100]);
         $transaction = CustomerTransaction::factory()->for($customer)->create(['debit' => 400, 'credit' => 0]);
-        $customer->update(['current_balance' => 500]);
+        expect($customer->fresh()->current_balance)->toEqual(500.0);
 
         $response = $this->actingAs($actor, 'sanctum')
             ->deleteJson("/api/customers/{$customer->id}/transactions/{$transaction->id}");

@@ -51,7 +51,7 @@ class AssetController extends Controller
         return ApiResponse::success(new InventoryAssetResource($asset->load([
             'item', 'serial', 'currentWarehouse', 'currentEmployee',
             'assignments.employee', 'assignments.warehouse', 'assignments.workOrder', 'assignments.assigner',
-            'returns.employee', 'returns.destinationWarehouse', 'returns.receiver',
+            'returns.assignment', 'returns.employee', 'returns.destinationWarehouse', 'returns.receiver',
         ])));
     }
 

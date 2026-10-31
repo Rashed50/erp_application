@@ -55,7 +55,6 @@ class FundTransferService
                 'amount' => $amount,
                 'bank_charge' => $bankCharge,
                 'vat' => $vat,
-                'total_amount' => $amount + $bankCharge + $vat,
                 'remarks' => $data['remarks'] ?? null,
                 'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'fund-transfers'),
                 'created_by' => Auth::id(),
