@@ -29,6 +29,7 @@ class StoreWorkOrderRequest extends FormRequest
     {
         return [
             'customer_id' => ['required', Rule::exists('customers', 'id')->withoutTrashed()],
+            'quotation_id' => ['nullable', 'integer', Rule::exists('quotations', 'id')->withoutTrashed()],
             'work_title' => ['required', 'string', 'max:255'],
             'work_order_no' => ['required', 'string', 'max:255', Rule::unique('work_orders', 'work_order_no')],
             'issue_date' => ['required', 'date'],
@@ -36,6 +37,7 @@ class StoreWorkOrderRequest extends FormRequest
             'retention_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'deliver_date' => ['nullable', 'date', 'after_or_equal:issue_date'],
             'status' => ['nullable', Rule::in(WorkOrder::STATUSES)],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx', 'max:20480'],
         ];
     }
 }
