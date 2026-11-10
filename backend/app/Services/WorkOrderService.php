@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 
 class WorkOrderService
 {
+    public function __construct(private readonly AttachmentService $attachmentService) {}
+
     public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null, ?string $status = null): LengthAwarePaginator
     {
         return WorkOrder::query()
@@ -25,7 +27,9 @@ class WorkOrderService
 
     public function find(WorkOrder $workOrder): WorkOrder
     {
-        return $workOrder->load('customer')->loadPaymentTotals();
+        return $workOrder
+            ->load(['customer', 'creator:id,name', 'approver:id,name', 'quotation:id,invoice_number'])
+            ->loadPaymentTotals();
     }
 
     /**
@@ -59,14 +63,15 @@ class WorkOrderService
     }
 
     /**
-     * @param  array{customer_id: int, work_title: string, work_order_no: string, issue_date: string, total_amount: float, retention_percent?: ?float, deliver_date?: ?string, status?: ?string}  $data
+     * @param  array{customer_id: int, work_title: string, work_order_no: string, issue_date: string, total_amount: float, retention_percent?: ?float, deliver_date?: ?string, status?: ?string, attachment?: ?\Illuminate\Http\UploadedFile}  $data
      */
     public function create(array $data): WorkOrder
     {
         $workOrder = WorkOrder::create([
-            ...$data,
+            ...collect($data)->except('attachment')->all(),
             'retention_percent' => $data['retention_percent'] ?? 0,
             'status' => $data['status'] ?? 'Pending',
+            'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'work-orders'),
             'created_by' => Auth::id(),
             'updated_by' => Auth::id(),
         ]);

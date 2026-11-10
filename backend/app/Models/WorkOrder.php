@@ -40,6 +40,11 @@ class WorkOrder extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function quotation(): BelongsTo
+    {
+        return $this->belongsTo(Quotation::class);
+    }
+
     public function sales(): HasMany
     {
         return $this->hasMany(Sale::class);

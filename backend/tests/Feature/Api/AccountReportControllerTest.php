@@ -206,6 +206,73 @@ describe('dashboard', function () {
             ->assertOk()
             ->assertJsonPath('data.total_sales', 1000);
     });
+
+    it('summarizes expenses, collections, and work orders for today, month, and year', function () {
+        IncomeExpenseTransaction::factory()->create([
+            'amount' => 120,
+            'transaction_date' => today()->toDateString(),
+        ]);
+        IncomeExpenseTransaction::factory()->create([
+            'amount' => 200,
+            'transaction_date' => today()->subMonth()->toDateString(),
+        ]);
+        IncomeExpenseTransaction::factory()->create([
+            'amount' => 500,
+            'transaction_date' => today()->subYear()->toDateString(),
+        ]);
+
+        CustomerTransaction::factory()->payment()->create([
+            'credit' => 300,
+            'transaction_date' => today()->toDateString(),
+        ]);
+        CustomerTransaction::factory()->payment()->create([
+            'credit' => 150,
+            'transaction_date' => today()->subMonth()->toDateString(),
+        ]);
+        CustomerTransaction::factory()->payment()->create([
+            'credit' => 999,
+            'transaction_date' => today()->toDateString(),
+            'status' => false,
+        ]);
+        CustomerTransaction::factory()->payment()->create([
+            'credit' => 1000,
+            'transaction_date' => today()->subYear()->toDateString(),
+        ]);
+
+        WorkOrder::factory()->create([
+            'issue_date' => today()->toDateString(),
+            'total_amount' => 1000,
+        ]);
+        WorkOrder::factory()->create([
+            'issue_date' => today()->subMonth()->toDateString(),
+            'total_amount' => 2000,
+        ]);
+        WorkOrder::factory()->create([
+            'issue_date' => today()->subYear()->toDateString(),
+            'total_amount' => 4000,
+        ]);
+
+        expect(IncomeExpenseTransaction::query()
+            ->where('type', 'expense')
+            ->whereBetween('transaction_date', [today()->startOfYear()->toDateString(), today()->toDateString()])
+            ->sum('amount'))->toBe(320.0);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.activity_summary.today.expense', 120)
+            ->assertJsonPath('data.activity_summary.today.collection', 300)
+            ->assertJsonPath('data.activity_summary.today.work_orders_count', 1)
+            ->assertJsonPath('data.activity_summary.today.work_orders_amount', 1000)
+            ->assertJsonPath('data.activity_summary.this_month.expense', 320)
+            ->assertJsonPath('data.activity_summary.this_month.collection', 450)
+            ->assertJsonPath('data.activity_summary.this_month.work_orders_count', 2)
+            ->assertJsonPath('data.activity_summary.this_month.work_orders_amount', 3000)
+            ->assertJsonPath('data.activity_summary.this_year.expense', 320)
+            ->assertJsonPath('data.activity_summary.this_year.collection', 450)
+            ->assertJsonPath('data.activity_summary.this_year.work_orders_count', 2)
+            ->assertJsonPath('data.activity_summary.this_year.work_orders_amount', 3000);
+    });
 });
 
 describe('cash transactions', function () {

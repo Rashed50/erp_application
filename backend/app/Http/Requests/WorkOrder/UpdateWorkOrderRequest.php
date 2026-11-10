@@ -29,6 +29,7 @@ class UpdateWorkOrderRequest extends FormRequest
     {
         return [
             'customer_id' => ['sometimes', 'required', Rule::exists('customers', 'id')->withoutTrashed()],
+            'quotation_id' => ['sometimes', 'nullable', 'integer', Rule::exists('quotations', 'id')->withoutTrashed()],
             'work_title' => ['sometimes', 'required', 'string', 'max:255'],
             'work_order_no' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('work_orders', 'work_order_no')->ignore($this->route('work_order'))],
             'issue_date' => ['sometimes', 'required', 'date'],

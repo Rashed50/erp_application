@@ -42,6 +42,27 @@
                         </div>
                     </div>
 
+                    <section class="mt-4">
+                        <h6 class="text-muted mb-3">{{ $t('Activity Summary') }}</h6>
+                        <div v-for="period in activityPeriods" :key="period.key" class="mb-4">
+                            <h6 class="mb-2">{{ $t(period.label) }}</h6>
+                            <div class="row g-3">
+                                <div class="col-sm-6 col-lg-4" v-for="metric in period.metrics" :key="metric.label">
+                                    <v-card class="stat-card">
+                                        <div class="stat-icon" :class="metric.color"><i :class="metric.icon"></i></div>
+                                        <div>
+                                            <div class="stat-label">{{ $t(metric.label) }}</div>
+                                            <div class="stat-value">{{ money(metric.value) }}</div>
+                                            <small v-if="metric.count !== undefined" class="text-muted">
+                                                {{ $t('{count} work orders', { count: metric.count }) }}
+                                            </small>
+                                        </div>
+                                    </v-card>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
                     <v-card class="mt-3" style="padding: 15px;" v-if="summary.banks.length > 1">
                         <h6 class="mb-3">{{ $t('Bank Balances') }}</h6>
                         <div v-for="bank in summary.banks" :key="bank.id"
@@ -82,6 +103,40 @@ const cards = computed(() => [
     { label: 'Total Payable', value: summary.value.total_payable, icon: 'fa-solid fa-file-invoice-dollar', color: 'bg-danger' },
     { label: 'Bank Balance', value: summary.value.bank_balance, icon: 'fa-solid fa-building-columns', color: 'bg-warning' },
 ])
+
+const activityPeriods = computed(() => {
+    const activity = summary.value?.activity_summary
+    if (!activity) return []
+
+    return [
+        { key: 'today', label: 'Today' },
+        { key: 'this_month', label: 'This Month' },
+        { key: 'this_year', label: 'This Year' },
+    ].map((period) => ({
+        ...period,
+        metrics: [
+            {
+                label: 'Expense',
+                value: activity[period.key].expense,
+                icon: 'fa-solid fa-money-bill-transfer',
+                color: 'bg-danger',
+            },
+            {
+                label: 'Collection',
+                value: activity[period.key].collection,
+                icon: 'fa-solid fa-hand-holding-dollar',
+                color: 'bg-success',
+            },
+            {
+                label: 'Work Orders',
+                value: activity[period.key].work_orders_amount,
+                count: activity[period.key].work_orders_count,
+                icon: 'fa-solid fa-clipboard-list',
+                color: 'bg-primary',
+            },
+        ],
+    }))
+})
 
 const loadSummary = async () => {
     loading.value = true

@@ -324,6 +324,15 @@ class AccountReportService
      */
     public function dashboardSummary(?string $fromDate = null, ?string $toDate = null): array
     {
+        $today = today()->toDateString();
+        $monthStart = today()->startOfMonth()->toDateString();
+        $yearStart = today()->startOfYear()->toDateString();
+        $periods = [
+            'today' => [$today, $today],
+            'this_month' => [$monthStart, $today],
+            'this_year' => [$yearStart, $today],
+        ];
+
         $totalSales = Sale::query()
             ->when($fromDate, fn ($query) => $query->whereDate('issue_date', '>=', $fromDate))
             ->when($toDate, fn ($query) => $query->whereDate('issue_date', '<=', $toDate))
@@ -350,6 +359,27 @@ class AccountReportService
             'balance' => (float) ($balances[$account->id] ?? 0),
         ]);
 
+        $activity = [];
+        foreach ($periods as $period => [$start, $end]) {
+            $activity[$period] = [
+                'expense' => round((float) IncomeExpenseTransaction::query()
+                    ->where('type', 'expense')
+                    ->whereBetween('transaction_date', [$start, $end])
+                    ->sum('amount'), 2),
+                'collection' => round((float) CustomerTransaction::query()
+                    ->where('transaction_type', CustomerTransaction::TYPE_PAYMENT_RECEIVED)
+                    ->where('status', true)
+                    ->whereBetween('transaction_date', [$start, $end])
+                    ->sum('credit'), 2),
+                'work_orders_count' => WorkOrder::query()
+                    ->whereBetween('issue_date', [$start, $end])
+                    ->count(),
+                'work_orders_amount' => round((float) WorkOrder::query()
+                    ->whereBetween('issue_date', [$start, $end])
+                    ->sum('total_amount'), 2),
+            ];
+        }
+
         return [
             'from_date' => $fromDate,
             'to_date' => $toDate,
@@ -359,6 +389,7 @@ class AccountReportService
             'total_payable' => -(float) ($balances[$payableId] ?? 0),
             'bank_balance' => round($banks->sum('balance'), 2),
             'banks' => $banks->values()->all(),
+            'activity_summary' => $activity,
         ];
     }
 
