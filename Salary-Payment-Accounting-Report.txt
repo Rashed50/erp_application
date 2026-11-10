@@ -1,0 +1,56 @@
+Salary Payment - Accounting Report
+==================================
+
+The payroll system follows this workflow:
+
+1. Generate salary
+   Salary is calculated and saved for the month. No accounting journal entry
+   is posted at this stage.
+
+2. Approve salary
+   Approval records the salary expense and the amount payable to the employee.
+
+   Journal entry:
+     Debit  Salaries & Wages (Account 5020)
+       Net salary + salary advance installment
+     Credit Advance to Employees (Account 1080)
+       Salary advance installment deducted
+     Credit Salary Payable (Account 2030)
+       Net salary owed to the employee
+
+3. Pay salary
+   From the Salary Sheet, select Pay for one salary or Mark Paid for selected
+   salaries. Enter the payment date and the cash/bank account. A payment may be
+   made in full or in installments.
+
+   Journal entry for each payment:
+     Debit  Salary Payable (Account 2030)
+       Amount paid
+     Credit Selected Cash/Bank Account
+       Amount paid
+
+Payment status
+--------------
+
+- A partial payment leaves the remaining amount due and the salary status is
+  Partially Paid.
+- Once the full net salary has been paid, the salary status becomes Paid.
+- Payment history records the date, payment account, amount, remarks, and user
+  who recorded the payment.
+- If an approved salary has no accrual entry yet, the system posts the accrual
+  when its first payment is recorded.
+
+Current limitation
+-----------------
+
+Advance salary installments are posted to Advance to Employees (1080).
+Separate liability accounts and journal entries are not currently described
+for tax, provident fund, or other deductions. If those deductions need separate
+accounting treatment, define the accounts and add the corresponding posting
+logic.
+
+Relevant implementation
+-----------------------
+
+- backend/app/Services/PayrollService.php
+- frontend/src/views/hr/payroll/SalarySheet.vue

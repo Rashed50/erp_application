@@ -25,6 +25,23 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
+                                        <label for="quotation_id">{{ $t('Quotation:') }}</label>
+                                        <select id="quotation_id" class="form-control" v-model="form.quotation_id">
+                                            <option value="">{{ $t('Select a Quotation') }}</option>
+                                            <option v-for="quotation in quotations" :key="quotation.id"
+                                                :value="quotation.id">
+                                                {{ quotation.invoice_number }} - {{ quotation.customer_name }}
+                                            </option>
+                                        </select>
+                                        <div v-if="errors.quotation_id" class="error-msg">{{ errors.quotation_id }}</div>
+                                        <div v-if="quotationsError" class="error-msg">
+                                            {{ $t('Failed to load quotations.') }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
                                         <label for="work_order_no">{{ $t('Work Order No:') }}</label>
                                         <input type="text" id="work_order_no" class="form-control"
                                             v-model="form.work_order_no" required />
@@ -89,6 +106,16 @@
                                         <div v-if="errors.status" class="error-msg">{{ errors.status }}</div>
                                     </div>
                                 </div>
+
+                                <div class="col-md-12">
+                                    <div class="form-group mb-3">
+                                        <label for="attachment">{{ $t('Attachment:') }}</label>
+                                        <input id="attachment" type="file" class="form-control"
+                                            accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+                                            @change="handleFileUpload" />
+                                        <div v-if="errors.attachment" class="error-msg">{{ errors.attachment }}</div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-12">
@@ -119,6 +146,7 @@ const router = useRouter();
 
 const { form, errors, isSubmitting, submit } = useStoreForm({
     customer_id: '',
+    quotation_id: '',
     work_title: '',
     work_order_no: '',
     issue_date: new Date().toISOString().slice(0, 10),
@@ -126,13 +154,19 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     retention_percent: 0,
     deliver_date: '',
     status: 'Pending',
+    attachment: null,
 })
 
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
+const { items: quotations, fetchData: loadQuotations, error: quotationsError } = useFetch('/api/quotations', { per_page: 500 })
 
 const retentionAmount = computed(() =>
     ((Number(form.total_amount) || 0) * (Number(form.retention_percent) || 0) / 100).toFixed(2)
 )
+
+const handleFileUpload = (event) => {
+    form.attachment = event.target.files[0] ?? null
+}
 
 const handleSubmit = async () => {
     const resp = await submit('/api/work-orders', 'post')
@@ -145,5 +179,6 @@ const handleSubmit = async () => {
 
 onMounted(() => {
     loadCustomers()
+    loadQuotations()
 })
 </script>
