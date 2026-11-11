@@ -49,8 +49,12 @@ class QuotationService
                 $vat = round((float) ($data['vat_amount'] ?? 0), 2);
                 $this->assertDiscountWithinTotal($discount, (float) $totals['total_amount']);
 
+
+
                 $quotation = Quotation::create([
                     'customer_id' => $data['customer_id'],
+                    'concern_company_id' => $data['concern_company_id'],
+                    'signature_by' => $data['signature_by'],
                     'invoice_number' => $data['invoice_number'],
                     'description' => $data['description'] ?? null,
                     'issue_date' => $data['issue_date'],

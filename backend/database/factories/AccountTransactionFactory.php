@@ -20,7 +20,6 @@ class AccountTransactionFactory extends Factory
         return [
             'tr_no' => fake()->bothify('TR-####'),
             'date' => fake()->date(),
-            'total_amount' => fake()->randomFloat(2, 100, 5000),
             'general_particular' => fake()->sentence(),
         ];
     }

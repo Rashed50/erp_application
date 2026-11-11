@@ -54,9 +54,11 @@
                             <thead>
                                 <tr>
                                     <th class="text-left">#</th>
-                                    <th class="text-left">{{ $t('Invoice No') }}</th>
+                                    <th class="text-left">{{ $t('Quotation No') }}</th>
                                     <th class="text-left">{{ $t('Customer') }}</th>
                                     <th class="text-left">{{ $t('Issue Date') }}</th>
+                                    <th class="text-left">{{ $t('Signature By') }}</th>
+                                     <th class="text-left">{{ $t('Quotation For') }}</th>
                                     <th class="text-right">{{ $t('Net Total') }}</th>
                                     <th class="text-center">{{ $t('File') }}</th>
                                     <th class="text-center">{{ $t('Action') }}</th>
@@ -79,6 +81,8 @@
                                     <td>{{ item.invoice_number }}</td>
                                     <td>{{ item.customer_name }}</td>
                                     <td>{{ item.issue_date }}</td>
+                                    <td>{{ item.signature_by }}</td>
+                                    <td>{{ item.concern_company_name ?? '-' }}</td>
                                     <td class="text-right">{{ Number(item.net_total).toFixed(2) }}</td>
                                     <td class="text-center">
                                         <a v-if="item.file_url" :href="item.file_url" target="_blank" rel="noopener"

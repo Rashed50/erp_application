@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ItemName;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -18,7 +19,7 @@ class ItemNameService
             ->with(['category', 'subCategory', 'unit'])
             ->when($filters['search'] ?? null, fn ($query, string $search) => $query->search($search))
             ->when(! is_null($filters['status'] ?? null), fn ($query) => $query->where('item_status', $filters['status']))
-            ->when($filters['icatg_id'] ?? null, fn ($query, int $categoryId) => $query->where('icatg_id', $categoryId))
+            ->when($filters['icatg_id'] ?? null, fn ($query, int $categoryId) => $query->whereRelation('subCategory', 'icatg_id', $categoryId))
             ->when($filters['iscatg_id'] ?? null, fn ($query, int $subCategoryId) => $query->where('iscatg_id', $subCategoryId))
             ->when($filters['itype_id'] ?? null, fn ($query, int $typeId) => $query->where('itype_id', $typeId))
             ->latest()
@@ -27,12 +28,15 @@ class ItemNameService
     }
 
     /**
+     * The category (`icatg_id`) only narrows the sub category choice; the
+     * item keeps just its sub category, which belongs to that category.
+     *
      * @param  array{icatg_id: int, iscatg_id: int, itype_id: int, item_name: string, item_title: string, item_code: string, unit_id?: ?int, track_type?: ?string, minimum_stock?: ?float, item_status?: ?bool}  $data
      */
     public function create(array $data): ItemName
     {
         $item = ItemName::create([
-            ...$data,
+            ...Arr::except($data, 'icatg_id'),
             'track_type' => $this->trackTypeFor($data['itype_id'], $data['track_type'] ?? null),
             'minimum_stock' => $data['minimum_stock'] ?? 0,
             'item_status' => $data['item_status'] ?? true,
@@ -66,7 +70,7 @@ class ItemNameService
             $data['minimum_stock'] ??= 0;
         }
 
-        $item->fill([...$data, 'update_by_id' => Auth::id()]);
+        $item->fill([...Arr::except($data, 'icatg_id'), 'update_by_id' => Auth::id()]);
         $item->save();
 
         return $item->load(['category', 'subCategory', 'unit']);

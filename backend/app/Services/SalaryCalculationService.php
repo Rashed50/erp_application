@@ -96,11 +96,6 @@ class SalaryCalculationService
             'emp_work_id' => $work->id,
             'salary_month' => $monthStart->toDateString(),
 
-            'employee_code' => $employee->employee_code,
-            'employee_name' => $employee->name,
-            'department' => $employee->department?->name,
-            'designation' => $employee->designation?->name,
-
             'days_in_month' => $daysInMonth,
             'employed_days' => $employedDays,
             'working_days' => $workingDays,

@@ -502,7 +502,7 @@
                     <span class="sidebar-menu-icon">
                         <i class="fa-solid fa-gear"></i>
                     </span>
-                    {{ $t('nav.settings') }}
+                    {{ $t('nav.settings') ?? 'Settings' }}
                 </router-link>
             </v-list-item>
 

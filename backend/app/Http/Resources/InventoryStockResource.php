@@ -25,7 +25,7 @@ class InventoryStockResource extends JsonResource
             'minimum_stock' => $this->whenLoaded('item', fn () => (float) $this->item?->minimum_stock),
             'quantity' => (float) $this->quantity,
             'reserved_quantity' => (float) $this->reserved_quantity,
-            'available_quantity' => (float) $this->available_quantity,
+            'available_quantity' => $this->resource->availableQuantity(),
             'updated_at' => $this->updated_at,
         ];
     }

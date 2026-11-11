@@ -32,6 +32,10 @@ There are two location of all migrations file
 
 
 ```
+drop database erp_db_fresh;
+```
+
+```
 php artisan migrate
 also   to run attendance migration use 
 php artisan migrate --path=database/migrations/attendance

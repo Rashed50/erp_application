@@ -28,11 +28,6 @@ class SalaryPayment extends Model
         return $this->belongsTo(SalaryHistory::class, 'salary_history_id');
     }
 
-    public function employee(): BelongsTo
-    {
-        return $this->belongsTo(Employee::class)->withTrashed();
-    }
-
     public function paymentAccount(): BelongsTo
     {
         return $this->belongsTo(ChartOfAccount::class, 'payment_account_id');

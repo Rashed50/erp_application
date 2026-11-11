@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        
+
         DB::transaction(function () {
 
             $this->call(PermissionSeeder::class);
@@ -33,16 +33,21 @@ class DatabaseSeeder extends Seeder
             $this->call(DepartmentsSeeder::class);
             $this->call(DesignationsSeeder::class);
             $this->call(ItemUnitSeeder::class);
+            $this->call(AttendanceSettingsSeeder::class);
 
-            // for local machine development, not for production. Demo data is separate.
-            $this->call(CustomerSeeder::class);
-            $this->call(WorkOrderSeeder::class);
-            $this->call(EmployeeSeeder::class);
-            $this->call(EmployeeInfoSeeder::class);
-            $this->call(EmpWorksSeeder::class);
-            $this->call(HrDemoDataSeeder::class);
-            $this->call(CustomerWorkOrderSeeder::class);
-            $this->call(ItemSeeder::class);
+
+
+            ## for local machine development, not for production. Demo data is separate.
+        //
+        //     $this->call(CustomerSeeder::class);
+        //     $this->call(WorkOrderQuotationDemoSeeder::class);
+        //   //  $this->call(WorkOrderSeeder::class);
+        //     $this->call(EmployeeSeeder::class);
+        //     $this->call(EmployeeInfoSeeder::class);
+        //     $this->call(EmpWorksSeeder::class);
+        //     $this->call(HrDemoDataSeeder::class);
+        //     $this->call(CustomerWorkOrderSeeder::class);
+ 
 
         });
     }

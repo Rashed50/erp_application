@@ -16,7 +16,7 @@ class MaterialRequestService
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return MaterialRequest::query()
-            ->with(['warehouse', 'workOrder', 'requester', 'approver', 'items.item'])
+            ->with(['warehouse', 'workOrder', 'requester', 'approver', 'items' => fn ($query) => $query->withOrderedQuantity(), 'items.item'])
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->when($filters['warehouse_id'] ?? null, fn ($query, int $id) => $query->where('warehouse_id', $id))
             ->when($filters['work_order_id'] ?? null, fn ($query, int $id) => $query->where('work_order_id', $id))
@@ -108,35 +108,14 @@ class MaterialRequestService
     }
 
     /**
-     * Counts ordered quantities against the request's approved lines and
-     * moves it to (partially) purchased.
-     *
-     * @param  array<int, array{item_id: int, quantity: float}>  $orderedLines
+     * Move the request to (partially) purchased once a purchase order was
+     * raised against it. What each line has purchased comes from the
+     * request's purchase orders.
      */
-    public function recordPurchase(MaterialRequest $materialRequest, array $orderedLines): void
+    public function recordPurchase(MaterialRequest $materialRequest): void
     {
-        $items = $materialRequest->items()->lockForUpdate()->get();
-
-        foreach ($orderedLines as $line) {
-            $remaining = (float) $line['quantity'];
-
-            foreach ($items->where('item_id', $line['item_id']) as $requestItem) {
-                if ($remaining <= 0) {
-                    break;
-                }
-
-                $open = max(0, (float) $requestItem->approved_qty - (float) $requestItem->purchased_qty);
-                $applied = min($open, $remaining);
-
-                if ($applied > 0) {
-                    $requestItem->purchased_qty = (float) $requestItem->purchased_qty + $applied;
-                    $requestItem->save();
-                    $remaining -= $applied;
-                }
-            }
-        }
-
-        $fullyPurchased = $items->every(fn ($item) => (float) $item->purchased_qty >= (float) $item->approved_qty);
+        $fullyPurchased = $materialRequest->items()->withOrderedQuantity()->get()
+            ->every(fn ($item) => $item->purchased_qty >= (float) $item->approved_qty);
 
         $materialRequest->update([
             'status' => $fullyPurchased ? MaterialRequest::STATUS_PURCHASED : MaterialRequest::STATUS_PARTIALLY_PURCHASED,

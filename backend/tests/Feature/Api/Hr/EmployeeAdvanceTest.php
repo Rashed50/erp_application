@@ -94,8 +94,8 @@ describe('advance entry', function () {
     });
 
     it('lists advances with totals', function () {
-        EmployeeAdvance::factory()->create(['amount' => 12000, 'recovered_amount' => 4000]);
-        EmployeeAdvance::factory()->create(['amount' => 6000, 'recovered_amount' => 6000, 'status' => 'Completed']);
+        EmployeeAdvance::factory()->recovered(4000)->create(['amount' => 12000]);
+        EmployeeAdvance::factory()->recovered(6000)->create(['amount' => 6000]);
 
         $this->actingAs($this->actor, 'sanctum')
             ->getJson('/api/hr/employee-advances?status=Running')
@@ -214,7 +214,7 @@ describe('cash repayment', function () {
     });
 
     it('rejects a repayment above the outstanding balance', function () {
-        $advance = EmployeeAdvance::factory()->create(['recovered_amount' => 10000]);
+        $advance = EmployeeAdvance::factory()->recovered(10000)->create();
 
         $this->actingAs($this->actor, 'sanctum')
             ->postJson("/api/hr/employee-advances/{$advance->id}/recoveries", ['amount' => 2500, 'recovery_date' => '2026-01-05', 'payment_account_id' => $this->cashAccountId])

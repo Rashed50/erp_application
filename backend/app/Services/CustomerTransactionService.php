@@ -25,10 +25,9 @@ class CustomerTransactionService
      * When `payment_account_id` is given (a payment received), the credit is
      * also posted to the general ledger as a journal entry: debit that
      * cash/bank account and credit Accounts Receivable. `account_transaction_id`
-     * links an entry to a journal entry posted elsewhere (a sale invoice), and
-     * `sale_id` tags a payment's journal entry with the sale it settles.
+     * links an entry to a journal entry posted elsewhere (a sale invoice).
      *
-     * @param  array{transaction_type: string, work_order_id?: ?int, invoice_no?: ?string, debit?: ?float, credit?: ?float, payment_account_id?: ?int, account_transaction_id?: ?int, sale_id?: ?int, transaction_date: string, notes?: ?string}  $data
+     * @param  array{transaction_type: string, work_order_id?: ?int, invoice_no?: ?string, debit?: ?float, credit?: ?float, payment_account_id?: ?int, account_transaction_id?: ?int, transaction_date: string, notes?: ?string}  $data
      */
     public function create(Customer $customer, array $data): CustomerTransaction
     {
@@ -51,8 +50,7 @@ class CustomerTransactionService
                 'updated_by' => Auth::id(),
             ]);
 
-            $this->postPaymentToLedger($transaction, $data['sale_id'] ?? null);
-            $this->recalculateBalance($customer);
+            $this->postPaymentToLedger($transaction);
 
             return $transaction;
         });
@@ -71,8 +69,6 @@ class CustomerTransactionService
         return DB::transaction(function () use ($transaction, $data) {
             $transaction->fill([...$data, 'updated_by' => Auth::id()]);
             $transaction->save();
-
-            $this->recalculateBalance($transaction->customer);
 
             return $transaction;
         });
@@ -94,34 +90,15 @@ class CustomerTransactionService
             $transaction->updated_by = Auth::id();
             $transaction->save();
 
-            $this->recalculateBalance($transaction->customer);
-
             return $transaction;
         });
-    }
-
-    /**
-     * Recompute the customer's running balance from its opening balance plus
-     * every non-reversed ledger entry, rather than trusting incremental
-     * updates that could drift out of sync.
-     */
-    private function recalculateBalance(Customer $customer): void
-    {
-        $totals = $customer->transactions()
-            ->where('status', true)
-            ->selectRaw('SUM(debit) as total_debit, SUM(credit) as total_credit')
-            ->first();
-
-        $customer->update([
-            'current_balance' => $customer->opening_balance + ($totals->total_debit ?? 0) - ($totals->total_credit ?? 0),
-        ]);
     }
 
     /**
      * Post a received payment's journal entry and link it to the ledger
      * entry. Entries without a payment account are not posted.
      */
-    private function postPaymentToLedger(CustomerTransaction $transaction, ?int $saleId): void
+    private function postPaymentToLedger(CustomerTransaction $transaction): void
     {
         if (! $transaction->payment_account_id) {
             return;
@@ -135,7 +112,6 @@ class CustomerTransactionService
             'tr_no' => $transaction->invoice_no,
             'date' => $transaction->transaction_date->toDateString(),
             'general_particular' => $transaction->notes,
-            'sale_id' => $saleId,
         ], [
             ['account_id' => $transaction->payment_account_id, 'debit' => $amount, 'particular' => "{$amount} dr {$transaction->payment_account_id}"],
             ['account_id' => $receivable->id, 'credit' => $amount, 'particular' => "{$amount} cr {$receivable->id}"],

@@ -324,15 +324,24 @@ class AccountReportService
      */
     public function dashboardSummary(?string $fromDate = null, ?string $toDate = null): array
     {
+        $today = today()->toDateString();
+        $monthStart = today()->startOfMonth()->toDateString();
+        $yearStart = today()->startOfYear()->toDateString();
+        $periods = [
+            'today' => [$today, $today],
+            'this_month' => [$monthStart, $today],
+            'this_year' => [$yearStart, $today],
+        ];
+
         $totalSales = Sale::query()
             ->when($fromDate, fn ($query) => $query->whereDate('issue_date', '>=', $fromDate))
             ->when($toDate, fn ($query) => $query->whereDate('issue_date', '<=', $toDate))
-            ->sum('net_total');
+            ->sum(Sale::netTotalSql());
 
         $totalPurchase = Purchase::query()
             ->when($fromDate, fn ($query) => $query->whereDate('purchase_date', '>=', $fromDate))
             ->when($toDate, fn ($query) => $query->whereDate('purchase_date', '<=', $toDate))
-            ->sum('net_total');
+            ->sum(Purchase::netTotalSql());
 
         $receivableId = ChartOfAccount::query()->where('account_number', LedgerPostingService::ACCOUNTS_RECEIVABLE_NUMBER)->value('id');
         $payableId = ChartOfAccount::query()->where('account_number', LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->value('id');
@@ -350,6 +359,27 @@ class AccountReportService
             'balance' => (float) ($balances[$account->id] ?? 0),
         ]);
 
+        $activity = [];
+        foreach ($periods as $period => [$start, $end]) {
+            $activity[$period] = [
+                'expense' => round((float) IncomeExpenseTransaction::query()
+                    ->where('type', 'expense')
+                    ->whereBetween('transaction_date', [$start, $end])
+                    ->sum('amount'), 2),
+                'collection' => round((float) CustomerTransaction::query()
+                    ->where('transaction_type', CustomerTransaction::TYPE_PAYMENT_RECEIVED)
+                    ->where('status', true)
+                    ->whereBetween('transaction_date', [$start, $end])
+                    ->sum('credit'), 2),
+                'work_orders_count' => WorkOrder::query()
+                    ->whereBetween('issue_date', [$start, $end])
+                    ->count(),
+                'work_orders_amount' => round((float) WorkOrder::query()
+                    ->whereBetween('issue_date', [$start, $end])
+                    ->sum('total_amount'), 2),
+            ];
+        }
+
         return [
             'from_date' => $fromDate,
             'to_date' => $toDate,
@@ -359,6 +389,7 @@ class AccountReportService
             'total_payable' => -(float) ($balances[$payableId] ?? 0),
             'bank_balance' => round($banks->sum('balance'), 2),
             'banks' => $banks->values()->all(),
+            'activity_summary' => $activity,
         ];
     }
 
@@ -447,7 +478,9 @@ class AccountReportService
         $rows = Supplier::query()
             ->where('active_status', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'phone', 'email', 'contact_person', 'opening_balance', 'current_balance'])
+            ->select(['id', 'name', 'phone', 'email', 'contact_person', 'opening_balance'])
+            ->withCurrentBalance()
+            ->get()
             ->map(fn (Supplier $supplier) => [
                 'id' => $supplier->id,
                 'name' => $supplier->name,
@@ -548,6 +581,7 @@ class AccountReportService
     {
         $rows = Purchase::query()
             ->with(['supplier:id,name', 'creditAccount:id,name', 'debitAccount:id,name'])
+            ->withLineTotals()
             ->when($accountIds, fn ($query) => $query->whereIn('credit_account_id', $accountIds))
             ->when($fromDate, fn ($query) => $query->whereDate('purchase_date', '>=', $fromDate))
             ->when($toDate, fn ($query) => $query->whereDate('purchase_date', '<=', $toDate))
@@ -588,7 +622,9 @@ class AccountReportService
     {
         $sales = Sale::query()
             ->whereBetween('issue_date', [$fromDate, $toDate])
-            ->get(['id', 'invoice_number', 'issue_date', 'description', 'net_total'])
+            ->select(['id', 'invoice_number', 'issue_date', 'description', 'overall_discount', 'overall_vat'])
+            ->withLineTotals()
+            ->get()
             ->map(fn (Sale $sale) => [
                 'id' => $sale->id,
                 'date' => $sale->issue_date?->toDateString(),
@@ -601,7 +637,9 @@ class AccountReportService
 
         $purchases = Purchase::query()
             ->whereBetween('purchase_date', [$fromDate, $toDate])
-            ->get(['id', 'invoice_number', 'purchase_date', 'description', 'net_total'])
+            ->select(['id', 'invoice_number', 'purchase_date', 'description', 'overall_discount', 'overall_vat'])
+            ->withLineTotals()
+            ->get()
             ->map(fn (Purchase $purchase) => [
                 'id' => $purchase->id,
                 'date' => $purchase->purchase_date?->toDateString(),
@@ -642,6 +680,8 @@ class AccountReportService
     {
         $rows = Sale::query()
             ->with('customer:id,name')
+            ->withLineTotals()
+            ->withPaidAmount()
             ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
             ->when($fromDate, fn ($query) => $query->whereDate('issue_date', '>=', $fromDate))
             ->when($toDate, fn ($query) => $query->whereDate('issue_date', '<=', $toDate))
@@ -739,8 +779,8 @@ class AccountReportService
 
         $rows = WorkOrder::query()
             ->with('customer:id,name')
-            ->withSum(['sales as sales_amount' => $inRange('issue_date')], 'net_total')
-            ->withSum(['purchases as purchase_amount' => $inRange('purchase_date')], 'net_total')
+            ->withSum(['sales as sales_amount' => $inRange('issue_date')], Sale::netTotalSql())
+            ->withSum(['purchases as purchase_amount' => $inRange('purchase_date')], Purchase::netTotalSql())
             ->withSum(['incomeExpenses as expense_amount' => $inRange('transaction_date', 'expense')], 'amount')
             ->withSum(['incomeExpenses as other_income_amount' => $inRange('transaction_date', 'income')], 'amount')
             ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
@@ -796,6 +836,7 @@ class AccountReportService
 
         $sales = $inRange($workOrder->sales(), 'issue_date')
             ->with('customer:id,name')
+            ->withLineTotals()
             ->get()
             ->map(fn (Sale $sale) => [
                 'date' => $sale->issue_date?->toDateString(),
@@ -809,6 +850,7 @@ class AccountReportService
 
         $purchases = $inRange($workOrder->purchases(), 'purchase_date')
             ->with('supplier:id,name')
+            ->withLineTotals()
             ->get()
             ->map(fn (Purchase $purchase) => [
                 'date' => $purchase->purchase_date?->toDateString(),

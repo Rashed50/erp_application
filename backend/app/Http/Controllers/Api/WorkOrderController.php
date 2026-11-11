@@ -88,6 +88,6 @@ class WorkOrderController extends Controller
         return ApiResponse::success([
             'work_orders' => $workOrders,
         ]);
-        //        return response()->json($workOrders);
+      
     }
 }

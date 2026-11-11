@@ -40,7 +40,7 @@ class PurchaseOrderController extends Controller
     public function show(PurchaseOrder $purchaseOrder): JsonResponse
     {
         return ApiResponse::success(new PurchaseOrderResource($purchaseOrder->load([
-            'supplier', 'materialRequest', 'creator', 'approver', 'items.item',
+            'supplier', 'materialRequest', 'creator', 'approver', 'items' => fn ($query) => $query->withReceivedQuantity(), 'items.item',
             'receipts.warehouse', 'receipts.receiver', 'receipts.items.item', 'receipts.items.serials',
         ])));
     }

@@ -96,8 +96,7 @@ describe('generate', function () {
         $salary = SalaryHistory::sole();
         expect($salary->employee_id)->toBe($employee->id)
             ->and($salary->status)->toBe('Generated')
-            ->and($salary->employee_code)->toBe($employee->employee_code)
-            ->and($salary->department)->toBe('Accounts')
+            ->and($salary->employee->department->name)->toBe('Accounts')
             ->and((float) $salary->gross_salary)->toBe(44000.0)
             ->and((float) $salary->net_salary)->toBe(44000.0)
             ->and($salary->generated_by)->toBe($this->actor->id);
@@ -130,7 +129,7 @@ describe('generate', function () {
         expect(SalaryHistory::sole()->employee_id)->toBe($selected->id);
     });
 
-    it('never recalculates an approved salary and keeps history unchanged when salary or employee data changes', function () {
+    it('never recalculates an approved salary and keeps its amounts unchanged when salary or employee data changes', function () {
         $employee = payrollEmployee();
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/hr/payroll/generate', ['month' => '2026-01']);
         $salary = SalaryHistory::sole();
@@ -147,7 +146,6 @@ describe('generate', function () {
 
         $salary->refresh();
         expect((float) $salary->basic_salary)->toBe(30000.0)
-            ->and($salary->employee_name)->not->toBe('Renamed Person')
             ->and($salary->status)->toBe('Approved');
     });
 
@@ -427,6 +425,150 @@ describe('salary configuration', function () {
             ->assertJsonPath('data.monthly_gross', 49000);
 
         expect($employee->salaryDetails()->count())->toBe(2);
+    });
+
+    it('keeps a replaced revision as history even when payroll never used it', function () {
+        $employee = payrollEmployee();
+        $first = $employee->salaryDetails()->sole();
+        SalaryDetail::factory()->for($employee)->create(['effective_date' => '2026-03-01']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->putJson("/api/hr/salary-details/{$first->id}", [...$first->only([
+                'house_rent', 'medical_allowance', 'transport_allowance', 'food_allowance', 'other_allowance',
+                'overtime_rate', 'other_deduction', 'deduction_basis', 'status',
+            ]), 'effective_date' => '2025-01-01', 'basic_salary' => 99000])
+            ->assertStatus(422);
+
+        $this->actingAs($this->actor, 'sanctum')->deleteJson("/api/hr/salary-details/{$first->id}")->assertStatus(422);
+        expect($employee->salaryDetails()->count())->toBe(2);
+    });
+
+    it('saves the new designation with a promotion and gives it to the employee', function () {
+        $employee = payrollEmployee(['designation' => 'Officer']);
+        $seniorOfficer = Designation::firstOrCreate(['name' => 'Senior Officer']);
+        $revision = [
+            'effective_date' => '2026-02-01', 'basic_salary' => 40000, 'house_rent' => 10000,
+            'medical_allowance' => 2000, 'transport_allowance' => 2000, 'food_allowance' => 0, 'other_allowance' => 0,
+            'overtime_rate' => 0, 'other_deduction' => 0, 'deduction_basis' => 'basic', 'status' => true,
+            'change_reason' => 'Promotion',
+        ];
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->postJson("/api/hr/employees/{$employee->id}/salary-details", $revision)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('designation_id', 'data');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->postJson("/api/hr/employees/{$employee->id}/salary-details", [...$revision, 'designation_id' => $seniorOfficer->id])
+            ->assertStatus(201)
+            ->assertJsonPath('data.designation', 'Senior Officer');
+
+        expect($employee->refresh()->designation_id)->toBe($seniorOfficer->id);
+    });
+
+    it('records the designation of a back-dated revision without changing the current one', function () {
+        $employee = payrollEmployee(['designation' => 'Manager']);
+        $manager = $employee->designation_id;
+        SalaryDetail::factory()->for($employee)->create(['effective_date' => '2026-06-01', 'designation_id' => $manager]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->postJson("/api/hr/employees/{$employee->id}/salary-details", [
+                'effective_date' => '2026-02-01', 'basic_salary' => 35000, 'house_rent' => 10000,
+                'medical_allowance' => 2000, 'transport_allowance' => 2000, 'food_allowance' => 0, 'other_allowance' => 0,
+                'overtime_rate' => 0, 'other_deduction' => 0, 'deduction_basis' => 'basic', 'status' => true,
+                'change_reason' => 'Promotion', 'designation_id' => Designation::firstOrCreate(['name' => 'Officer'])->id,
+            ])
+            ->assertStatus(201);
+
+        expect($employee->refresh()->designation_id)->toBe($manager);
+    });
+
+    it('logs the old and new value of every field on add, edit and delete', function () {
+        $employee = payrollEmployee();
+        $revision = [
+            'effective_date' => '2026-02-01', 'basic_salary' => 30000, 'house_rent' => 10000,
+            'medical_allowance' => 2000, 'transport_allowance' => 2000, 'food_allowance' => 0, 'other_allowance' => 0,
+            'overtime_rate' => 0, 'other_deduction' => 0, 'deduction_basis' => 'basic', 'status' => true,
+        ];
+
+        $id = $this->actingAs($this->actor, 'sanctum')
+            ->postJson("/api/hr/employees/{$employee->id}/salary-details", $revision)
+            ->assertStatus(201)
+            ->json('data.id');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->putJson("/api/hr/salary-details/{$id}", [...$revision, 'house_rent' => 12000])
+            ->assertOk();
+        $this->actingAs($this->actor, 'sanctum')->deleteJson("/api/hr/salary-details/{$id}")->assertOk();
+
+        $logs = $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/hr/employees/{$employee->id}/salary-detail-logs")
+            ->assertOk()
+            ->assertJsonCount(3, 'data')
+            ->json('data');
+
+        expect(array_column($logs, 'action'))->toBe(['Deleted', 'Updated', 'Created'])
+            ->and($logs[1]['changes'])->toBe(['house_rent' => ['old' => 10000, 'new' => 12000]])
+            ->and($logs[1]['created_by_name'])->toBe($this->actor->name)
+            ->and($logs[0]['changes']['house_rent'])->toBe(['old' => 12000, 'new' => null]);
+    });
+
+    it('shows which amounts changed against the previous revision', function () {
+        $employee = payrollEmployee();
+        SalaryDetail::factory()->for($employee)->create(['effective_date' => '2026-02-01', 'house_rent' => 12000, 'medical_allowance' => 1500]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/hr/employees/{$employee->id}/salary-details")
+            ->assertJsonPath('data.0.change_type', 'Increment')
+            ->assertJsonPath('data.0.change_amount', 1500)
+            ->assertJsonPath('data.0.field_changes', [
+                ['field' => 'house_rent', 'previous' => 10000, 'current' => 12000, 'difference' => 2000],
+                ['field' => 'medical_allowance', 'previous' => 2000, 'current' => 1500, 'difference' => -500],
+            ]);
+    });
+
+    it('reports salary changes within the dates', function () {
+        $employee = payrollEmployee(['department' => 'Accounts']);
+        SalaryDetail::factory()->for($employee)->create(['effective_date' => '2026-02-01', 'basic_salary' => 35000, 'change_reason' => 'Annual Increment']);
+        SalaryDetail::factory()->for($employee)->create(['effective_date' => '2026-08-01', 'basic_salary' => 32000]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/hr/reports/salary-changes?from=2026-01-01&to=2026-06-30&department=Accounts')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.rows')
+            ->assertJsonPath('data.rows.0.employee_code', $employee->employee_code)
+            ->assertJsonPath('data.rows.0.change_type', 'Increment')
+            ->assertJsonPath('data.rows.0.change_reason', 'Annual Increment')
+            ->assertJsonPath('data.rows.0.change_amount', 5000)
+            ->assertJsonPath('data.totals', ['changes' => 1, 'increments' => 1, 'decrements' => 0]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/hr/reports/salary-changes')
+            ->assertJsonPath('data.totals', ['changes' => 2, 'increments' => 1, 'decrements' => 1]);
+    });
+
+    it('marks each revision as an increment or decrement and counts them', function () {
+        $employee = payrollEmployee();
+        SalaryDetail::factory()->for($employee)->create(['effective_date' => '2026-02-01', 'basic_salary' => 40000, 'change_reason' => 'Promotion']);
+        SalaryDetail::factory()->for($employee)->create(['effective_date' => '2026-03-01', 'basic_salary' => 35000, 'change_reason' => 'Demotion']);
+        SalaryDetail::factory()->for($employee)->create(['effective_date' => '2026-04-01', 'basic_salary' => 38000]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/hr/employees/{$employee->id}/salary-details")
+            ->assertOk()
+            ->assertJsonPath('data.0.change_type', 'Increment')
+            ->assertJsonPath('data.0.change_amount', 3000)
+            ->assertJsonPath('data.0.is_locked', false)
+            ->assertJsonPath('data.1.change_type', 'Decrement')
+            ->assertJsonPath('data.1.change_reason', 'Demotion')
+            ->assertJsonPath('data.1.is_locked', true)
+            ->assertJsonPath('data.2.change_type', 'Increment')
+            ->assertJsonPath('data.2.change_amount', 10000)
+            ->assertJsonPath('data.3.change_type', 'Initial');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/hr/employees/{$employee->id}")
+            ->assertJsonPath('data.salary_change_summary', ['revisions' => 4, 'increments' => 2, 'decrements' => 1]);
     });
 });
 

@@ -21,8 +21,6 @@ class ItemNameFactory extends Factory
     {
         return [
             'iscatg_id' => ItemSubCategory::factory(),
-            // The item's category is always its sub category's category.
-            'icatg_id' => fn (array $attributes) => ItemSubCategory::find($attributes['iscatg_id'])->icatg_id,
             'itype_id' => ItemName::TYPE_ASSET,
             'track_type' => ItemName::TRACK_SERIAL,
             'item_name' => fake()->unique()->words(2, true),

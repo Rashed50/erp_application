@@ -18,7 +18,7 @@ return new class extends Migration
             // item is a free-text line description rather than a catalog FK
             // (same reasoning as purchase_items.item_name).
             $table->string('item_name');
-            $table->string('description')->nullable();
+            $table->text('description')->nullable();
             $table->string('unit_id')->nullable()->constrained('inventory_units')->cascadeOnDelete();
             $table->decimal('count', 7, 2)->default(1);
             $table->decimal('weight', 7, 2)->default(1);

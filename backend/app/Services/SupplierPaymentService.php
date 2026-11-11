@@ -69,11 +69,6 @@ class SupplierPaymentService
                 'notes' => $data['remarks'] ?? null,
             ]);
 
-            $purchase?->update([
-                'paid_amount' => $purchase->paid_amount + $billAmount,
-                'updated_by' => Auth::id(),
-            ]);
-
             $payment = SupplierPayment::create([
                 'supplier_id' => $supplier->id,
                 'purchase_id' => $purchase?->id,
@@ -83,7 +78,6 @@ class SupplierPaymentService
                 'payment_date' => $data['payment_date'],
                 'bill_amount' => $billAmount,
                 'bank_charge' => $bankCharge,
-                'total_amount' => $billAmount + $bankCharge,
                 'remarks' => $data['remarks'] ?? null,
                 'attachment' => $this->attachmentService->store($data['attachment'] ?? null, 'supplier-payments'),
                 'branch_office_id' => $supplier->branch_office_id,
@@ -108,13 +102,6 @@ class SupplierPaymentService
                 $this->supplierTransactionService->reverse($payment->ledgerTransaction);
             }
 
-            if ($payment->purchase) {
-                $payment->purchase->update([
-                    'paid_amount' => max(0, $payment->purchase->paid_amount - $payment->bill_amount),
-                    'updated_by' => Auth::id(),
-                ]);
-            }
-
             $this->ledgerPostingService->reverse($payment);
             $payment->delete();
         });
@@ -132,7 +119,6 @@ class SupplierPaymentService
             'tr_no' => $payment->invoice_no,
             'date' => $payment->payment_date->toDateString(),
             'general_particular' => 'Bill Payment',
-            'purchase_id' => $payment->purchase_id,
         ], [
             ['account_id' => $payment->payment_account_id, 'credit' => (float) $payment->total_amount, 'particular' => 'bill payment'],
             ['account_id' => $this->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->id, 'debit' => (float) $payment->bill_amount, 'particular' => 'bill payment'],

@@ -71,6 +71,11 @@
                                 <i class="fa-solid fa-plus me-1"></i> {{ $t(currentSalary ? 'Change Salary' : 'Add Salary') }}
                             </v-btn>
                         </div>
+                        <div class="mb-2 small" v-if="employee.salary_change_summary?.revisions">
+                            <span class="badge bg-success me-1">{{ $t('Increments: {count}', { count: employee.salary_change_summary.increments }) }}</span>
+                            <span class="badge bg-danger me-1">{{ $t('Decrements: {count}', { count: employee.salary_change_summary.decrements }) }}</span>
+                            <span class="text-muted">{{ $t('{count} salary revisions on record', { count: employee.salary_change_summary.revisions }) }}</span>
+                        </div>
                         <v-table class="custom-bordered">
                             <thead>
                                 <tr>
@@ -82,6 +87,7 @@
                                     <th class="text-right">{{ $t('Food') }}</th>
                                     <th class="text-right">{{ $t('Other') }}</th>
                                     <th class="text-right">{{ $t('Gross') }}</th>
+                                    <th class="text-center">{{ $t('Change') }}</th>
                                     <th class="text-right">{{ $t('OT Rate') }}</th>
                                     <th class="text-right">{{ $t('Fixed Deduction') }}</th>
                                     <th class="text-center">{{ $t('Status') }}</th>
@@ -90,7 +96,7 @@
                             </thead>
                             <tbody>
                                 <tr v-if="!employee.salary_details.length">
-                                    <td colspan="12" class="text-center py-3">{{ $t('No salary configuration.') }}</td>
+                                    <td colspan="13" class="text-center py-3">{{ $t('No salary configuration.') }}</td>
                                 </tr>
                                 <tr v-for="revision in employee.salary_details" :key="revision.id">
                                     <td>
@@ -104,6 +110,22 @@
                                     <td class="text-right">{{ money(revision.food_allowance) }}</td>
                                     <td class="text-right">{{ money(revision.other_allowance) }}</td>
                                     <td class="text-right"><strong>{{ money(revision.monthly_gross) }}</strong></td>
+                                    <td class="text-center">
+                                        <span v-if="revision.change_type" :class="changeTypeClass(revision.change_type)">
+                                            {{ $t(revision.change_type) }}
+                                        </span>
+                                        <div class="small" v-if="revision.change_amount">
+                                            {{ signedMoney(revision.change_amount) }}
+                                        </div>
+                                        <div class="small text-nowrap" v-for="change in revision.field_changes" :key="change.field"
+                                            :class="change.difference > 0 ? 'text-success' : 'text-danger'">
+                                            {{ $t(SALARY_FIELD_LABELS[change.field]) }}: {{ signedMoney(change.difference) }}
+                                        </div>
+                                        <div class="small text-muted" v-if="revision.change_reason">{{ $t(revision.change_reason) }}</div>
+                                        <div class="small" v-if="revision.designation">
+                                            <i class="fa-solid fa-user-tie me-1"></i>{{ revision.designation }}
+                                        </div>
+                                    </td>
                                     <td class="text-right">{{ money(revision.overtime_rate) }}</td>
                                     <td class="text-right">{{ money(revision.other_deduction) }}</td>
                                     <td class="text-center">
@@ -112,15 +134,50 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <template v-if="!revision.is_used_by_payroll">
+                                        <template v-if="!revision.is_locked">
                                             <v-btn v-if="can(['salary-configs.update'])" size="small" variant="text"
                                                 color="blue-darken-3" @click="openSalaryDialog(revision)">{{ $t('Edit') }}</v-btn>
                                             <v-btn v-if="can(['salary-configs.delete'])" size="small" variant="text"
                                                 color="red-darken-2" @click="deleteRevision(revision)">{{ $t('Delete') }}</v-btn>
                                         </template>
-                                        <small v-else class="text-muted" :title="$t('Used by generated salaries')">
+                                        <small v-else-if="revision.is_used_by_payroll" class="text-muted" :title="$t('Used by generated salaries')">
                                             <i class="fa-solid fa-lock"></i> {{ $t('Used in payroll') }}
                                         </small>
+                                        <small v-else class="text-muted" :title="$t('Replaced by a later revision')">
+                                            <i class="fa-solid fa-lock"></i> {{ $t('Salary history') }}
+                                        </small>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </v-table>
+
+                        <!-- Every add, edit and delete of a revision, with the old and new values. -->
+                        <h6 class="mt-4 mb-2">{{ $t('Salary Edit Log') }}</h6>
+                        <v-table class="custom-bordered" density="compact">
+                            <thead>
+                                <tr>
+                                    <th>{{ $t('Date & Time') }}</th>
+                                    <th>{{ $t('By') }}</th>
+                                    <th>{{ $t('Action') }}</th>
+                                    <th>{{ $t('Changes') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="!salaryLogs.length">
+                                    <td colspan="4" class="text-center py-3">{{ $t('No salary edits recorded.') }}</td>
+                                </tr>
+                                <tr v-for="log in salaryLogs" :key="log.id">
+                                    <td class="text-nowrap">{{ dateTime(log.created_at) }}</td>
+                                    <td>{{ log.created_by_name || '-' }}</td>
+                                    <td><span :class="logActionClass(log.action)">{{ $t(log.action) }}</span></td>
+                                    <td>
+                                        <div class="small" v-for="(change, field) in log.changes" :key="field">
+                                            <strong>{{ $t(SALARY_FIELD_LABELS[field] || field) }}:</strong>
+                                            <template v-if="log.action === 'Updated'">
+                                                {{ logValue(field, change.old) }} → {{ logValue(field, change.new) }}
+                                            </template>
+                                            <template v-else>{{ logValue(field, log.action === 'Deleted' ? change.old : change.new) }}</template>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -280,7 +337,7 @@
     </div>
 
     <SalaryDetailDialog v-if="employee" v-model="salaryDialogOpen" :employee-id="employee.id"
-        :revision="editingRevision" :base="currentSalary" @saved="loadEmployee" />
+        :revision="editingRevision" :base="currentSalary" @saved="salaryChanged" />
 </template>
 
 <script setup>
@@ -291,10 +348,10 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePermission } from '@/composables/usePermission';
 import { useRoute } from 'vue-router';
-import { employeeStatusClass, money, monthLabel, salaryStatusClass } from '../helpers';
+import { SALARY_FIELD_LABELS, employeeStatusClass, money, monthLabel, salaryStatusClass, signedMoney } from '../helpers';
 import { userPlaceholder } from '@/helpers/imagePlaceholder';
 import SalaryDetailDialog from './SalaryDetailDialog.vue';
-import { t } from '@/i18n';
+import { intlLocale, t } from '@/i18n';
 
 const route = useRoute();
 const { can } = usePermission()
@@ -385,10 +442,53 @@ const loadSalaries = async () => {
     salaries.value = data.data?.salaries ?? []
 }
 
+const changeTypeClass = (type) => ({
+    Increment: 'badge bg-success',
+    Decrement: 'badge bg-danger',
+    Initial: 'badge bg-primary',
+})[type] ?? 'badge bg-secondary'
+
 const openSalaryDialog = (revision) => {
     editingRevision.value = revision
     salaryDialogOpen.value = true
 }
+
+const salaryLogs = ref([])
+
+const loadSalaryLogs = async () => {
+    if (!can(['salary-configs.update'])) return
+    try {
+        const { data } = await axios.get(`/api/hr/employees/${route.params.id}/salary-detail-logs`)
+        salaryLogs.value = data.data ?? []
+    } catch {
+        salaryLogs.value = []
+    }
+}
+
+// Reload the revisions and the edit log after a revision is saved or deleted.
+const salaryChanged = () => {
+    loadEmployee()
+    loadSalaryLogs()
+}
+
+const logActionClass = (action) => ({
+    Created: 'badge bg-success',
+    Updated: 'badge bg-warning text-dark',
+    Deleted: 'badge bg-danger',
+})[action] ?? 'badge bg-secondary'
+
+const AMOUNT_FIELDS = ['basic_salary', 'house_rent', 'medical_allowance', 'transport_allowance', 'food_allowance', 'other_allowance', 'overtime_rate', 'other_deduction']
+
+const logValue = (field, value) => {
+    if (value === null || value === undefined || value === '') return '-'
+    if (AMOUNT_FIELDS.includes(field)) return money(value)
+    if (field === 'status') return t(value ? 'Active' : 'Inactive')
+    if (field === 'deduction_basis') return t(value === 'gross' ? 'Basic + allowances' : 'Basic salary')
+    if (field === 'change_reason') return t(value)
+    return value
+}
+
+const dateTime = (value) => (value ? new Date(value).toLocaleString(intlLocale()) : '')
 
 const deleteRevision = async (revision) => {
     const result = await Swal.fire({
@@ -403,7 +503,7 @@ const deleteRevision = async (revision) => {
     try {
         const { data } = await axios.delete(`/api/hr/salary-details/${revision.id}`)
         toast.success(data.message)
-        loadEmployee()
+        salaryChanged()
     } catch (e) {
         toast.error(e.response?.data?.message || t('Failed to delete.'))
     }
@@ -473,6 +573,7 @@ onMounted(() => {
     loadEmployee()
     loadWorks()
     loadSalaries()
+    loadSalaryLogs()
 })
 </script>
 

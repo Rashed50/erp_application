@@ -3,9 +3,12 @@
 use App\Models\ChartOfAccount;
 use App\Models\Customer;
 use App\Models\Purchase;
+use App\Models\Quotation;
 use App\Models\User;
 use App\Models\WorkOrder;
 use Database\Seeders\ChartOfAccountSeeder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 
 function workOrderPayload(int $customerId, array $overrides = []): array
@@ -99,6 +102,41 @@ describe('store', function () {
             ->assertJsonPath('data.approved_by', null);
     });
 
+    it('links an optional quotation to the work order', function () {
+        $customer = Customer::factory()->create();
+        $quotation = Quotation::query()->create([
+            'customer_id' => $customer->id,
+            'invoice_number' => 'QUO-'.fake()->unique()->numerify('#####'),
+            'issue_date' => '2026-09-01',
+            'total_amount' => 1000,
+            'net_total' => 1000,
+        ]);
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/work-orders', workOrderPayload($customer->id, ['quotation_id' => $quotation->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.quotation_id', $quotation->id);
+
+        $this->assertDatabaseHas('work_orders', ['quotation_id' => $quotation->id]);
+    });
+
+    it('stores an optional attachment', function () {
+        $customer = Customer::factory()->create();
+        $disk = config('filesystems.uploads.public_disk');
+        Storage::fake($disk);
+
+        $response = $this->actingAs(adminUser(), 'sanctum')
+            ->post('/api/work-orders', workOrderPayload($customer->id, [
+                'attachment' => UploadedFile::fake()->create('scope.pdf', 100, 'application/pdf'),
+            ]))
+            ->assertCreated();
+
+        $path = WorkOrder::query()->latest('id')->value('attachment');
+        expect($path)->not->toBeNull();
+        Storage::disk($disk)->assertExists($path);
+        $response->assertJsonPath('data.attachment_url', Storage::disk($disk)->url($path));
+    });
+
     it('defaults status to Pending and retention to zero', function () {
         $customer = Customer::factory()->create();
 
@@ -133,13 +171,30 @@ describe('store', function () {
 });
 
 describe('show', function () {
-    it('returns a single work order', function () {
+    it('returns work order details including its quotation and attachment', function () {
         $workOrder = WorkOrder::factory()->create();
+        $quotation = Quotation::query()->create([
+            'customer_id' => $workOrder->customer_id,
+            'invoice_number' => 'QUO-'.fake()->unique()->numerify('#####'),
+            'issue_date' => '2026-09-01',
+            'total_amount' => 1000,
+            'net_total' => 1000,
+        ]);
+        $disk = config('filesystems.uploads.public_disk');
+        Storage::fake($disk);
+        $attachmentPath = 'work-orders/details.pdf';
+        Storage::disk($disk)->put($attachmentPath, 'sample');
+        $workOrder->update([
+            'quotation_id' => $quotation->id,
+            'attachment' => $attachmentPath,
+        ]);
 
         $this->actingAs(adminUser(), 'sanctum')
             ->getJson("/api/work-orders/{$workOrder->id}")
             ->assertOk()
-            ->assertJsonPath('data.work_order_no', $workOrder->work_order_no);
+            ->assertJsonPath('data.work_order_no', $workOrder->work_order_no)
+            ->assertJsonPath('data.quotation_number', $quotation->invoice_number)
+            ->assertJsonPath('data.attachment_url', Storage::disk($disk)->url($attachmentPath));
     });
 });
 

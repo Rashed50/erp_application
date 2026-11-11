@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\FileStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,7 +18,9 @@ class WorkOrderResource extends JsonResource
         return [
             'id' => $this->id,
             'customer_id' => $this->customer_id,
+            'quotation_id' => $this->quotation_id,
             'customer_name' => $this->whenLoaded('customer', fn () => $this->customer?->name),
+            'quotation_number' => $this->whenLoaded('quotation', fn () => $this->quotation?->invoice_number),
             'work_title' => $this->work_title,
             'work_order_no' => $this->work_order_no,
             'issue_date' => $this->issue_date?->toDateString(),
@@ -29,6 +32,7 @@ class WorkOrderResource extends JsonResource
             'payments_count' => $this->whenHas('payments_count'),
             'deliver_date' => $this->deliver_date?->toDateString(),
             'status' => $this->status,
+            'attachment_url' => resolve(FileStorageService::class)->url($this->attachment),
             'created_by' => $this->created_by,
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'updated_by' => $this->updated_by,

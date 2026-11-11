@@ -121,6 +121,11 @@
                                             </button>
                                         </template>
                                         <ul class="table-action-menu">
+                                            <li class="menu-item">
+                                                <button type="button" class="menu-link" @click="openView(item)">
+                                                    {{ $t('View') }}
+                                                </button>
+                                            </li>
                                             <li class="menu-item" v-if="!item.approved_by && can(['work-orders.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'work order')">
                                                     {{ $t('Approve') }}
@@ -154,6 +159,74 @@
 
         </div>
     </div>
+
+    <v-dialog v-model="viewDialog" max-width="800">
+        <v-card>
+            <v-card-title>{{ $t('Work Order Details') }}</v-card-title>
+            <v-card-text>
+                <div v-if="viewLoading" class="text-center py-4">
+                    <v-progress-linear indeterminate color="primary"></v-progress-linear>
+                    {{ $t('Loading...') }}
+                </div>
+                <div v-else-if="selectedWorkOrder" class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Work Order No') }}:</strong> {{ selectedWorkOrder.work_order_no }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Work Title') }}:</strong> {{ selectedWorkOrder.work_title }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Customer') }}:</strong> {{ selectedWorkOrder.customer_name || '-' }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Quotation') }}:</strong> {{ selectedWorkOrder.quotation_number || '-' }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Issue Date') }}:</strong> {{ selectedWorkOrder.issue_date || '-' }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Deliver Date') }}:</strong> {{ selectedWorkOrder.deliver_date || '-' }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Total Amount') }}:</strong> {{ amount(selectedWorkOrder.total_amount) }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Retention') }}:</strong> {{ amount(selectedWorkOrder.retention_amount) }}
+                        ({{ Number(selectedWorkOrder.retention_percent) }}%)
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Paid') }}:</strong> {{ amount(selectedWorkOrder.paid_amount) }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Outstanding') }}:</strong> {{ amount(selectedWorkOrder.outstanding_amount) }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Status') }}:</strong> {{ $t(selectedWorkOrder.status) }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Inserted By') }}:</strong> {{ selectedWorkOrder.created_by_name || '-' }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Approved By') }}:</strong> {{ selectedWorkOrder.approved_by_name || '-' }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ $t('Attachment') }}:</strong>
+                        <a v-if="selectedWorkOrder.attachment_url" :href="selectedWorkOrder.attachment_url"
+                            target="_blank" rel="noopener">
+                            {{ $t('Open attachment') }}
+                        </a>
+                        <span v-else>-</span>
+                    </div>
+                </div>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn class="text-none" color="grey-lighten-3" rounded="0" variant="flat" @click="viewDialog = false">
+                    {{ $t('Close') }}
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 
 </template>
 <script setup>
@@ -195,6 +268,25 @@ const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers'
 const { approve } = useApproval('/api/work-orders', () => fetchData())
 
 const amount = (value) => Number(value || 0).toFixed(2)
+const viewDialog = ref(false)
+const viewLoading = ref(false)
+const selectedWorkOrder = ref(null)
+
+const openView = async (item) => {
+    viewDialog.value = true
+    viewLoading.value = true
+    selectedWorkOrder.value = null
+
+    try {
+        const { data } = await axios.get(`/api/work-orders/${item.id}`)
+        selectedWorkOrder.value = data.data
+    } catch (e) {
+        viewDialog.value = false
+        toast.error(e.response?.data?.message || t('Failed to load work order details.'))
+    } finally {
+        viewLoading.value = false
+    }
+}
 
 // Print every row matching the current filters in the shared report layout.
 const { printTable } = usePrintable()

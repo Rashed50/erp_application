@@ -13,6 +13,16 @@
                         <label>{{ $t(report.monthLabel || 'Month:') }}</label>
                         <input type="month" class="form-control" v-model="filters.month" />
                     </div>
+                    <template v-if="report.filters.includes('dates')">
+                        <div class="col-md-2">
+                            <label>{{ $t('From:') }}</label>
+                            <input type="date" class="form-control" v-model="filters.from" />
+                        </div>
+                        <div class="col-md-2">
+                            <label>{{ $t('To:') }}</label>
+                            <input type="date" class="form-control" v-model="filters.to" />
+                        </div>
+                    </template>
                     <div class="col-md-2" v-if="report.filters.includes('year')">
                         <label>{{ $t('Year:') }}</label>
                         <input type="number" min="2000" max="2100" class="form-control" v-model.number="filters.year" />
@@ -101,7 +111,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import SearchSelect from '@/components/common/SearchSelect.vue';
 import { usePrintable } from '@/composables/usePrintable';
 import { useRoute } from 'vue-router';
-import { SALARY_STATUSES, currentMonth, money, monthLabel } from '../helpers';
+import { SALARY_STATUSES, currentMonth, fieldChangesText, money, monthLabel, signedMoney } from '../helpers';
 import { t } from '@/i18n';
 
 const { printTable } = usePrintable()
@@ -227,6 +237,27 @@ const reports = {
             moneyColumn('due_amount', 'Due'),
         ],
     },
+    // Every salary revision compared with the one before it.
+    salaryChanges: {
+        title: 'Salary Increment / Decrement History',
+        endpoint: '/api/hr/reports/salary-changes',
+        filters: ['dates', 'employee', 'department'],
+        rows: (data) => data.rows ?? [],
+        columns: [
+            { key: 'index', label: '#' },
+            { key: 'effective_date', label: 'Effective Date' },
+            { key: 'employee_code', label: 'ID' },
+            { key: 'employee_name', label: 'Name' },
+            { key: 'department', label: 'Department' },
+            { key: 'change_type', label: 'Change', format: (s) => t(s) },
+            { key: 'change_reason', label: 'Reason', format: (s) => (s ? t(s) : '') },
+            { key: 'designation', label: 'Designation' },
+            { key: 'previous_monthly_gross', label: 'Previous Gross', align: 'right', format: money },
+            { key: 'monthly_gross', label: 'New Gross', align: 'right', format: money },
+            { key: 'change_amount', label: 'Difference', align: 'right', format: signedMoney },
+            { key: 'field_changes', label: 'What Changed', format: (changes) => fieldChangesText(changes, t) },
+        ],
+    },
     department: {
         title: 'Department-wise Payroll',
         endpoint: '/api/hr/reports/department-wise',
@@ -268,6 +299,8 @@ const report = computed(() => reports[reportKey.value])
 const filters = reactive({
     month: currentMonth(),
     year: new Date().getFullYear(),
+    from: `${new Date().getFullYear()}-01-01`,
+    to: new Date().toISOString().slice(0, 10),
     employee_id: '',
     department: '',
     designation: '',
@@ -303,6 +336,10 @@ const params = () => {
     const result = { per_page: ALL, ...(current.extraParams || {}) }
     if (current.filters.includes('month')) result.month = filters.month
     if (current.filters.includes('year')) result.year = filters.year
+    if (current.filters.includes('dates')) {
+        if (filters.from) result.from = filters.from
+        if (filters.to) result.to = filters.to
+    }
     if (current.filters.includes('employee') && filters.employee_id) result.employee_id = filters.employee_id
     for (const key of ['department', 'designation', 'status']) {
         if (current.filters.includes(key) && filters[key]) result[key] = filters[key]
@@ -333,6 +370,7 @@ const print = () => {
     const subtitle = [
         report.value.filters.includes('month') ? monthLabel(filters.month) : null,
         report.value.filters.includes('year') ? filters.year : null,
+        report.value.filters.includes('dates') ? [filters.from, filters.to].filter(Boolean).join(' - ') : null,
         filters.department && report.value.filters.includes('department') ? filters.department : null,
     ].filter(Boolean).join(' · ')
 

@@ -72,6 +72,6 @@ class InventoryTransfer extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(InventoryTransferItem::class);
+        return $this->hasMany(InventoryTransferItem::class)->chaperone('transfer');
     }
 }

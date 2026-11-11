@@ -60,7 +60,6 @@ class ChartOfAccountService
             $account = ChartOfAccount::create([
                 ...$data,
                 'account_type_id' => $parent?->account_type_id ?? $data['account_type_id'],
-                'sibling_level' => $parent ? $parent->sibling_level + 1 : 0,
                 'opening_date' => $data['opening_date'] ?? today()->toDateString(),
                 'opening_balance' => $data['opening_balance'] ?? 0,
                 'is_transaction' => $data['is_transaction'] ?? false,
@@ -82,18 +81,7 @@ class ChartOfAccountService
     {
         return DB::transaction(function () use ($account, $data) {
             $account->fill([...$data, 'updated_by' => Auth::id()]);
-
-            if (array_key_exists('parent_id', $data)) {
-                $parent = $data['parent_id'] ? ChartOfAccount::find($data['parent_id']) : null;
-                $account->sibling_level = $parent ? $parent->sibling_level + 1 : 0;
-            }
-
-            $levelChanged = $account->isDirty('sibling_level');
             $account->save();
-
-            if ($levelChanged) {
-                $this->syncChildLevels($account);
-            }
 
             return $this->find($account);
         });
@@ -140,16 +128,5 @@ class ChartOfAccountService
             ['account_id' => $account->id, 'debit' => $amount, 'particular' => "{$amount} amt dr from {$account->name}"],
             ['account_id' => $equity->id, 'credit' => $amount, 'particular' => "{$amount} amt cr from {$equity->name}"],
         ]);
-    }
-
-    /**
-     * Keeps every descendant's sibling_level consistent after its ancestor moved.
-     */
-    private function syncChildLevels(ChartOfAccount $account): void
-    {
-        foreach ($account->children as $child) {
-            $child->update(['sibling_level' => $account->sibling_level + 1]);
-            $this->syncChildLevels($child);
-        }
     }
 }

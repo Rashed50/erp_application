@@ -19,8 +19,15 @@ class InventoryStock extends Model
             'item_id' => 'integer',
             'quantity' => 'decimal:3',
             'reserved_quantity' => 'decimal:3',
-            'available_quantity' => 'decimal:3',
         ];
+    }
+
+    /**
+     * The quantity not reserved for anything.
+     */
+    public function availableQuantity(): float
+    {
+        return round((float) $this->quantity - (float) $this->reserved_quantity, 3);
     }
 
     public function warehouse(): BelongsTo

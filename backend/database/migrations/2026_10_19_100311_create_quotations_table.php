@@ -14,9 +14,8 @@ return new class extends Migration
         Schema::create('quotations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->constrained('customers')->restrictOnDelete();
-            // The ledger entry this sale posted to the customer's subsidiary
-            // ledger, mirroring purchases.supplier_transaction_id, so an
-            // update/reversal here keeps that entry in sync.
+            $table->unsignedBigInteger('concern_company_id')->nullable();
+            $table->string('signature_by')->nullable();
             $table->string('invoice_number')->unique();
             $table->text('description')->nullable();
             $table->date('issue_date');
@@ -25,8 +24,6 @@ return new class extends Migration
             $table->decimal('vat_amount', 15, 2)->default(0);
             $table->decimal('profit_percent', 3, 2)->default(0);
             $table->decimal('net_total', 15, 2)->default(0);
-            // How much of net_total the customer has paid so far — net_total
-            // minus paid_amount is the outstanding "due" amount.       
             $table->text('notes')->nullable();
             $table->text('file_path')->nullable();
             $table->unsignedBigInteger('branch_office_id')->nullable();

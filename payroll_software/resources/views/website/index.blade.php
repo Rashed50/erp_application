@@ -27,11 +27,7 @@
 
 
 
-    {{-- <header>
-        <img src="logo.png" alt="Company Logo" class="logo">
-        <h1>ABC Simplified Payroll Management</h1>
-        <button class="login-button">Login</button>
-    </header> --}}
+     
     <div class="gallery">
 
         <img src="{{ asset('contents/admin') }}/assets/images/home_page/home1.jpg" alt="Payroll Overview">
