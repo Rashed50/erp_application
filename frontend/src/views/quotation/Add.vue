@@ -19,15 +19,58 @@
                             </div>
                         </div>
 
+                         <!-- Quotation For -->
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="quotation_for">{{ $t('Quotation For:') }}</label>
+                            <select id="quotation_for" class="form-select" v-model="form.quotation_for" required>
+                                <option value="" disabled>{{ $t('Select Company') }}</option>
+                                <option v-for="company in quotationForOptions" :key="company.id" :value="company.id">
+                                    {{ company.name }}
+                                </option>
+                            </select>
+                            <div v-if="errors.quotation_for" class="error-msg">{{ errors.quotation_for }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Signature By -->
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="signature_by">{{ $t('Signature By:') }}</label>
+                            <select id="signature_by" class="form-select" v-model="form.signature_by" required>
+                                <option value="" disabled>{{ $t('Select Employee') }}</option>
+                                <option v-for="emp in signatureByOptions" :key="emp.id" :value="emp.name">
+                                    {{ emp.name }}
+                                </option>
+                            </select>
+                            <div v-if="errors.signature_by" class="error-msg">{{ errors.signature_by }}</div>
+                        </div>
+                    </div>
+
                         <!-- Invoice Number -->
-                        <div class="col-md-4">
+                        <!-- <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label for="invoice_number"> Quotation Number</label>
                                 <input type="text" id="invoice_number" class="form-control"
                                     v-model="form.invoice_number" required />
                                 <div v-if="errors.invoice_number" class="error-msg">{{ errors.invoice_number }}</div>
                             </div>
+                        </div> -->
+
+                        <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="invoice_number">{{ $t('Quotation Number') }}</label>
+                            <input  type="text"   id="invoice_number"   class="form-control"    v-model="form.invoice_number"   @input="autoGenerateQuotationNumber = false"
+                                required
+                            />
+                            <small class="text-muted">
+                                {{ autoGenerateQuotationNumber ? $t('Auto-generated') : $t('Manual override') }}
+                            </small>
+                            <div v-if="errors.invoice_number" class="error-msg">{{ errors.invoice_number }}</div>
                         </div>
+                    </div>
+
+
 
                         <!-- Issue Date -->
                         <div class="col-md-4">
@@ -48,6 +91,7 @@
                         </div>
                     </div>
 
+                   
                     <hr>
 
                     <!-- Items Section -->
@@ -218,7 +262,8 @@
 
 <script setup>
 import axios from 'axios';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { watch,computed, onMounted, reactive, ref } from 'vue';
+ 
 import { useFetch } from '@/composables/useFetch';
 import { setToast } from '@/helpers/toast';
 import { t } from '@/i18n';
@@ -226,11 +271,29 @@ import { t } from '@/i18n';
 const emit = defineEmits(['saved', 'cancel']);
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-
+const autoGenerateQuotationNumber = ref(true);
 const today = () => {
     const now = new Date();
     return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
+
+const quotationForOptions = [
+    { id: 1, name: 'Al Noor Trading Co.' },
+    { id: 2, name: 'Saudi Build Solutions LLC' },
+    { id: 3, name: 'Gulf Engineering Works' },
+    { id: 4, name: 'Al Faisal Contracting Est.' },
+    // { id: 5, name: 'Najd Industrial Services' },
+];
+
+const signatureByOptions = [
+    { id: 1, name: 'MD. Ehsanul Haque Dewan' },
+    { id: 2, name: 'MD. Sohel Rana' },
+    // { id: 3, name: 'Omar Al-Mansoori' },
+    // { id: 4, name: 'Khalid Al-Dossari' },
+    // { id: 5, name: 'Sultan Al-Otaibi' },
+];
+
+
 
 const emptyItem = () => ({
     product_id: '',
@@ -245,6 +308,8 @@ const emptyItem = () => ({
 
 const form = reactive({
     customer_id: '',
+    quotation_for: '',      // 👈 new
+    signature_by: '',       // 👈 new
     invoice_number: '',
     issue_date: today(),
     discount_amount: 0,
@@ -307,6 +372,10 @@ const buildFormData = () => {
     const fd = new FormData();
 
     fd.append('customer_id', form.customer_id);
+    fd.append('concern_company_id', form.quotation_for);       // 👈 quotation for
+    fd.append('signature_by', form.signature_by);         // 👈 signatured employee 
+     
+
     fd.append('invoice_number', form.invoice_number);
     fd.append('issue_date', form.issue_date);
     fd.append('discount_amount', form.discount_amount ?? 0);
@@ -362,9 +431,66 @@ const handleSubmit = async () => {
     }
 };
 
+const resetForm = () => {
+    form.customer_id = '';
+    form.quotation_for = '';
+    form.signature_by = '';
+    form.invoice_number = '';
+    // ... reset other fields
+    autoGenerateQuotationNumber.value = true;
+};
+
+const generateQuotationNumber = () => {
+    const company = quotationForOptions.find(
+        (c) => String(c.id) === String(form.quotation_for)
+    );
+    const customer = customers.value.find(
+        (c) => String(c.id) === String(form.customer_id)
+    );
+
+    if (!company || !customer) {
+        return ''; // wait until both are selected
+    }
+
+    // 2 characters from company name (letters only, uppercase)
+    const companyPart = (company.name || '')
+        .replace(/[^A-Za-z]/g, '')
+        .toUpperCase()
+        .slice(0, 2)
+        .padEnd(2, 'X');
+
+    // 3 characters from customer name (letters only, uppercase)
+    const customerPart = (customer.name || '')
+        .replace(/[^A-Za-z]/g, '')
+        .toUpperCase()
+        .slice(0, 3)
+        .padEnd(3, 'X');
+
+    // YYMM from today's date
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+
+    // 3-digit random
+    const random = String(Math.floor(Math.random() * 900) + 100); // 100–999
+
+    return `${companyPart}-${customerPart}-${yy}${mm}-${random}`;
+};
+
 onMounted(() => {
     loadCustomers();
     loadProducts();
     loadUnits();
 });
+
+
+
+watch(
+    () => [form.quotation_for, form.customer_id],
+    () => {
+        if (autoGenerateQuotationNumber.value) {
+            form.invoice_number = generateQuotationNumber();
+        }
+    }
+);
 </script>

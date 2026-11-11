@@ -32,6 +32,8 @@ class StoreQuotationRequest extends FormRequest
     {
         return [
             'customer_id' => ['required', Rule::exists('customers', 'id')],
+            'concern_company_id' => ['required'],
+            'signature_by' => ['required', 'string', 'max:255'],
             'invoice_number' => ['required', 'string', 'max:255', Rule::unique('quotations', 'invoice_number')],
             'description' => ['nullable', 'string'],
             'issue_date' => ['required', 'date'],
@@ -43,7 +45,7 @@ class StoreQuotationRequest extends FormRequest
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.item_name' => ['required', 'string', 'max:255'],
-            'items.*.description' => ['nullable', 'string', 'max:255'],
+           // 'items.*.description' => ['nullable', 'text', 'max:1000'],
             'items.*.unit_id' => [ 'integer', Rule::exists('inventory_units', 'id')->where('status', 1)],
             'items.*.count' => ['nullable', 'numeric', 'min:0'],
             'items.*.weight' => ['nullable', 'numeric', 'min:0'],

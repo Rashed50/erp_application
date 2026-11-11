@@ -22,6 +22,9 @@ class QuotationResource extends JsonResource
             // data_get(toArray()) so a missing column simply gives null instead of an error
             'customer_address' => $this->whenLoaded('customer', fn () => data_get($this->customer->toArray(), 'address')),
             'invoice_number' => $this->invoice_number,
+            'signature_by' => $this->signature_by,
+            'concern_company_id' => $this->concern_company_id,
+            'concern_company_name' => $this->concernCompany($this->concern_company_id),
             'description' => $this->description,
             'issue_date' => $this->issue_date?->toDateString(),
             'total_amount' => (float) $this->total_amount,
@@ -37,5 +40,20 @@ class QuotationResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+    private function concernCompany(int $concernCompanyId): ?string
+    { 
+
+        if($concernCompanyId == 1) {
+            return "Al Noor Trading Co.";
+        }else if($concernCompanyId == 2) {
+            return "Saudi Build Solutions LLC";
+        }else if($concernCompanyId == 3) {
+            return "Gulf Engineering Works";
+        }else if($concernCompanyId == 4) {
+            return "Al Faisal Contracting Est.";
+        }else {
+            return null;
+        }
     }
 }

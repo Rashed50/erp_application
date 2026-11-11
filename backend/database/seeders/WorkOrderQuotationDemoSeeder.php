@@ -52,6 +52,8 @@ class WorkOrderQuotationDemoSeeder extends Seeder
                     ['invoice_number' => $sample['quotation']['number']],
                     [
                         'customer_id' => $customer->id,
+                        'signature_by' => null,
+                        'concern_company_id' => 1, // Assuming a default company ID for demo
                         'description' => $sample['quotation']['title'],
                         'issue_date' => today()->subDays(10 - $index)->toDateString(),
                         'total_amount' => $sample['quotation']['amount'],

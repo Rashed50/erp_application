@@ -14,12 +14,12 @@ return new class extends Migration {
             $table->date('effective_from');
             $table->date('effective_to')->nullable();
             $table->timestamps();
-            $table->foreign('employee_auto_id', 'employee_shifts_employee_fk')
-                ->references('id')->on('employee_info')
-                ->cascadeOnUpdate()->restrictOnDelete();
-            $table->foreign('attendance_shift_id', 'employee_shifts_shift_fk')
-                ->references('id')->on('attendance_shifts')
-                ->cascadeOnUpdate()->restrictOnDelete();
+            // $table->foreign('employee_auto_id', 'employee_shifts_employee_fk')
+            //     ->references('id')->on('employee_info')
+            //     ->cascadeOnUpdate()->restrictOnDelete();
+            // $table->foreign('attendance_shift_id', 'employee_shifts_shift_fk')
+            //     ->references('id')->on('attendance_shifts')
+            //     ->cascadeOnUpdate()->restrictOnDelete();
             $table->index(['employee_auto_id', 'effective_from', 'effective_to'], 'employee_shifts_employee_dates_idx');
         });
     }

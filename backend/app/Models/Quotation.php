@@ -14,6 +14,8 @@ class Quotation extends Model
 
     protected $fillable = [
         'customer_id',
+        'concern_company_id',
+        'signature_by',
         'invoice_number',
         'description',
         'issue_date',
