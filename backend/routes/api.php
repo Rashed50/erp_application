@@ -1,28 +1,108 @@
 <?php
 
+use App\Http\Controllers\Api\AccountReportController;
 use App\Http\Controllers\Api\AccountTypeController;
 use App\Http\Controllers\Api\ApprovalController;
+use App\Http\Controllers\Api\Asset\AssetController;
+use App\Http\Controllers\Api\Asset\EmployeeInventoryController;
+use App\Http\Controllers\Api\Asset\InventoryDisposalController;
+use App\Http\Controllers\Api\Asset\InventoryLookupController;
+use App\Http\Controllers\Api\Asset\InventoryStockController;
+use App\Http\Controllers\Api\Asset\InventoryTransferController;
+use App\Http\Controllers\Api\Asset\InventoryUnitController;
+use App\Http\Controllers\Api\Asset\InventoryWarehouseController;
+use App\Http\Controllers\Api\Asset\ItemCategoryController;
+use App\Http\Controllers\Api\Asset\ItemNameController;
+use App\Http\Controllers\Api\Asset\ItemSubCategoryController;
+use App\Http\Controllers\Api\Asset\MaterialRequestController;
+use App\Http\Controllers\Api\Asset\PurchaseOrderController;
+use App\Http\Controllers\Api\Attendance\AdmsController;
+use App\Http\Controllers\Api\Attendance\AttendanceController;
+use App\Http\Controllers\Api\Attendance\AttendanceLogController;
+use App\Http\Controllers\Api\Attendance\AttendancePeriodController;
+use App\Http\Controllers\Api\Attendance\AttendanceReportController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChartOfAccountController;
+use App\Http\Controllers\Api\CompanySettingController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerTransactionController;
+use App\Http\Controllers\Api\FundTransferController;
+use App\Http\Controllers\Api\Hr\DepartmentController;
+use App\Http\Controllers\Api\Hr\DesignationController;
+use App\Http\Controllers\Api\Hr\EmployeeAdvanceController;
+use App\Http\Controllers\Api\Hr\EmployeeController;
+use App\Http\Controllers\Api\Hr\EmployeeFileController;
+use App\Http\Controllers\Api\Hr\EmployeeWorkController;
+use App\Http\Controllers\Api\Hr\HrReportController;
+use App\Http\Controllers\Api\Hr\PayrollController;
+use App\Http\Controllers\Api\Hr\SalaryDetailController;
 use App\Http\Controllers\Api\IncomeExpenseTransactionController;
+use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\PermissionCategoryController;
 use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\PurchasePaymentController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SalePaymentController;
 use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\SupplierPaymentController;
 use App\Http\Controllers\Api\SupplierTransactionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UserRoleController;
+use App\Http\Controllers\Api\WorkOrderController;
 use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\QuotationController;
+
+
+
+// Device endpoint: add a dedicated ADMS authentication middleware before production.
+//Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
+
+
+
+
+
+
+Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
+    Route::get('/get-employees-for-attendance-in', [AttendanceController::class, 'getEmployeesForAttendanceIN']);
+    Route::get('/get-employees-for-attendance-out', [AttendanceController::class, 'getEmployeesForAttendanceOUT']);
+
+    Route::post('/check-in', [AttendanceController::class, 'checkIn'])->middleware('permission:attendance.check_in');
+    Route::post('/check-out', [AttendanceController::class, 'checkOut'])->middleware('permission:attendance.check_out');
+
+    Route::post('/process-logs', [AttendanceController::class, 'processLogs']);
+    Route::get('/logs', [AttendanceLogController::class, 'index']);
+    // Route::get('/reports/monthly', [AttendanceReportController::class, 'monthly']);
+    Route::get('/periods', [AttendancePeriodController::class, 'index']);
+    Route::post('/periods/submit', [AttendancePeriodController::class, 'submit']);
+    Route::post('/periods/approve', [AttendancePeriodController::class, 'approve']);
+    Route::post('/periods/lock', [AttendancePeriodController::class, 'lock']);
+    Route::get('/', [AttendanceController::class, 'index']);
+    Route::put('/{id}', [AttendanceController::class, 'update']);
+    Route::delete('/{id}', [AttendanceController::class, 'destroy']);
+    Route::get('/{dailyAttendance}', [AttendanceController::class, 'show'])->whereNumber('dailyAttendance');
+    Route::post('/generate-monthly-records', [AttendanceController::class, 'generateMonthlyRecords'])->middleware('permission:attendance.process');
+});
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('quotations', [QuotationController::class, 'index'])->middleware('permission:quotations.view');
+    Route::get('quotations/{quotation}', [QuotationController::class, 'show'])->middleware('permission:quotations.view');
+    Route::post('quotations', [QuotationController::class, 'store'])->middleware('permission:quotations.create');
+    Route::put('quotations/{quotation}', [QuotationController::class, 'update'])->middleware('permission:quotations.update');
+    Route::delete('quotations/{quotation}', [QuotationController::class, 'destroy'])->middleware('permission:quotations.delete');
+});
+
+
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::get('/branding', [CompanySettingController::class, 'branding'])->name('branding');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -30,6 +110,30 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return ApiResponse::success(new UserResource($request->user()->load('roles')));
     });
+
+    // The signed-in user's own profile; no permission needed.
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+
+    // Address dropdowns: any signed-in user may read the location lists.
+    Route::prefix('/locations')->name('locations.')->group(function () {
+        Route::get('/divisions', [LocationController::class, 'divisions'])->name('divisions');
+        Route::get('/districts', [LocationController::class, 'districts'])->name('districts');
+        Route::get('/upazilas', [LocationController::class, 'upazilas'])->name('upazilas');
+
+        Route::middleware('permission:locations.create')->group(function () {
+            Route::post('/divisions', [LocationController::class, 'storeDivision'])->name('divisions.store');
+            Route::post('/districts', [LocationController::class, 'storeDistrict'])->name('districts.store');
+            Route::post('/upazilas', [LocationController::class, 'storeUpazila'])->name('upazilas.store');
+        });
+    });
+
+    // Every signed-in user needs the company branding (sidebar logo); only editing is gated.
+    Route::get('/settings', [CompanySettingController::class, 'show'])->name('settings.show');
+    Route::post('/settings', [CompanySettingController::class, 'update'])
+        ->name('settings.update')
+        ->middleware('permission:settings.update');
 
     Route::apiResource('users', UserController::class)
         ->middlewareFor(['index', 'show'], 'permission:users.view')
@@ -54,11 +158,51 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('permissions.index')
         ->middleware('permission:roles.view');
 
+    // Permissions grouped by category: read by the role screens, managed on the permissions screen.
+    Route::get('/permission-categories', [PermissionCategoryController::class, 'index'])
+        ->name('permission-categories.index')
+        ->middleware('permission:permissions.view|roles.view|roles.create|roles.update');
+    Route::post('/permission-categories', [PermissionCategoryController::class, 'store'])
+        ->name('permission-categories.store')
+        ->middleware('permission:permissions.create');
+    Route::put('/permission-categories/{permission_category}', [PermissionCategoryController::class, 'update'])
+        ->name('permission-categories.update')
+        ->middleware('permission:permissions.update');
+    Route::post('/permission-categories/{permission_category}/permissions', [PermissionCategoryController::class, 'storePermission'])
+        ->name('permission-categories.permissions.store')
+        ->middleware('permission:permissions.create');
+
     Route::apiResource('customers', CustomerController::class)
         ->middlewareFor(['index', 'show'], 'permission:customers.view')
         ->middlewareFor('store', 'permission:customers.create')
         ->middlewareFor('update', 'permission:customers.update')
         ->middlewareFor('destroy', 'permission:customers.delete');
+
+    // The purchase and income/expense forms tag entries with any work order.
+    Route::get('/work-orders/options', [WorkOrderController::class, 'options'])
+        ->name('work-orders.options')
+        ->middleware('permission:work-orders.view|purchases.create|purchases.update|income-expenses.create|income-expenses.update|account-reports.view');
+
+    Route::apiResource('work-orders', WorkOrderController::class)
+        ->middlewareFor(['index', 'show'], 'permission:work-orders.view')
+        ->middlewareFor('store', 'permission:work-orders.create')
+        ->middlewareFor('update', 'permission:work-orders.update')
+        ->middlewareFor('destroy', 'permission:work-orders.delete');
+    
+    Route::get('/work-orders-list', [WorkOrderController::class, 'getWorkOrderListForDropdownMenu'])->middleware('permission:work-orders.view');
+
+    // The sale form needs a customer's work orders even without work-orders.view.
+    Route::get('/customers/{customer}/work-orders', [WorkOrderController::class, 'forCustomer'])
+        ->name('customers.work-orders.index')
+        ->middleware('permission:work-orders.view|sales.create|sales.update');
+    
+    
+
+    Route::apiResource('products', ProductController::class)
+        ->middlewareFor(['index', 'show'], 'permission:products.view')
+        ->middlewareFor('store', 'permission:products.create')
+        ->middlewareFor('update', 'permission:products.update')
+        ->middlewareFor('destroy', 'permission:products.delete');
 
     Route::get('/customers/{customer}/transactions', [CustomerTransactionController::class, 'index'])
         ->name('customers.transactions.index')
@@ -92,6 +236,44 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('update', 'permission:purchases.update')
         ->middlewareFor('destroy', 'permission:purchases.delete');
 
+    // Supplier (purchase bill) payments, at the same URLs as the payroll_software
+    // Account module's admin/accounting/purchase/payment/* pages.
+    Route::prefix('/accounting/purchase/payment')->name('supplier-payments.')->group(function () {
+        Route::get('/list', [SupplierPaymentController::class, 'index'])
+            ->name('index')
+            ->middleware('permission:supplier-payments.view');
+        Route::post('/store', [SupplierPaymentController::class, 'store'])
+            ->name('store')
+            ->middleware('permission:supplier-payments.create');
+        Route::get('/{supplier_payment}', [SupplierPaymentController::class, 'show'])
+            ->whereNumber('supplier_payment')
+            ->name('show')
+            ->middleware('permission:supplier-payments.view');
+        Route::delete('/{supplier_payment}', [SupplierPaymentController::class, 'destroy'])
+            ->whereNumber('supplier_payment')
+            ->name('destroy')
+            ->middleware('permission:supplier-payments.delete');
+    });
+
+    // Internal fund transfers, at the same URLs as the payroll_software Account
+    // module's admin/accounting/internal-fund-transfer* pages.
+    Route::prefix('/accounting')->name('fund-transfers.')->group(function () {
+        Route::get('/internal-fund-transfer/list', [FundTransferController::class, 'index'])
+            ->name('index')
+            ->middleware('permission:fund-transfers.view');
+        Route::post('/internal-fund-transfer-store', [FundTransferController::class, 'store'])
+            ->name('store')
+            ->middleware('permission:fund-transfers.create');
+        Route::get('/internal-fund-transfer/{fund_transfer}', [FundTransferController::class, 'show'])
+            ->whereNumber('fund_transfer')
+            ->name('show')
+            ->middleware('permission:fund-transfers.view');
+        Route::delete('/internal-fund-transfer/{fund_transfer}', [FundTransferController::class, 'destroy'])
+            ->whereNumber('fund_transfer')
+            ->name('destroy')
+            ->middleware('permission:fund-transfers.delete');
+    });
+
     Route::post('/purchases/{purchase}/payments', [PurchasePaymentController::class, 'store'])
         ->name('purchases.payments.store')
         ->middleware('permission:purchase-payments.create');
@@ -110,11 +292,40 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('account-types.index')
         ->middleware('permission:ledger-accounts.view');
 
+    Route::get('/ledger-accounts/{ledger_account}/next-account-number', [ChartOfAccountController::class, 'nextAccountNumber'])
+        ->name('ledger-accounts.next-account-number')
+        ->middleware('permission:ledger-accounts.create|ledger-accounts.update');
+
     Route::apiResource('ledger-accounts', ChartOfAccountController::class)
         ->middlewareFor(['index', 'show'], 'permission:ledger-accounts.view')
         ->middlewareFor('store', 'permission:ledger-accounts.create')
         ->middlewareFor('update', 'permission:ledger-accounts.update')
         ->middlewareFor('destroy', 'permission:ledger-accounts.delete');
+
+    // Ledger reports, computed from the journal as in the payroll_software
+    // Account module's admin/accounting/reports/* pages.
+    Route::prefix('/accounting/reports')->name('account-reports.')->middleware('permission:account-reports.view')->group(function () {
+        Route::get('/dashboard', [AccountReportController::class, 'dashboard'])->name('dashboard');
+        Route::get('/general-ledger', [AccountReportController::class, 'generalLedger'])->name('general-ledger');
+        Route::get('/trial-balance', [AccountReportController::class, 'trialBalance'])->name('trial-balance');
+        Route::get('/profit-loss', [AccountReportController::class, 'profitAndLoss'])->name('profit-loss');
+        Route::get('/balance-sheet', [AccountReportController::class, 'balanceSheet'])->name('balance-sheet');
+        Route::get('/cash-transactions', [AccountReportController::class, 'cashTransactions'])->name('cash-transactions');
+        Route::get('/supplier-statement', [AccountReportController::class, 'supplierStatement'])->name('supplier-statement');
+        Route::get('/supplier-balances', [AccountReportController::class, 'supplierBalances'])->name('supplier-balances');
+        Route::get('/customer-statement', [AccountReportController::class, 'customerStatement'])->name('customer-statement');
+        Route::get('/expense-details', [AccountReportController::class, 'expenseDetails'])->name('expense-details');
+        Route::get('/sales-purchase-summary', [AccountReportController::class, 'salesPurchaseSummary'])->name('sales-purchase-summary');
+        Route::get('/sales', [AccountReportController::class, 'salesRegister'])->name('sales');
+        Route::get('/work-order-collections', [AccountReportController::class, 'workOrderCollections'])->name('work-order-collections');
+        Route::get('/work-order-profitability', [AccountReportController::class, 'workOrderProfitability'])->name('work-order-profitability');
+        Route::get('/work-order-details', [AccountReportController::class, 'workOrderDetails'])->name('work-order-details');
+        Route::get('/customer-collections', [AccountReportController::class, 'customerCollections'])->name('customer-collections');
+        Route::get('/bank-reconciliation', [AccountReportController::class, 'bankReconciliation'])->name('bank-reconciliation');
+        Route::patch('/bank-reconciliation/cleared', [AccountReportController::class, 'markCleared'])
+            ->name('bank-reconciliation.cleared')
+            ->middleware('permission:account-reports.reconcile');
+    });
 
     Route::apiResource('income-expenses', IncomeExpenseTransactionController::class)
         ->middlewareFor(['index', 'show'], 'permission:income-expenses.view')
@@ -124,6 +335,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/customers/{customer}/approve', [ApprovalController::class, 'customer'])
         ->name('customers.approve')
         ->middleware('permission:customers.approve');
+
+    Route::post('/work-orders/{work_order}/approve', [ApprovalController::class, 'workOrder'])
+        ->name('work-orders.approve')
+        ->middleware('permission:work-orders.approve');
 
     Route::post('/suppliers/{supplier}/approve', [ApprovalController::class, 'supplier'])
         ->name('suppliers.approve')
@@ -137,6 +352,14 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('sales.approve')
         ->middleware('permission:sales.approve');
 
+    Route::post('/accounting/internal-fund-transfer/{fund_transfer}/approve', [ApprovalController::class, 'fundTransfer'])
+        ->name('fund-transfers.approve')
+        ->middleware('permission:fund-transfers.approve');
+
+    Route::post('/accounting/purchase/payment/{supplier_payment}/approve', [ApprovalController::class, 'supplierPayment'])
+        ->name('supplier-payments.approve')
+        ->middleware('permission:supplier-payments.approve');
+
     Route::post('/ledger-accounts/{ledger_account}/approve', [ApprovalController::class, 'ledgerAccount'])
         ->name('ledger-accounts.approve')
         ->middleware('permission:ledger-accounts.approve');
@@ -144,4 +367,299 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/income-expenses/{income_expense}/approve', [ApprovalController::class, 'incomeExpense'])
         ->name('income-expenses.approve')
         ->middleware('permission:income-expenses.approve');
+
+    /* ====================== HR & Payroll ====================== */
+    Route::prefix('/hr')->name('hr.')->group(function () {
+        Route::get('/dashboard', [HrReportController::class, 'dashboard'])
+            ->name('dashboard')
+            ->middleware('permission:employees.view|payroll.view');
+
+        Route::apiResource('departments', DepartmentController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:departments.view')
+            ->middlewareFor('store', 'permission:departments.create')
+            ->middlewareFor('update', 'permission:departments.update');
+        Route::patch('/departments/{department}/status', [DepartmentController::class, 'updateStatus'])
+            ->name('departments.status')
+            ->middleware('permission:departments.update');
+
+        Route::apiResource('designations', DesignationController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:designations.view')
+            ->middlewareFor('store', 'permission:designations.create')
+            ->middlewareFor('update', 'permission:designations.update');
+        Route::patch('/designations/{designation}/status', [DesignationController::class, 'updateStatus'])
+            ->name('designations.status')
+            ->middleware('permission:designations.update');
+
+        Route::get('/employees/options', [EmployeeController::class, 'options'])
+            ->name('employees.options')
+            ->middleware('permission:employees.view|employee-works.view|payroll.view|hr-reports.view');
+
+        // Employee pickers on the work, advance, payroll, report, purchase and income/expense screens use the list too.
+        Route::get('/employees', [EmployeeController::class, 'index'])
+            ->name('employees.index')
+            ->middleware('permission:employees.view|employee-works.view|employee-advances.create|hr-reports.view|purchases.create|purchases.update|income-expenses.create|income-expenses.update');
+        Route::apiResource('employees', EmployeeController::class)
+            ->except('index')
+            ->middlewareFor('show', 'permission:employees.view')
+            ->middlewareFor('store', 'permission:employees.create')
+            ->middlewareFor('update', 'permission:employees.update')
+            ->middlewareFor('destroy', 'permission:employees.delete');
+
+        Route::post('/employees/{employee}/files', [EmployeeFileController::class, 'store'])
+            ->name('employees.files.store')
+            ->middleware('permission:employees.update');
+        Route::get('/employee-files/{employee_file}/download', [EmployeeFileController::class, 'download'])
+            ->name('employee-files.download')
+            ->middleware('permission:employees.view');
+        Route::delete('/employee-files/{employee_file}', [EmployeeFileController::class, 'destroy'])
+            ->name('employee-files.destroy')
+            ->middleware('permission:employees.update');
+
+        Route::get('/employees/{employee}/salary-details', [SalaryDetailController::class, 'index'])
+            ->name('employees.salary-details.index')
+            ->middleware('permission:salary-configs.view');
+        Route::get('/employees/{employee}/salary-detail-logs', [SalaryDetailController::class, 'logs'])
+            ->name('employees.salary-detail-logs.index')
+            ->middleware('permission:salary-configs.view');
+        Route::post('/employees/{employee}/salary-details', [SalaryDetailController::class, 'store'])
+            ->name('employees.salary-details.store')
+            ->middleware('permission:salary-configs.create');
+        Route::put('/salary-details/{salary_detail}', [SalaryDetailController::class, 'update'])
+            ->name('salary-details.update')
+            ->middleware('permission:salary-configs.update');
+        Route::delete('/salary-details/{salary_detail}', [SalaryDetailController::class, 'destroy'])
+            ->name('salary-details.destroy')
+            ->middleware('permission:salary-configs.delete');
+
+        Route::get('/employee-works/find', [EmployeeWorkController::class, 'find'])
+            ->name('employee-works.find')
+            ->middleware('permission:employee-works.view');
+        Route::get('/employee-works', [EmployeeWorkController::class, 'index'])
+            ->name('employee-works.index')
+            ->middleware('permission:employee-works.view|hr-reports.view');
+        Route::apiResource('employee-works', EmployeeWorkController::class)
+            ->only(['store', 'update', 'destroy'])
+            ->middlewareFor('store', 'permission:employee-works.create')
+            ->middlewareFor('update', 'permission:employee-works.update')
+            ->middlewareFor('destroy', 'permission:employee-works.delete');
+
+        // Cash/bank accounts that advances and salaries are paid from (or repaid into).
+        Route::get('/payment-accounts', [ChartOfAccountController::class, 'paymentAccounts'])
+            ->name('payment-accounts')
+            ->middleware('permission:employee-advances.create|employee-advances.update|employee-advances.recover|payroll.pay');
+
+        // Advance salary, recovered by installments at salary generation.
+        Route::apiResource('employee-advances', EmployeeAdvanceController::class)
+            ->middlewareFor(['index', 'show'], 'permission:employee-advances.view')
+            ->middlewareFor('store', 'permission:employee-advances.create')
+            ->middlewareFor('update', 'permission:employee-advances.update')
+            ->middlewareFor('destroy', 'permission:employee-advances.delete');
+        Route::post('/employee-advances/{employee_advance}/recoveries', [EmployeeAdvanceController::class, 'storeRecovery'])
+            ->name('employee-advances.recoveries.store')
+            ->middleware('permission:employee-advances.recover');
+        Route::delete('/advance-recoveries/{advance_recovery}', [EmployeeAdvanceController::class, 'destroyRecovery'])
+            ->name('advance-recoveries.destroy')
+            ->middleware('permission:employee-advances.recover');
+
+        Route::get('/payroll/preview', [PayrollController::class, 'preview'])
+            ->name('payroll.preview')
+            ->middleware('permission:payroll.generate');
+        Route::post('/payroll/generate', [PayrollController::class, 'generate'])
+            ->name('payroll.generate')
+            ->middleware('permission:payroll.generate');
+        Route::get('/salary-histories', [PayrollController::class, 'index'])
+            ->name('salary-histories.index')
+            ->middleware('permission:payroll.view|hr-reports.view');
+        Route::post('/salary-histories/approve', [PayrollController::class, 'approve'])
+            ->name('salary-histories.approve')
+            ->middleware('permission:payroll.approve');
+        Route::post('/salary-histories/pay', [PayrollController::class, 'pay'])
+            ->name('salary-histories.pay')
+            ->middleware('permission:payroll.pay');
+        Route::post('/salary-histories/{salary_history}/payments', [PayrollController::class, 'storePayment'])
+            ->whereNumber('salary_history')
+            ->name('salary-histories.payments.store')
+            ->middleware('permission:payroll.pay');
+        Route::delete('/salary-payments/{salary_payment}', [PayrollController::class, 'destroyPayment'])
+            ->name('salary-payments.destroy')
+            ->middleware('permission:payroll.pay');
+        Route::get('/salary-histories/{salary_history}', [PayrollController::class, 'show'])
+            ->whereNumber('salary_history')
+            ->name('salary-histories.show')
+            ->middleware('permission:payroll.view');
+        Route::post('/salary-histories/{salary_history}/cancel', [PayrollController::class, 'cancel'])
+            ->whereNumber('salary_history')
+            ->name('salary-histories.cancel')
+            ->middleware('permission:payroll.cancel');
+
+        Route::get('/reports/department-wise', [HrReportController::class, 'departmentWise'])
+            ->name('reports.department-wise')
+            ->middleware('permission:hr-reports.view');
+        Route::get('/reports/salary-summary', [HrReportController::class, 'salarySummary'])
+            ->name('reports.salary-summary')
+            ->middleware('permission:hr-reports.view');
+        Route::get('/reports/salary-changes', [HrReportController::class, 'salaryChanges'])
+            ->name('reports.salary-changes')
+            ->middleware('permission:hr-reports.view');
+        Route::get('/reports/salary-due', [HrReportController::class, 'salaryDue'])
+            ->name('reports.salary-due')
+            ->middleware('permission:hr-reports.view|payroll.pay');
+    });
+
+    /* ====================== Asset ====================== */
+    Route::prefix('/asset')->name('asset.')->group(function () {
+        // Dropdowns on the sub category and item forms.
+        Route::get('/item-categories/options', [ItemCategoryController::class, 'options'])
+            ->name('item-categories.options')
+            ->middleware('permission:item-categories.view|item-sub-categories.view|item-sub-categories.create|item-sub-categories.update|item-names.view|item-names.create|item-names.update');
+        Route::get('/item-sub-categories/options', [ItemSubCategoryController::class, 'options'])
+            ->name('item-sub-categories.options')
+            ->middleware('permission:item-sub-categories.view|item-names.view|item-names.create|item-names.update');
+
+        Route::apiResource('item-categories', ItemCategoryController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:item-categories.view')
+            ->middlewareFor('store', 'permission:item-categories.create')
+            ->middlewareFor('update', 'permission:item-categories.update');
+        Route::patch('/item-categories/{item_category}/status', [ItemCategoryController::class, 'updateStatus'])
+            ->name('item-categories.status')
+            ->middleware('permission:item-categories.update');
+
+        Route::apiResource('item-sub-categories', ItemSubCategoryController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:item-sub-categories.view')
+            ->middlewareFor('store', 'permission:item-sub-categories.create')
+            ->middlewareFor('update', 'permission:item-sub-categories.update');
+        Route::patch('/item-sub-categories/{item_sub_category}/status', [ItemSubCategoryController::class, 'updateStatus'])
+            ->name('item-sub-categories.status')
+            ->middleware('permission:item-sub-categories.update');
+
+        Route::apiResource('item-names', ItemNameController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:item-names.view')
+            ->middlewareFor('store', 'permission:item-names.create')
+            ->middlewareFor('update', 'permission:item-names.update');
+        Route::patch('/item-names/{item_name}/status', [ItemNameController::class, 'updateStatus'])
+            ->name('item-names.status')
+            ->middleware('permission:item-names.update');
+
+
+        Route::get('lookups/inventory-units', [InventoryUnitController::class, 'getInventoryUnit'])
+            ->middleware('permission:quotations.create|quotations.update');
+
+        /* ---------- Inventory setup ---------- */
+        Route::get('/units/options', [InventoryUnitController::class, 'options'])
+            ->name('units.options')
+            ->middleware('permission:inventory-units.view|item-names.create|item-names.update|sales.create|sales.update|purchases.create|purchases.update');
+        Route::apiResource('units', InventoryUnitController::class)
+            ->except('destroy')
+            ->parameters(['units' => 'inventory_unit'])
+            ->middlewareFor(['index', 'show'], 'permission:inventory-units.view')
+            ->middlewareFor('store', 'permission:inventory-units.create')
+            ->middlewareFor('update', 'permission:inventory-units.update');
+
+        // Store pickers on every stock movement screen.
+        Route::get('/warehouses/options', [InventoryWarehouseController::class, 'options'])
+            ->name('warehouses.options')
+            ->middleware('permission:warehouses.view|material-requests.create|purchase-orders.receive|inventory-transfers.create|employee-inventory.issue|employee-inventory.return|assets.return|inventory-disposals.create|inventory-stocks.view');
+        Route::apiResource('warehouses', InventoryWarehouseController::class)
+            ->except('destroy')
+            ->middlewareFor(['index', 'show'], 'permission:warehouses.view')
+            ->middlewareFor('store', 'permission:warehouses.create')
+            ->middlewareFor('update', 'permission:warehouses.update');
+
+        // Dropdowns shared by the procurement, stock, custody and disposal screens.
+        Route::middleware('permission:warehouses.view|material-requests.view|material-requests.create|purchase-orders.view|purchase-orders.create|purchase-orders.receive|inventory-transfers.view|inventory-transfers.create|inventory-stocks.view|employee-inventory.view|employee-inventory.issue|assets.view|assets.assign|inventory-disposals.view|inventory-disposals.create')
+            ->group(function () {
+                Route::get('/lookups', [InventoryLookupController::class, 'index'])->name('lookups');
+                Route::get('/lookups/serials', [InventoryLookupController::class, 'serials'])->name('lookups.serials');
+            });
+
+        /* ---------- Procurement ---------- */
+        Route::apiResource('material-requests', MaterialRequestController::class)
+            ->only(['index', 'show', 'store'])
+            ->middlewareFor(['index', 'show'], 'permission:material-requests.view')
+            ->middlewareFor('store', 'permission:material-requests.create');
+        Route::post('/material-requests/{material_request}/approve', [MaterialRequestController::class, 'approve'])
+            ->name('material-requests.approve')
+            ->middleware('permission:material-requests.approve');
+        Route::post('/material-requests/{material_request}/reject', [MaterialRequestController::class, 'reject'])
+            ->name('material-requests.reject')
+            ->middleware('permission:material-requests.approve');
+
+        Route::apiResource('purchase-orders', PurchaseOrderController::class)
+            ->only(['index', 'show', 'store'])
+            ->middlewareFor(['index', 'show'], 'permission:purchase-orders.view')
+            ->middlewareFor('store', 'permission:purchase-orders.create');
+        Route::post('/purchase-orders/{purchase_order}/approve', [PurchaseOrderController::class, 'approve'])
+            ->name('purchase-orders.approve')
+            ->middleware('permission:purchase-orders.approve');
+        Route::post('/purchase-orders/{purchase_order}/receive', [PurchaseOrderController::class, 'receive'])
+            ->name('purchase-orders.receive')
+            ->middleware('permission:purchase-orders.receive');
+
+        /* ---------- Stock movement ---------- */
+        Route::apiResource('transfers', InventoryTransferController::class)
+            ->only(['index', 'show', 'store'])
+            ->middlewareFor(['index', 'show'], 'permission:inventory-transfers.view')
+            ->middlewareFor('store', 'permission:inventory-transfers.create');
+        Route::post('/transfers/{transfer}/approve', [InventoryTransferController::class, 'approve'])
+            ->name('transfers.approve')
+            ->middleware('permission:inventory-transfers.approve');
+        Route::post('/transfers/{transfer}/dispatch', [InventoryTransferController::class, 'dispatch'])
+            ->name('transfers.dispatch')
+            ->middleware('permission:inventory-transfers.dispatch');
+        Route::post('/transfers/{transfer}/receive', [InventoryTransferController::class, 'receive'])
+            ->name('transfers.receive')
+            ->middleware('permission:inventory-transfers.receive');
+
+        Route::get('/stocks', [InventoryStockController::class, 'index'])
+            ->name('stocks.index')
+            ->middleware('permission:inventory-stocks.view');
+        Route::get('/stock-transactions', [InventoryStockController::class, 'transactions'])
+            ->name('stock-transactions.index')
+            ->middleware('permission:inventory-stocks.view');
+
+        Route::get('/employee-inventory', [EmployeeInventoryController::class, 'index'])
+            ->name('employee-inventory.index')
+            ->middleware('permission:employee-inventory.view');
+        Route::post('/employee-inventory/issue', [EmployeeInventoryController::class, 'issue'])
+            ->name('employee-inventory.issue')
+            ->middleware('permission:employee-inventory.issue');
+        Route::get('/employee-inventory/{employee_inventory}', [EmployeeInventoryController::class, 'show'])
+            ->whereNumber('employee_inventory')
+            ->name('employee-inventory.show')
+            ->middleware('permission:employee-inventory.view');
+        Route::post('/employee-inventory/{employee_inventory}/return', [EmployeeInventoryController::class, 'returnItem'])
+            ->name('employee-inventory.return')
+            ->middleware('permission:employee-inventory.return');
+
+        /* ---------- Asset register ---------- */
+        Route::get('/assets', [AssetController::class, 'index'])
+            ->name('assets.index')
+            ->middleware('permission:assets.view');
+        Route::get('/assets/{asset}', [AssetController::class, 'show'])
+            ->name('assets.show')
+            ->middleware('permission:assets.view');
+        Route::post('/assets/{asset}/assign', [AssetController::class, 'assign'])
+            ->name('assets.assign')
+            ->middleware('permission:assets.assign');
+        Route::post('/asset-assignments/{asset_assignment}/return', [AssetController::class, 'returnAsset'])
+            ->name('asset-assignments.return')
+            ->middleware('permission:assets.return');
+
+        /* ---------- Disposal ---------- */
+        Route::apiResource('disposals', InventoryDisposalController::class)
+            ->only(['index', 'show', 'store'])
+            ->middlewareFor(['index', 'show'], 'permission:inventory-disposals.view')
+            ->middlewareFor('store', 'permission:inventory-disposals.create');
+        Route::post('/disposals/{disposal}/approve', [InventoryDisposalController::class, 'approve'])
+            ->name('disposals.approve')
+            ->middleware('permission:inventory-disposals.approve');
+        Route::post('/disposals/{disposal}/dispose', [InventoryDisposalController::class, 'dispose'])
+            ->name('disposals.dispose')
+            ->middleware('permission:inventory-disposals.dispose');
+    });
 });

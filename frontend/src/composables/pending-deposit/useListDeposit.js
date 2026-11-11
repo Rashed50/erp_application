@@ -1,4 +1,6 @@
 import { toast } from 'vue3-toastify'
+import { t } from '@/i18n'
+import { usePrintable } from '@/composables/usePrintable'
 
 export function useListDeposit() {
     const today = new Date().toISOString().substr(0, 10)
@@ -141,76 +143,25 @@ export function useListDeposit() {
         console.log(selected.value)
     }
 
-    // print table
+    // print table (shared company layout)
+    const printable = usePrintable()
     const printTable = () => {
         if (!items.value.length) return
 
-        const win = window.open('', '_blank')
-
-        let html = `
-            <html>
-            <head>
-            <title>Pending Deposit List - Destiny Multi-purpose Co-operative Society Ltd</title>
-            <style>
-                body { font-family: Arial, sans-serif }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px }
-                th, td { border: 1px solid #000; padding: 6px; font-size: 12px }
-                th { background: #f3f3f3 }
-            </style>
-            </head>
-            <body>
-            <h3>Pending Deposit List - Destiny Multi-purpose Co-operative Society Ltd</h3>
-            <table>
-                <thead>
-                <tr>
-                    <th>SL/No</th>
-                    <th>M.Number</th>
-                    <th>Name</th>
-                    <th>Mobile</th>
-                    <th>Amount</th>
-                    <th>Payment</th>
-                    <th>Trnx ID</th>
-                    <th>Date</th>
-                </tr>
-                </thead>
-                <tbody>
-        `
-
-        items.value.forEach((row, i) => {
-            html += `
-            <tr>
-                <td>${row.DT_RowIndex}</td>
-                <td>${row.member_number}</td>
-                <td>${row.name}</td>
-                <td>${row.mobile}</td>
-                <td>${row.amount}</td>
-                <td>${row.paymentOption}</td>
-                <td>${row.tnx_id ?? ''}</td>
-                <td>${row.created_at_formatted}</td>
-            </tr>
-            `
+        printable.printTable({
+            title: t('Pending Deposit List'),
+            items: items.value,
+            columns: [
+                { key: 'DT_RowIndex', label: t('SL/No') },
+                { key: 'member_number', label: t('M.Number') },
+                { key: 'name', label: t('Name') },
+                { key: 'mobile', label: t('Mobile') },
+                { key: 'amount', label: t('Amount'), align: 'right' },
+                { key: 'paymentOption', label: t('Payment') },
+                { key: 'tnx_id', label: t('Trnx ID') },
+                { key: 'created_at_formatted', label: t('Date') },
+            ],
         })
-
-        html += `
-                </tbody>
-            </table>
-
-            <script>
-                window.onload = function () {
-                window.print()
-                window.onafterprint = function () {
-                    window.close()
-                }
-                }
-            </script>
-
-            </body>
-            </html>
-        `
-
-        win.document.open()
-        win.document.write(html)
-        win.document.close()
     }
 
 

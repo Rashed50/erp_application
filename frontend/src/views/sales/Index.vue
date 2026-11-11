@@ -13,7 +13,7 @@
                             <div class="col-md-4"></div>
                             <div class="col-md-3">
                                 <select class="form-select" v-model="filters.customer_id">
-                                    <option value="">All Customers</option>
+                                    <option value="">{{ $t('All Customers') }}</option>
                                     <option v-for="customer in customers" :key="customer.id" :value="customer.id">
                                         {{ customer.name }}
                                     </option>
@@ -21,15 +21,15 @@
                             </div>
                             <div class="col-md-5">
                                 <div class="search-wrapper d-flex align-center gap-2">
-                                    <v-text-field variant="outlined" density="compact" placeholder="Search invoice no..."
+                                    <v-text-field variant="outlined" density="compact" :placeholder="$t('Search invoice no...')"
                                         v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
                                     <v-btn type="button" @click="fetchData" class="text-none text-white"
                                         color="blue-darken-3" rounded="0" variant="flat" min-width="100">
-                                        Search
+                                        {{ $t('Search') }}
                                     </v-btn>
                                     <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3"
                                         rounded="0" variant="flat" min-width="100">
-                                        Reload
+                                        {{ $t('Reload') }}
                                     </v-btn>
                                 </div>
                             </div>
@@ -41,29 +41,30 @@
                         <thead>
                             <tr>
                                 <th class="text-left">#</th>
-                                <th class="text-left">Invoice No</th>
-                                <th class="text-left">Customer</th>
-                                <th class="text-left">Issue Date</th>
-                                <th class="text-right">Net Total</th>
-                                <th class="text-right">Due</th>
-                                <th class="text-center">Approval</th>
-                                <th class="text-center">Action</th>
+                                <th class="text-left">{{ $t('Invoice No') }}</th>
+                                <th class="text-left">{{ $t('Customer') }}</th>
+                                <th class="text-left">{{ $t('Issue Date') }}</th>
+                                <th class="text-right">{{ $t('Net Total') }}</th>
+                                <th class="text-right">{{ $t('Due') }}</th>
+                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-center">{{ $t('Approval') }}</th>
+                                <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
 
                             <!-- Loading State with Vuetify Spinner -->
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
-                                    Loading...
+                                    {{ $t('Loading...') }}
                                 </td>
                             </tr>
 
                             <!-- No Data -->
                             <tr v-else-if="!items.length">
-                                <td colspan="8" class="text-center py-4">
-                                    No records found.
+                                <td colspan="9" class="text-center py-4">
+                                    {{ $t('No records found.') }}
                                 </td>
                             </tr>
 
@@ -79,8 +80,10 @@
                                         {{ Number(item.due_amount).toFixed(2) }}
                                     </span>
                                 </td>
+                                <td>{{ item.created_by_name || '-' }}</td>
                                 <td class="text-center">
-                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at" />
+                                    <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
+                                        :approved-by-name="item.approved_by_name" />
                                 </td>
                                 <!-- actions -->
                                 <td class="text-center">
@@ -93,23 +96,33 @@
                                         <ul class="table-action-menu">
                                             <li class="menu-item" v-if="!item.approved_by && can(['sales.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'sale')">
-                                                    Approve
+                                                    {{ $t('Approve') }}
                                                 </button>
                                             </li>
                                             <li class="menu-item" v-if="item.due_amount > 0 && can(['sale-payments.create'])">
                                                 <button type="button" class="menu-link" @click="openPaymentDialog(item)">
-                                                    Record Payment
+                                                    {{ $t('Record Payment') }}
                                                 </button>
+                                            </li>
+                                            <li class="menu-item">
+                                                <button type="button" class="menu-link" @click="handlePrintInvoice(item)">
+                                                    {{ $t('Print Invoice') }}
+                                                </button>
+                                            </li>
+                                            <li class="menu-item" v-if="item.attachment_url">
+                                                <a :href="item.attachment_url" target="_blank" class="menu-link">
+                                                    {{ $t('Attachment') }}
+                                                </a>
                                             </li>
                                             <li class="menu-item">
                                                 <router-link :to="{ name: 'admin_sale_edit', params: { id: item.id } }"
                                                     class="menu-link">
-                                                    Edit
+                                                    {{ $t('Edit') }}
                                                 </router-link>
                                             </li>
                                             <li class="menu-item">
                                                 <button type="button" class="menu-link" @click="handleDelete(item)">
-                                                    Delete
+                                                    {{ $t('Delete') }}
                                                 </button>
                                             </li>
                                         </ul>
@@ -128,7 +141,8 @@
             </v-card>
 
             <PaymentDialog v-model="paymentDialogOpen" :endpoint="`/api/sales/${selectedSale?.id}/payments`"
-                :due-amount="selectedSale?.due_amount ?? 0" title="Record Payment Received" @recorded="fetchData" />
+                :due-amount="selectedSale?.due_amount ?? 0" :title="$t('Record Payment Received')" with-payment-account
+                @recorded="fetchData" />
 
         </div>
     </div>
@@ -146,8 +160,11 @@ import PaymentDialog from '@/components/common/PaymentDialog.vue';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';
+import { usePrintable } from '@/composables/usePrintable';
+import { t } from '@/i18n';
 
 const { can } = usePermission()
+const { printInvoice } = usePrintable()
 
 const {
     items,
@@ -176,14 +193,38 @@ const openPaymentDialog = (item) => {
 
 const { approve } = useApproval('/api/sales', () => fetchData())
 
+// The list rows have no line items, so load the full sale before printing.
+const handlePrintInvoice = async (item) => {
+    try {
+        const { data } = await axios.get(`/api/sales/${item.id}`)
+        if (!data.success) return
+        const sale = data.data
+        printInvoice({
+            title: 'Sales Invoice',
+            partyLabel: 'Customer:',
+            partyName: sale.customer_name,
+            meta: [
+                { label: 'Invoice No:', value: sale.invoice_number },
+                { label: 'Issue Date:', value: sale.issue_date },
+                { label: 'Due Date:', value: sale.due_date },
+            ],
+            items: sale.items ?? [],
+            totals: sale,
+            notes: sale.notes,
+        })
+    } catch (e) {
+        toast.error(e.response?.data?.message || t('Failed to load the invoice.'))
+    }
+}
+
 const handleDelete = async (item) => {
     const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: `Delete sale "${item.invoice_number}"? This reverses its customer ledger entry.`,
+        title: t('Are you sure?'),
+        text: t('Delete sale "{invoice}"? This reverses its customer ledger entry.', { invoice: item.invoice_number }),
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('Yes, delete'),
+        cancelButtonText: t('Cancel'),
     })
 
     if (!result.isConfirmed) return
@@ -195,7 +236,7 @@ const handleDelete = async (item) => {
             fetchData()
         }
     } catch (e) {
-        toast.error(e.response?.data?.message || 'Failed to delete sale.')
+        toast.error(e.response?.data?.message || t('Failed to delete sale.'))
     }
 }
 

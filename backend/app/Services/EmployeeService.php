@@ -1,0 +1,175 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Department;
+use App\Models\Designation;
+use App\Models\Employee;
+use App\Models\EmployeeBankDetail;
+use App\Models\EmployeeDetail;
+use App\Models\SalaryDetail;
+use Illuminate\Database\Eloquent\{Collection,Builder};
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class EmployeeService
+{
+    /**
+     * Request keys that drive the photo and must not be filled onto the employee directly.
+     */
+    private const PHOTO_FIELDS = ['photo', 'remove_photo'];
+
+    public function __construct(private readonly FileStorageService $fileStorage) {}
+
+    /**
+     * @param  array{search?: ?string, department?: ?string, designation?: ?string, status?: ?string, employment_type?: ?string}  $filters
+     */
+    public function paginate(int $perPage, array $filters): LengthAwarePaginator
+    {
+        return Employee::query()
+            ->with(['department', 'designation', 'creator:id,name'])
+            ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->search($search))
+            ->when($filters['department'] ?? null, fn (Builder $query, string $department) => $query->inDepartment($department))
+            ->when($filters['designation'] ?? null, fn (Builder $query, string $designation) => $query->withDesignation($designation))
+            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
+            ->when($filters['employment_type'] ?? null, fn (Builder $query, string $type) => $query->where('employment_type', $type))
+            ->orderBy('employee_code')
+            ->paginate($perPage);
+    }
+
+
+     
+    public function getActiveEmployeesForAttendanceIN($employee_ids=[]):Collection
+    {
+        if(is_null($employee_ids) || empty($employee_ids)){
+            return Employee::query()
+            ->where('status', 'active')
+            ->orderBy('employee_code')
+            ->get();
+        }
+        return Employee::query()
+            ->whereIn('employee_code', $employee_ids)
+            ->orderBy('employee_code')
+            ->get();
+    }
+
+    public function getActiveEmployees():Collection
+    {
+        return Employee::
+        //    with(['department', 'designation'])
+           // ->where('status', 'active')
+            orderBy('employee_code')
+             ->get();
+    }
+
+    /**
+     * Salary revisions are only loaded for users who may edit them, so the
+     * pay of an employee stays hidden from everyone else.
+     */
+    public function find(Employee $employee): Employee
+    {
+        $employee->load([
+            'department',
+            'designation',
+            'division',
+            'district',
+            'upazila',
+            'detail.permanentDivision',
+            'detail.permanentDistrict',
+            'detail.permanentUpazila',
+            'bankDetail',
+            'files',
+        ]);
+
+        if (Auth::user()?->can('salary-configs.update')) {
+            $employee->load(['salaryDetails' => fn ($query) => $query->with('designation:id,name')->withCount('salaryHistories')->orderByDesc('effective_date')]);
+            SalaryDetail::linkRevisions($employee->salaryDetails);
+        }
+
+        return $employee;
+    }
+
+    /**
+     * Create the employee and its one-to-one detail and bank rows together.
+     *
+     * @param  array<string, mixed>  $data  Employee columns plus optional `detail` and `bank` arrays.
+     */
+    public function create(array $data): Employee
+    {
+        return DB::transaction(function () use ($data) {
+            $employee = Employee::create([
+                ...Arr::except($data, ['detail', 'bank', ...self::PHOTO_FIELDS]),
+                'photo' => isset($data['photo']) ? $this->fileStorage->store($data['photo'], 'employees/photos') : null,
+                'employee_code' => ($data['employee_code'] ?? null) ?: $this->nextEmployeeCode(),
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
+            ]);
+
+            $employee->detail()->create(Arr::only($data['detail'] ?? [], EmployeeDetail::FIELDS));
+
+            if (array_filter($data['bank'] ?? [])) {
+                $employee->bankDetail()->create(Arr::only($data['bank'], EmployeeBankDetail::FIELDS));
+            }
+
+            return $this->find($employee);
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function update(Employee $employee, array $data): Employee
+    {
+        return DB::transaction(function () use ($employee, $data) {
+            $employee->fill([...Arr::except($data, ['detail', 'bank', ...self::PHOTO_FIELDS]), 'updated_by' => Auth::id()]);
+            $employee->photo = $this->fileStorage->replace($employee->photo, $data['photo'] ?? null, (bool) ($data['remove_photo'] ?? false), 'employees/photos');
+            $employee->save();
+
+            if (array_key_exists('detail', $data)) {
+                $employee->detail()->updateOrCreate([], Arr::only($data['detail'] ?? [], EmployeeDetail::FIELDS));
+            }
+
+            if (array_key_exists('bank', $data)) {
+                $employee->bankDetail()->updateOrCreate([], Arr::only($data['bank'] ?? [], EmployeeBankDetail::FIELDS));
+            }
+
+            return $this->find($employee);
+        });
+    }
+
+    public function delete(Employee $employee): void
+    {
+        $employee->delete();
+    }
+
+    /**
+     * The next sequential code, e.g. EMP-1001, EMP-1002 (deleted employees
+     * included so a code is never reused).
+     */
+    public function nextEmployeeCode(): string
+    {
+        $highest = Employee::withTrashed()
+            ->where('employee_code', 'like', 'EMP-%')
+            ->pluck('employee_code')
+            ->map(fn (string $code) => (int) substr($code, 4))
+            ->max();
+
+        return 'EMP-'.max(1001, $highest + 1);
+    }
+
+    /**
+     * Every department and designation (inactive ones included, so a
+     * filter or an employee that still uses one can show it).
+     *
+     * @return array{departments: array<int, array{id: int, name: string, status: bool}>, designations: array<int, array{id: int, name: string, status: bool}>}
+     */
+    public function options(): array
+    {
+        return [
+            'departments' => Department::query()->orderBy('name')->get(['id', 'name', 'status'])->toArray(),
+            'designations' => Designation::query()->orderBy('name')->get(['id', 'name', 'status'])->toArray(),
+        ];
+    }
+}

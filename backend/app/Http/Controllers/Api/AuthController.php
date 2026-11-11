@@ -16,6 +16,8 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
+        //  return json_encode(['error' => 'Error', 'message' => $ex->getMessage(), 'success' => false, 'status' => 404]);
+
         $result = $this->authService->login(
             email: $request->string('email')->toString(),
             password: $request->string('password')->toString(),
@@ -26,8 +28,9 @@ class AuthController extends Controller
             data: [
                 'user' => new UserResource($result['user']),
                 'token' => $result['token'],
+                'idle_timeout' => $result['idle_timeout'],
             ],
-            message: 'Logged in successfully.',
+            message: __('Logged in successfully.'),
         );
     }
 
@@ -35,6 +38,6 @@ class AuthController extends Controller
     {
         $this->authService->logout($request->user());
 
-        return ApiResponse::success(message: 'Logged out successfully.');
+        return ApiResponse::success(message: __('Logged out successfully.'));
     }
 }

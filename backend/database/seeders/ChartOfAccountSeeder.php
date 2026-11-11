@@ -25,6 +25,7 @@ class ChartOfAccountSeeder extends Seeder
                 '1050' => 'Advance to Vendors (Control)',
                 '1060' => 'Prepaid Expenses',
                 '1070' => 'Fixed Assets',
+                '1080' => 'Advance to Employees',
             ],
         ],
         [
@@ -90,7 +91,6 @@ class ChartOfAccountSeeder extends Seeder
                 'name' => $name,
                 'account_type_id' => $accountTypeId,
                 'parent_id' => $parent?->id,
-                'sibling_level' => $parent ? $parent->sibling_level + 1 : 0,
                 'opening_date' => today(),
                 'is_transaction' => $isTransaction,
                 'is_predefined' => true,

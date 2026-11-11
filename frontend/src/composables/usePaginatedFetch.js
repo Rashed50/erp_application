@@ -15,6 +15,8 @@ function unwrapListPayload(payload) {
 export function usePaginatedFetch(url, initialFilters = {}, options = {}) {
     // data
     const items = ref([])
+    // The whole `data` object of the last response, for extras such as totals.
+    const payload = ref({})
     const loading = ref(false)
     const error = ref(null)
 
@@ -50,10 +52,10 @@ export function usePaginatedFetch(url, initialFilters = {}, options = {}) {
                 },
             })
 
-            const payload = response.data?.data ?? {}
-            const meta = payload.meta ?? {}
+            payload.value = response.data?.data ?? {}
+            const meta = payload.value.meta ?? {}
 
-            items.value = unwrapListPayload(payload)
+            items.value = unwrapListPayload(payload.value)
             pagination.total = meta.total ?? items.value.length
             pagination.lastPage = meta.last_page ?? 1
             if (pagination.perPage !== 'All') {
@@ -64,6 +66,16 @@ export function usePaginatedFetch(url, initialFilters = {}, options = {}) {
         } finally {
             loading.value = false
         }
+    }
+
+    // Every row matching the current filters (all pages), e.g. for printing;
+    // leaves the table's own page and items untouched.
+    const fetchAll = async () => {
+        const response = await axios.get(url, {
+            params: { page: 1, per_page: 1000000, ...filters },
+        })
+
+        return unwrapListPayload(response.data?.data ?? {})
     }
 
     // pagination helpers
@@ -92,6 +104,7 @@ export function usePaginatedFetch(url, initialFilters = {}, options = {}) {
 
     return {
         items,
+        payload,
         loading,
         error,
 
@@ -99,6 +112,7 @@ export function usePaginatedFetch(url, initialFilters = {}, options = {}) {
         pagination,
 
         fetchData,
+        fetchAll,
         changePage,
         changePerPage,
         resetFilters,

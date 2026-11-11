@@ -40,20 +40,20 @@ class RoleController extends Controller
     {
         $role = $this->roleService->create($request->validated());
 
-        return ApiResponse::success(new RoleResource($role), 'Role created successfully.', 201);
+        return ApiResponse::success(new RoleResource($role), __('Role created successfully.'), 201);
     }
 
     public function update(UpdateRoleRequest $request, Role $role): JsonResponse
     {
         $role = $this->roleService->update($role, $request->validated());
 
-        return ApiResponse::success(new RoleResource($role), 'Role updated successfully.');
+        return ApiResponse::success(new RoleResource($role), __('Role updated successfully.'));
     }
 
     public function destroy(Role $role): JsonResponse
     {
         $this->roleService->delete($role);
 
-        return ApiResponse::success(message: 'Role deleted successfully.');
+        return ApiResponse::success(message: __('Role deleted successfully.'));
     }
 }

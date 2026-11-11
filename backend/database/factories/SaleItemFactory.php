@@ -29,7 +29,6 @@ class SaleItemFactory extends Factory
             'unit_price' => $unitPrice,
             'discount' => 0,
             'vat' => 0,
-            'total_amount' => $qty * $unitPrice,
         ];
     }
 }

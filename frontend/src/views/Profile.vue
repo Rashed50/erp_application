@@ -2,8 +2,8 @@
     <div class="profile-container mt-5">
         <v-card class="pa-4">
             <v-tabs v-model="activeTab" color="primary">
-                <v-tab value="profile">Profile Information</v-tab>
-                <v-tab value="password">Change Password</v-tab>
+                <v-tab value="profile">{{ $t('Profile Information') }}</v-tab>
+                <v-tab value="password">{{ $t('Change Password') }}</v-tab>
             </v-tabs>
 
             <v-window v-model="activeTab">
@@ -13,7 +13,8 @@
                         <div class="row">
                             <div class="col-md-12 text-center mb-4">
                                 <div class="profile-image-wrapper">
-                                    <img :src="profileImagePreview || profileForm.profile_image_url"
+                                    <img :src="profileImagePreview || profileForm.profile_image_url || userPlaceholder"
+                                        :data-placeholder="userPlaceholder"
                                         class="profile-image" alt="Profile Image">
                                     <label for="image" class="image-upload-label">
                                         <i class="fa-solid fa-camera"></i>
@@ -28,7 +29,7 @@
 
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                                    <label class="form-label">{{ $t('Name') }} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" v-model="profileForm.name">
                                     <div v-if="errors.name" class="error-msg">{{ errors.name }}</div>
                                 </div>
@@ -36,7 +37,7 @@
 
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form-label">Email <span class="text-danger">*</span></label>
+                                    <label class="form-label">{{ $t('Email') }} <span class="text-danger">*</span></label>
                                     <input type="email" class="form-control" v-model="profileForm.email">
                                     <div v-if="errors.email" class="error-msg">{{ errors.email }}</div>
                                 </div>
@@ -45,7 +46,7 @@
                             <div class="col-12 text-end mt-3">
                                 <v-btn type="submit" color="primary" :loading="profileSubmitting"
                                     :disabled="profileSubmitting">
-                                    Update Profile
+                                    {{ $t('Update Profile') }}
                                 </v-btn>
                             </div>
                         </div>
@@ -58,7 +59,7 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label class="form-label">Current Password <span
+                                    <label class="form-label">{{ $t('Current Password') }} <span
                                             class="text-danger">*</span></label>
                                     <input type="password" class="form-control" v-model="passwordForm.current_password">
                                     <div v-if="passwordErrors.current_password" class="error-msg">
@@ -69,7 +70,7 @@
 
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label class="form-label">New Password <span class="text-danger">*</span></label>
+                                    <label class="form-label">{{ $t('New Password') }} <span class="text-danger">*</span></label>
                                     <input type="password" class="form-control" v-model="passwordForm.new_password">
                                     <div v-if="passwordErrors.new_password" class="error-msg">
                                         {{ passwordErrors.new_password }}
@@ -79,7 +80,7 @@
 
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label class="form-label">Confirm New Password <span
+                                    <label class="form-label">{{ $t('Confirm New Password') }} <span
                                             class="text-danger">*</span></label>
                                     <input type="password" class="form-control"
                                         v-model="passwordForm.new_password_confirmation">
@@ -89,7 +90,7 @@
                             <div class="col-12 text-end mt-3">
                                 <v-btn type="submit" color="primary" :loading="passwordSubmitting"
                                     :disabled="passwordSubmitting">
-                                    Change Password
+                                    {{ $t('Change Password') }}
                                 </v-btn>
                             </div>
                         </div>
@@ -103,7 +104,12 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
 import { toast } from 'vue3-toastify';
+import { userPlaceholder } from '@/helpers/imagePlaceholder';
 import axios from 'axios';
+import { t } from '@/i18n';
+import { useAuthStore } from '@/stores/auth';
+
+const auth = useAuthStore();
 
 const activeTab = ref('profile');
 const profileSubmitting = ref(false);
@@ -132,19 +138,29 @@ const passwordErrors = reactive({});
 // Profile Image Preview
 const profileImagePreview = ref(null);
 
+// Put the API's validation errors (data: { field: [messages] }) on the form.
+const showErrors = (error, target, fallback) => {
+    const fieldErrors = error.response?.status === 422 ? error.response.data?.data : null;
+    if (fieldErrors) {
+        Object.entries(fieldErrors).forEach(([field, messages]) => { target[field] = messages[0]; });
+    } else {
+        toast.error(error.response?.data?.message || fallback);
+    }
+};
+
 const handleImageUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
         // Validate file type
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
         if (!allowedTypes.includes(file.type)) {
-            toast.error('Please upload a valid image (JPEG, PNG, JPG, GIF)');
+            toast.error(t('Please upload a valid image (JPEG, PNG, JPG, GIF, WEBP)'));
             return;
         }
 
         // Validate file size (2MB max)
         if (file.size > 2 * 1024 * 1024) {
-            toast.error('Image size should be less than 2MB');
+            toast.error(t('Image size should be less than 2MB'));
             return;
         }
 
@@ -162,14 +178,14 @@ const handleImageUpload = (event) => {
 // Fetch Profile Data
 const fetchProfile = async () => {
     try {
-        const response = await axios.get('/apis/profile');
-        if (response.data.status) {
+        const response = await axios.get('/api/profile');
+        if (response.data.success) {
             profileForm.name = response.data.data.name;
             profileForm.email = response.data.data.email;
             profileForm.profile_image_url = response.data.data.image_url;
         }
     } catch (error) {
-        toast.error('Failed to load profile data');
+        toast.error(t('Failed to load profile data'));
     }
 };
 
@@ -189,16 +205,19 @@ const updateProfile = async () => {
     }
 
     try {
-        const response = await axios.post('/apis/profile/update', formData, {
+        const response = await axios.post('/api/profile', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
         });
 
-        if (response.data.status) {
+        if (response.data.success) {
             toast.success(response.data.message);
             profileForm.profile_image_url = response.data.data.image_url;
             profileImagePreview.value = null;
+            profileForm.image = null;
+            // Refresh the name and photo shown in the header.
+            auth.user = { ...auth.user, ...response.data.data };
 
             // Reset file input
             if (imageInput.value) {
@@ -206,16 +225,7 @@ const updateProfile = async () => {
             }
         }
     } catch (error) {
-        if (error.response?.status === 422) {
-            const validationErrors = error.response.data.errors;
-            Object.assign(errors, validationErrors);
-
-            Object.values(validationErrors).forEach(errArr => {
-                errArr.forEach(msg => toast.error(msg));
-            });
-        } else {
-            toast.error(error.response?.data?.message || 'Failed to update profile');
-        }
+        showErrors(error, errors, t('Failed to update profile'));
     } finally {
         profileSubmitting.value = false;
     }
@@ -229,28 +239,17 @@ const updatePassword = async () => {
     Object.keys(passwordErrors).forEach(key => delete passwordErrors[key]);
 
     try {
-        const response = await axios.post('/apis/profile/update-password', passwordForm);
+        const response = await axios.put('/api/profile/password', passwordForm);
 
-        if (response.data.status) {
+        if (response.data.success) {
             toast.success(response.data.message);
             // Reset password form
             passwordForm.current_password = '';
             passwordForm.new_password = '';
             passwordForm.new_password_confirmation = '';
-
-            location.reload(); // Reload to logout the user after password change
         }
     } catch (error) {
-        if (error.response?.status === 422) {
-            const validationErrors = error.response.data.errors;
-            Object.assign(passwordErrors, validationErrors);
-
-            Object.values(validationErrors).forEach(errArr => {
-                errArr.forEach(msg => toast.error(msg));
-            });
-        } else {
-            toast.error(error.response?.data?.message || 'Failed to update password');
-        }
+        showErrors(error, passwordErrors, t('Failed to update password'));
     } finally {
         passwordSubmitting.value = false;
     }

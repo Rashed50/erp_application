@@ -18,6 +18,8 @@ class CustomerTransactionResource extends JsonResource
             'id' => $this->id,
             'customer_id' => $this->customer_id,
             'customer_name' => $this->whenLoaded('customer', fn () => $this->customer->name),
+            'work_order_id' => $this->work_order_id,
+            'work_order_no' => $this->whenLoaded('workOrder', fn () => $this->workOrder?->work_order_no),
             'transaction_type' => $this->transaction_type,
             'invoice_no' => $this->invoice_no,
             'debit' => (float) $this->debit,
@@ -25,6 +27,7 @@ class CustomerTransactionResource extends JsonResource
             'transaction_date' => $this->transaction_date?->toDateString(),
             'notes' => $this->notes,
             'status' => $this->status,
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

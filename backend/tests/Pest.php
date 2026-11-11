@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\AccountTransactionDetail;
+use App\Models\ChartOfAccount;
 use App\Models\User;
+use Database\Seeders\ChartOfAccountSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -62,4 +65,26 @@ function adminUser(): User
     $user->assignRole(Role::findOrCreate('Super Admin', 'web'));
 
     return $user;
+}
+
+/**
+ * Seed the predefined chart of accounts (idempotent) and return the Cash in
+ * Hand account id, for tests that pay money from or into a cash account.
+ */
+function cashInHandAccountId(): int
+{
+    (new ChartOfAccountSeeder)->run();
+
+    return ChartOfAccount::query()->where('account_number', '1010')->value('id');
+}
+
+/**
+ * Debits minus credits posted to an account, from its journal lines.
+ */
+function ledgerBalance(string $accountNumber): float
+{
+    $lines = AccountTransactionDetail::query()
+        ->whereHas('account', fn ($query) => $query->where('account_number', $accountNumber));
+
+    return round((float) (clone $lines)->sum('debit') - (float) $lines->sum('credit'), 2);
 }

@@ -1,7 +1,12 @@
 <?php
 
+use App\Models\AccountTransaction;
 use App\Models\ChartOfAccount;
+use App\Models\Employee;
 use App\Models\IncomeExpenseTransaction;
+use App\Models\WorkOrder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 describe('index', function () {
     it('returns 401 when no token is provided', function () {
@@ -135,7 +140,7 @@ describe('account balances', function () {
     it('posts an expense by raising the expense account and lowering the asset account', function () {
         $actor = adminUser();
         $rent = ChartOfAccount::factory()->expense()->create();
-        $cash = ChartOfAccount::factory()->asset()->create(['balance' => 10000]);
+        $cash = ChartOfAccount::factory()->asset()->create();
 
         $this->actingAs($actor, 'sanctum')->postJson('/api/income-expenses', [
             'type' => 'expense',
@@ -146,7 +151,7 @@ describe('account balances', function () {
         ])->assertStatus(201);
 
         expect((float) $rent->fresh()->balance)->toBe(2500.0)
-            ->and((float) $cash->fresh()->balance)->toBe(7500.0);
+            ->and((float) $cash->fresh()->balance)->toBe(-2500.0);
     });
 
     it('posts an income by raising both the revenue and the asset account', function () {
@@ -169,7 +174,7 @@ describe('account balances', function () {
     it('re-posts balances when an entry amount is edited and reverses them on delete', function () {
         $actor = adminUser();
         $rent = ChartOfAccount::factory()->expense()->create();
-        $cash = ChartOfAccount::factory()->asset()->create(['balance' => 10000]);
+        $cash = ChartOfAccount::factory()->asset()->create();
 
         $id = $this->actingAs($actor, 'sanctum')->postJson('/api/income-expenses', [
             'type' => 'expense',
@@ -182,12 +187,14 @@ describe('account balances', function () {
         $this->actingAs($actor, 'sanctum')->putJson("/api/income-expenses/{$id}", ['amount' => 1000])->assertOk();
 
         expect((float) $rent->fresh()->balance)->toBe(1000.0)
-            ->and((float) $cash->fresh()->balance)->toBe(9000.0);
+            ->and((float) $cash->fresh()->balance)->toBe(-1000.0)
+            ->and(AccountTransaction::query()->whereMorphedTo('source', IncomeExpenseTransaction::find($id))->count())->toBe(1);
 
         $this->actingAs($actor, 'sanctum')->deleteJson("/api/income-expenses/{$id}")->assertOk();
 
         expect((float) $rent->fresh()->balance)->toBe(0.0)
-            ->and((float) $cash->fresh()->balance)->toBe(10000.0);
+            ->and((float) $cash->fresh()->balance)->toBe(0.0)
+            ->and(AccountTransaction::count())->toBe(0);
     });
 
     it('rejects posting to a group account', function () {
@@ -216,5 +223,88 @@ describe('account balances', function () {
             'amount' => 100,
             'transaction_date' => now()->toDateString(),
         ])->assertStatus(422)->assertJsonStructure(['data' => ['payment_account_id']]);
+    });
+});
+
+describe('work order', function () {
+    it('tags an expense with a work order', function () {
+        $actor = adminUser();
+        $workOrder = WorkOrder::factory()->create(['work_order_no' => 'WO-EXP-1']);
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/income-expenses', [
+                'type' => 'expense',
+                'work_order_id' => $workOrder->id,
+                'income_expense_account_id' => ChartOfAccount::factory()->expense()->create()->id,
+                'payment_account_id' => ChartOfAccount::factory()->asset()->create()->id,
+                'amount' => 750,
+                'transaction_date' => now()->toDateString(),
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.work_order_id', $workOrder->id)
+            ->assertJsonPath('data.work_order_no', 'WO-EXP-1');
+    });
+
+    it('rejects an unknown work order', function () {
+        $actor = adminUser();
+        $transaction = IncomeExpenseTransaction::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/income-expenses/{$transaction->id}", ['work_order_id' => 999999])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['work_order_id']]);
+    });
+});
+
+describe('expense by', function () {
+    it('records the employee who spent the money', function () {
+        $actor = adminUser();
+        $rent = ChartOfAccount::factory()->expense()->create();
+        $cash = ChartOfAccount::factory()->asset()->create();
+        $employee = Employee::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/income-expenses', [
+                'type' => 'expense',
+                'income_expense_account_id' => $rent->id,
+                'payment_account_id' => $cash->id,
+                'employee_id' => $employee->id,
+                'amount' => 500,
+                'transaction_date' => now()->toDateString(),
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.employee_id', $employee->id)
+            ->assertJsonPath('data.employee_name', "{$employee->name} ({$employee->employee_code})");
+    });
+});
+
+describe('attachment', function () {
+    it('stores an uploaded expense voucher and removes it on request', function () {
+        Storage::fake('public');
+        $rent = ChartOfAccount::factory()->expense()->create();
+        $cash = ChartOfAccount::factory()->asset()->create();
+
+        $response = $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/income-expenses', [
+                'type' => 'expense',
+                'income_expense_account_id' => $rent->id,
+                'payment_account_id' => $cash->id,
+                'amount' => 500,
+                'transaction_date' => now()->toDateString(),
+                'attachment' => UploadedFile::fake()->image('voucher.jpg'),
+            ])
+            ->assertStatus(201);
+
+        $transaction = IncomeExpenseTransaction::sole();
+        Storage::disk('public')->assertExists($transaction->attachment);
+        $response->assertJsonPath('data.attachment_url', Storage::disk('public')->url($transaction->attachment));
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->putJson("/api/income-expenses/{$transaction->id}", ['remove_attachment' => true])
+            ->assertOk()
+            ->assertJsonPath('data.attachment_url', null);
+
+        Storage::disk('public')->assertMissing($transaction->attachment);
     });
 });

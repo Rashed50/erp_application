@@ -1,0 +1,220 @@
+<template lang="html">
+    <Breadcrumb title="Employees" buttonText="Add Employee" :buttonLink="{ name: 'admin_hr_employee_add' }"
+        buttonIcon="fa-solid fa-user-plus" />
+
+    <div class="main-content-wrapper mt-4">
+        <div class="container-fluid">
+            <v-card style="padding: 5px; margin-top: 15px;">
+                <div class="row align-items-center mb-2">
+                    <div class="col-md-2">
+                        <SearchSelect v-model="filters.department" :items="options.departments" item-value="name"
+                            :placeholder="$t('All Departments')" />
+                    </div>
+                    <div class="col-md-2">
+                        <SearchSelect v-model="filters.designation" :items="options.designations" item-value="name"
+                            :placeholder="$t('All Designations')" />
+                    </div>
+                    <div class="col-md-2">
+                        <SearchSelect v-model="filters.status" :items="options.statuses" :item-title="(s) => $t(s)"
+                            :item-value="(s) => s" :placeholder="$t('All Status')" />
+                    </div>
+                    <div class="col-md-6">
+                        <div class="search-wrapper d-flex align-center gap-2">
+                            <v-text-field variant="outlined" density="compact" :placeholder="$t('ID, name, phone, email...')"
+                                v-model="filters.search" hide-details class="flex-grow-1"></v-text-field>
+                            <v-btn type="button" @click="fetchData" class="text-none text-white" color="blue-darken-3"
+                                rounded="0" variant="flat" min-width="100">
+                                {{ $t('Search') }}
+                            </v-btn>
+                            <v-btn @click.prevent="resetFilters" class="text-none" color="grey-lighten-3" rounded="0"
+                                variant="flat" min-width="100">
+                                {{ $t('Reload') }}
+                            </v-btn>
+                            <v-btn @click.prevent="print" class="text-none" color="grey-lighten-3" rounded="0"
+                                variant="flat" min-width="100" :loading="printing" :disabled="!items.length">
+                                <i class="fa-solid fa-print me-1"></i> {{ $t('Print') }}
+                            </v-btn>
+                        </div>
+                    </div>
+                </div>
+
+                <v-table class="custom-bordered">
+                    <thead>
+                        <tr>
+                            <th class="text-left">#</th>
+                            <th class="text-left">{{ $t('Employee ID') }}</th>
+                            <th class="text-left">{{ $t('Name') }}</th>
+                            <th class="text-left">{{ $t('Department') }}</th>
+                            <th class="text-left">{{ $t('Designation') }}</th>
+                            <th class="text-left">{{ $t('Phone') }}</th>
+                            <th class="text-left">{{ $t('Joining Date') }}</th>
+                            <th class="text-center">{{ $t('Status') }}</th>
+                            <th class="text-left">{{ $t('Inserted By') }}</th>
+                            <th class="text-center">{{ $t('Action') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-if="loading">
+                            <td colspan="10" class="text-center py-4">
+                                <v-progress-linear indeterminate color="primary"></v-progress-linear>
+                                {{ $t('Loading...') }}
+                            </td>
+                        </tr>
+                        <tr v-else-if="!items.length">
+                            <td colspan="10" class="text-center py-4">{{ $t('No employees found.') }}</td>
+                        </tr>
+                        <tr v-else v-for="(item, index) in items" :key="item.id">
+                            <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
+                            <td>{{ item.employee_code }}</td>
+                            <td>
+                                <router-link :to="{ name: 'admin_hr_employee_show', params: { id: item.id } }">
+                                    <img :src="item.photo_url || userPlaceholder" :data-placeholder="userPlaceholder"
+                                        alt="" class="rounded-circle me-2"
+                                        style="width: 32px; height: 32px; object-fit: cover;" />
+                                    {{ item.name }}
+                                </router-link>
+                            </td>
+                            <td>{{ item.department }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.phone }}</td>
+                            <td>{{ item.joining_date }}</td>
+                            <td class="text-center">
+                                <span :class="employeeStatusClass(item.status)">{{ $t(item.status) }}</span>
+                            </td>
+                            <td>{{ item.created_by_name || '-' }}</td>
+                            <td class="text-center">
+                                <v-menu>
+                                    <template v-slot:activator="{ props }">
+                                        <button type="button" class="table-action-button" v-bind="props">
+                                            <i class="fa-solid fa-bars"></i>
+                                        </button>
+                                    </template>
+                                    <ul class="table-action-menu">
+                                        <li class="menu-item">
+                                            <router-link :to="{ name: 'admin_hr_employee_show', params: { id: item.id } }"
+                                                class="menu-link">
+                                                {{ $t('Details') }}
+                                            </router-link>
+                                        </li>
+                                        <li class="menu-item" v-if="can(['employees.update'])">
+                                            <router-link :to="{ name: 'admin_hr_employee_edit', params: { id: item.id } }"
+                                                class="menu-link">
+                                                {{ $t('Edit') }}
+                                            </router-link>
+                                        </li>
+                                        <li class="menu-item" v-if="can(['employees.delete'])">
+                                            <button type="button" class="menu-link" @click="handleDelete(item)">
+                                                {{ $t('Delete') }}
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </v-menu>
+                            </td>
+                        </tr>
+                    </tbody>
+                </v-table>
+
+                <BasePagination :current-page="pagination.page" :per-page="pagination.perPage" :total="pagination.total"
+                    :last-page="pagination.lastPage" @page-change="changePage" @per-page-change="changePerPage" />
+            </v-card>
+        </div>
+    </div>
+</template>
+
+<script setup>
+import axios from 'axios';
+import Swal from 'sweetalert2';
+import { toast } from 'vue3-toastify';
+import BasePagination from '@/components/common/BasePagination.vue';
+import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
+import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
+import { usePermission } from '@/composables/usePermission';
+import { usePrintable } from '@/composables/usePrintable';
+import { employeeStatusClass } from '../helpers';
+import { userPlaceholder } from '@/helpers/imagePlaceholder';
+import { t } from '@/i18n';
+
+const { can } = usePermission()
+
+const {
+    items,
+    loading,
+    filters,
+    pagination,
+    fetchData,
+    fetchAll,
+    changePage,
+    changePerPage,
+    resetFilters,
+} = usePaginatedFetch('/api/hr/employees', {
+    search: '',
+    department: '',
+    designation: '',
+    status: '',
+})
+
+const options = ref({ departments: [], designations: [], statuses: [] })
+
+// Print every row matching the current filters in the shared report layout.
+const { printTable } = usePrintable()
+const printing = ref(false)
+const print = async () => {
+    printing.value = true
+    try {
+        printTable({
+            title: t('Employee List'),
+            items: await fetchAll(),
+            columns: [
+                { key: 'index', label: '#' },
+                { key: 'employee_code', label: t('Employee ID') },
+                { key: 'name', label: t('Name') },
+                { key: 'department', label: t('Department') },
+                { key: 'designation', label: t('Designation') },
+                { key: 'phone', label: t('Phone') },
+                { key: 'joining_date', label: t('Joining Date') },
+                { key: 'employment_type', label: t('Employment Type'), format: (value) => t(value) },
+                { key: 'status', label: t('Status'), format: (value) => t(value) },
+            ],
+        })
+    } catch (e) {
+        toast.error(e.response?.data?.message || t('Failed to load data for printing.'))
+    } finally {
+        printing.value = false
+    }
+}
+
+const handleDelete = async (item) => {
+    const result = await Swal.fire({
+        title: t('Are you sure?'),
+        text: t('Delete employee "{name}"?', { name: item.name }),
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: t('Yes, delete'),
+        cancelButtonText: t('Cancel'),
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+        const resp = await axios.delete(`/api/hr/employees/${item.id}`)
+        if (resp.data.success) {
+            toast.success(resp.data.message)
+            fetchData()
+        }
+    } catch (e) {
+        // An employee with salary history cannot be deleted (422).
+        toast.error(e.response?.data?.message || t('Failed to delete employee.'))
+    }
+}
+
+onMounted(async () => {
+    fetchData()
+    try {
+        const { data } = await axios.get('/api/hr/employees/options')
+        if (data.success) options.value = data.data
+    } catch (e) {
+        console.error(e)
+    }
+})
+</script>

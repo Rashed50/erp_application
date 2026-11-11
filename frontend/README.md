@@ -61,3 +61,24 @@ npm run test:e2e -- tests/example.spec.ts
 # Runs the tests in debug mode
 npm run test:e2e -- --debug
 ```
+
+
+## RUN FRONTEND IN DOCKER CONTAINER
+```
+docker compose up --build -d
+```
+### Clear docker builder cache
+```
+docker builder prune -f
+```
+
+
+## Geneate build file in docker and copy that files in local machine inside public directory
+```
+docker build --target export-stage --output type=tar,dest=./public/build.zip .
+
+or a root directory build.zip
+
+docker build --target export-stage --output type=tar,dest=./build.zip .
+
+```

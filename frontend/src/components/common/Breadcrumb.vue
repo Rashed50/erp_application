@@ -6,7 +6,7 @@
                 <div class="col-md-6">
                     <h4>
                         <span><i :class="icon"></i></span>
-                        {{ title }}
+                        {{ $t(title) }}
                     </h4>
                 </div>
 
@@ -16,7 +16,7 @@
                         <router-link v-for="(button, index) in displayButtons" :key="`${button.text}-${index}`"
                             :to="button.link" class="primary-button">
                             <i :class="button.icon || buttonIcon"></i>
-                            {{ button.text }}
+                            {{ $t(button.text) }}
                         </router-link>
                     </template>
                 </div>

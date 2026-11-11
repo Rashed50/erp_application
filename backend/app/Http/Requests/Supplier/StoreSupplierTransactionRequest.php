@@ -47,11 +47,11 @@ class StoreSupplierTransactionRequest extends FormRequest
             $credit = (float) $this->input('credit', 0);
 
             if ($debit > 0 && $credit > 0) {
-                $validator->errors()->add('debit', 'A transaction cannot have both a debit and a credit amount.');
+                $validator->errors()->add('debit', __('A transaction cannot have both a debit and a credit amount.'));
             }
 
             if ($debit <= 0 && $credit <= 0) {
-                $validator->errors()->add('debit', 'A transaction must have either a debit or a credit amount.');
+                $validator->errors()->add('debit', __('A transaction must have either a debit or a credit amount.'));
             }
         });
     }

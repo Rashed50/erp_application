@@ -86,6 +86,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Supported Locales
+    |--------------------------------------------------------------------------
+    |
+    | The locales an API client may request through the X-Locale (or
+    | Accept-Language) header. Anything else falls back to "locale" above.
+    |
+    */
+
+    'supported_locales' => ['en', 'bn'],
+
+    /*
+    |--------------------------------------------------------------------------
     | Encryption Key
     |--------------------------------------------------------------------------
     |

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AccountTransaction;
 use App\Models\AccountType;
 use App\Models\ChartOfAccount;
 use App\Models\IncomeExpenseTransaction;
@@ -32,7 +33,7 @@ describe('index', function () {
     it('filters accounts by parent and transaction flag', function () {
         $actor = adminUser();
         $group = ChartOfAccount::factory()->asset()->group()->create();
-        ChartOfAccount::factory()->asset()->create(['parent_id' => $group->id, 'sibling_level' => 1]);
+        ChartOfAccount::factory()->asset()->create(['parent_id' => $group->id]);
         ChartOfAccount::factory()->asset()->create();
 
         $this->actingAs($actor, 'sanctum')->getJson("/api/ledger-accounts?parent_id={$group->id}")
@@ -40,6 +41,35 @@ describe('index', function () {
 
         $this->actingAs($actor, 'sanctum')->getJson('/api/ledger-accounts?is_transaction=0')
             ->assertOk()->assertJsonCount(1, 'data.accounts');
+    });
+
+    it('filters accounts by closed flag', function () {
+        $actor = adminUser();
+        ChartOfAccount::factory()->create(['is_closed' => true]);
+        ChartOfAccount::factory()->count(2)->create(['is_closed' => false]);
+
+        $this->actingAs($actor, 'sanctum')->getJson('/api/ledger-accounts?is_closed=0')
+            ->assertOk()->assertJsonCount(2, 'data.accounts');
+    });
+
+    it('searches accounts by account type name', function () {
+        $actor = adminUser();
+        ChartOfAccount::factory()->asset()->create();
+        ChartOfAccount::factory()->expense()->create();
+
+        $this->actingAs($actor, 'sanctum')->getJson('/api/ledger-accounts?search=Expense')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.accounts')
+            ->assertJsonPath('data.accounts.0.account_type', 'Expense');
+    });
+
+    it('includes the creator name', function () {
+        $actor = adminUser();
+        ChartOfAccount::factory()->create(['created_by' => $actor->id]);
+
+        $this->actingAs($actor, 'sanctum')->getJson('/api/ledger-accounts')
+            ->assertOk()
+            ->assertJsonPath('data.accounts.0.created_by_name', $actor->name);
     });
 });
 
@@ -130,6 +160,73 @@ describe('store', function () {
     });
 });
 
+describe('store opening balance', function () {
+    it('posts an asset opening balance as a journal entry against Owner equity', function () {
+        $this->seed(ChartOfAccountSeeder::class);
+        $actor = adminUser();
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/ledger-accounts', ['name' => 'Petty Cash', 'account_type_id' => AccountType::ASSET, 'is_transaction' => true, 'opening_balance' => 500])
+            ->assertStatus(201)
+            ->assertJsonPath('data.opening_balance', 500)
+            ->assertJsonPath('data.balance', 500);
+
+        $account = ChartOfAccount::find($response->json('data.id'));
+        $entry = AccountTransaction::query()->whereMorphedTo('source', $account)->sole();
+        $equity = ChartOfAccount::where('account_number', '3000')->first();
+
+        expect($entry->general_particular)->toBe('Initial Ledger account setup')
+            ->and((float) $entry->total_amount)->toBe(500.0)
+            ->and($equity->balance)->toBe(500.0);
+    });
+
+    it('does not post an opening balance on a non-asset account', function () {
+        $this->seed(ChartOfAccountSeeder::class);
+        $actor = adminUser();
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/ledger-accounts', ['name' => 'Bank Loan', 'account_type_id' => AccountType::LIABILITY, 'is_transaction' => true, 'opening_balance' => 500])
+            ->assertStatus(201)
+            ->assertJsonPath('data.opening_balance', 500)
+            ->assertJsonPath('data.balance', 0);
+
+        expect(AccountTransaction::query()->whereMorphedTo('source', ChartOfAccount::find($response->json('data.id')))->exists())->toBeFalse();
+    });
+
+    it('rejects a negative opening balance', function () {
+        $actor = adminUser();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/ledger-accounts', ['name' => 'Cash', 'account_type_id' => AccountType::ASSET, 'opening_balance' => -1])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['opening_balance']]);
+    });
+});
+
+describe('next account number', function () {
+    it('suggests the next child number under the parent number', function () {
+        $actor = adminUser();
+        $group = ChartOfAccount::factory()->asset()->group()->create(['account_number' => '1000']);
+        ChartOfAccount::factory()->asset()->create(['parent_id' => $group->id, 'account_number' => '1000.1']);
+
+        $this->actingAs($actor, 'sanctum')
+            ->getJson("/api/ledger-accounts/{$group->id}/next-account-number")
+            ->assertOk()
+            ->assertJsonPath('data.account_number', '1000.2');
+    });
+
+    it('skips a number that is already taken', function () {
+        $actor = adminUser();
+        $group = ChartOfAccount::factory()->asset()->group()->create(['account_number' => '2000']);
+        ChartOfAccount::factory()->asset()->create(['account_number' => '2000.1']);
+
+        $this->actingAs($actor, 'sanctum')
+            ->getJson("/api/ledger-accounts/{$group->id}/next-account-number")
+            ->assertOk()
+            ->assertJsonPath('data.account_number', '2000.2');
+    });
+});
+
 describe('update', function () {
     it('does not allow changing the account type', function () {
         $actor = adminUser();
@@ -145,9 +242,9 @@ describe('update', function () {
     it('moves an account and re-levels its subtree', function () {
         $actor = adminUser();
         $root = ChartOfAccount::factory()->asset()->group()->create();
-        $other = ChartOfAccount::factory()->asset()->group()->create(['parent_id' => $root->id, 'sibling_level' => 1]);
+        $other = ChartOfAccount::factory()->asset()->group()->create(['parent_id' => $root->id]);
         $moving = ChartOfAccount::factory()->asset()->group()->create();
-        $child = ChartOfAccount::factory()->asset()->create(['parent_id' => $moving->id, 'sibling_level' => 1]);
+        $child = ChartOfAccount::factory()->asset()->create(['parent_id' => $moving->id]);
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$moving->id}", ['parent_id' => $other->id])
@@ -160,7 +257,7 @@ describe('update', function () {
     it('rejects moving an account beneath its own child', function () {
         $actor = adminUser();
         $parent = ChartOfAccount::factory()->asset()->group()->create();
-        $child = ChartOfAccount::factory()->asset()->group()->create(['parent_id' => $parent->id, 'sibling_level' => 1]);
+        $child = ChartOfAccount::factory()->asset()->group()->create(['parent_id' => $parent->id]);
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$parent->id}", ['parent_id' => $child->id])
@@ -171,7 +268,7 @@ describe('update', function () {
     it('rejects turning an account with children into a transaction account', function () {
         $actor = adminUser();
         $parent = ChartOfAccount::factory()->asset()->group()->create();
-        ChartOfAccount::factory()->asset()->create(['parent_id' => $parent->id, 'sibling_level' => 1]);
+        ChartOfAccount::factory()->asset()->create(['parent_id' => $parent->id]);
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$parent->id}", ['is_transaction' => true])
@@ -220,7 +317,7 @@ describe('destroy', function () {
     it('rejects deleting an account that has child accounts', function () {
         $actor = adminUser();
         $parent = ChartOfAccount::factory()->asset()->group()->create();
-        ChartOfAccount::factory()->asset()->create(['parent_id' => $parent->id, 'sibling_level' => 1]);
+        ChartOfAccount::factory()->asset()->create(['parent_id' => $parent->id]);
 
         $this->actingAs($actor, 'sanctum')
             ->deleteJson("/api/ledger-accounts/{$parent->id}")

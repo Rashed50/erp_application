@@ -40,24 +40,24 @@ class UserController extends Controller
     {
         $user = $this->userService->create($request->validated());
 
-        return ApiResponse::success(new UserResource($user), 'User created successfully.', 201);
+        return ApiResponse::success(new UserResource($user), __('User created successfully.'), 201);
     }
 
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
         $user = $this->userService->update($user, $request->validated());
 
-        return ApiResponse::success(new UserResource($user), 'User updated successfully.');
+        return ApiResponse::success(new UserResource($user), __('User updated successfully.'));
     }
 
     public function destroy(Request $request, User $user): JsonResponse
     {
         if ($request->user()->is($user)) {
-            return ApiResponse::error('You cannot delete your own account.', 422);
+            return ApiResponse::error(__('You cannot delete your own account.'), 422);
         }
 
         $this->userService->delete($user);
 
-        return ApiResponse::success(message: 'User deleted successfully.');
+        return ApiResponse::success(message: __('User deleted successfully.'));
     }
 }

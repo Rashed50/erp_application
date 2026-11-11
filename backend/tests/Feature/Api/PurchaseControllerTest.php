@@ -1,7 +1,15 @@
 <?php
 
+use App\Models\AccountTransaction;
+use App\Models\ChartOfAccount;
+use App\Models\Employee;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
+use App\Models\WorkOrder;
+use Database\Seeders\ChartOfAccountSeeder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 function purchasePayload(int $supplierId, array $overrides = []): array
 {
@@ -89,7 +97,7 @@ describe('store', function () {
 
     it('posts a Purchase ledger entry that increases the supplier balance', function () {
         $actor = adminUser();
-        $supplier = Supplier::factory()->create(['opening_balance' => 100, 'current_balance' => 100]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 100]);
 
         $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
@@ -102,6 +110,38 @@ describe('store', function () {
             'transaction_type' => 'Purchase',
             'credit' => 88,
         ]);
+    });
+});
+
+describe('store with products', function () {
+    it('links a line item to the selected product', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $product = Product::factory()->create(['name' => 'Cement Bag']);
+
+        $response = $this->actingAs($actor, 'sanctum')->postJson('/api/purchases', purchasePayload($supplier->id, [
+            'items' => [
+                ['product_id' => $product->id, 'item_name' => 'Cement Bag', 'qty' => 2, 'unit_price' => 10],
+                ['item_name' => 'Custom item', 'qty' => 1, 'unit_price' => 5],
+            ],
+        ]));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.items.0.product_id', $product->id)
+            ->assertJsonPath('data.items.1.product_id', null);
+
+        $this->assertDatabaseHas('purchase_items', ['product_id' => $product->id, 'item_name' => null]);
+    });
+
+    it('rejects a deleted product', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $product = Product::factory()->create();
+        $product->delete();
+
+        $this->actingAs($actor, 'sanctum')->postJson('/api/purchases', purchasePayload($supplier->id, [
+            'items' => [['product_id' => $product->id, 'item_name' => 'Gone', 'qty' => 1, 'unit_price' => 1]],
+        ]))->assertStatus(422);
     });
 });
 
@@ -123,7 +163,7 @@ describe('update', function () {
 
     it('recomputes totals and keeps the linked ledger entry in sync when items change', function () {
         $actor = adminUser();
-        $supplier = Supplier::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 0]);
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
@@ -152,9 +192,12 @@ describe('update', function () {
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
 
+        $this->seed(ChartOfAccountSeeder::class);
+        $cash = ChartOfAccount::query()->where('account_number', '1010')->first();
+
         // net_total is 88; pay 50 of it.
         $this->actingAs($actor, 'sanctum')
-            ->postJson("/api/purchases/{$purchase['id']}/payments", ['amount' => 50, 'payment_date' => now()->toDateString()])
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $cash->id, 'amount' => 50, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
 
         $this->actingAs($actor, 'sanctum')
@@ -169,6 +212,11 @@ describe('update', function () {
 });
 
 describe('payments', function () {
+    beforeEach(function () {
+        $this->seed(ChartOfAccountSeeder::class);
+        $this->cash = ChartOfAccount::query()->where('account_number', '1010')->first();
+    });
+
     it('rejects a payment that exceeds the due amount', function () {
         $actor = adminUser();
         $supplier = Supplier::factory()->create();
@@ -178,14 +226,14 @@ describe('payments', function () {
 
         // net_total is 88.
         $this->actingAs($actor, 'sanctum')
-            ->postJson("/api/purchases/{$purchase['id']}/payments", ['amount' => 200, 'payment_date' => now()->toDateString()])
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 200, 'payment_date' => now()->toDateString()])
             ->assertStatus(422)
             ->assertJsonStructure(['data' => ['amount']]);
     });
 
     it('records a partial payment, reduces the due amount, and decreases the supplier balance', function () {
         $actor = adminUser();
-        $supplier = Supplier::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 0]);
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
@@ -193,6 +241,7 @@ describe('payments', function () {
         // net_total is 88.
         $response = $this->actingAs($actor, 'sanctum')
             ->postJson("/api/purchases/{$purchase['id']}/payments", [
+                'payment_account_id' => $this->cash->id,
                 'amount' => 30,
                 'payment_date' => now()->toDateString(),
                 'notes' => 'partial payment',
@@ -219,22 +268,63 @@ describe('payments', function () {
 
         // net_total is 88.
         $this->actingAs($actor, 'sanctum')
-            ->postJson("/api/purchases/{$purchase['id']}/payments", ['amount' => 58, 'payment_date' => now()->toDateString()])
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 58, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
 
         $response = $this->actingAs($actor, 'sanctum')
-            ->postJson("/api/purchases/{$purchase['id']}/payments", ['amount' => 30, 'payment_date' => now()->toDateString()]);
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 30, 'payment_date' => now()->toDateString()]);
 
         $response->assertStatus(201)
             ->assertJsonPath('data.paid_amount', 88)
             ->assertJsonPath('data.due_amount', 0);
+    });
+
+    it('requires an open cash/bank credit account', function () {
+        $actor = adminUser();
+        $purchase = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload(Supplier::factory()->create()->id))
+            ->json('data');
+        $expenseAccount = ChartOfAccount::query()->where('account_number', '5010')->first();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['amount' => 10, 'payment_date' => now()->toDateString()])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['payment_account_id']]);
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $expenseAccount->id, 'amount' => 10, 'payment_date' => now()->toDateString()])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['payment_account_id']]);
+    });
+
+    it('saves the payment as a supplier payment and posts it to the chart of accounts', function () {
+        $actor = adminUser();
+        $purchase = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload(Supplier::factory()->create()->id))
+            ->json('data');
+        $payable = ChartOfAccount::query()->where('account_number', '2010')->first();
+
+        // net_total is 88, credited to Accounts Payable when the purchase was saved.
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 30, 'payment_date' => now()->toDateString()])
+            ->assertStatus(201);
+
+        expect((float) $this->cash->fresh()->balance)->toBe(-30.0)
+            ->and((float) $payable->fresh()->balance)->toBe(58.0);
+
+        $this->assertDatabaseHas('supplier_payments', [
+            'purchase_id' => $purchase['id'],
+            'payment_account_id' => $this->cash->id,
+            'bill_amount' => 30,
+            'bank_charge' => 0,
+        ]);
     });
 });
 
 describe('destroy', function () {
     it('soft-deletes the purchase and reverses its ledger entry', function () {
         $actor = adminUser();
-        $supplier = Supplier::factory()->create(['opening_balance' => 0, 'current_balance' => 0]);
+        $supplier = Supplier::factory()->create(['opening_balance' => 0]);
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
@@ -247,5 +337,258 @@ describe('destroy', function () {
 
         $this->assertSoftDeleted('purchases', ['id' => $purchase['id']]);
         expect($supplier->fresh()->current_balance)->toEqual('0.00');
+    });
+});
+
+describe('chart of account posting', function () {
+    beforeEach(function () {
+        $this->seed(ChartOfAccountSeeder::class);
+
+        $this->inventory = ChartOfAccount::query()->where('account_number', '1040')->first();
+        $this->purchaseAccount = ChartOfAccount::query()->where('account_number', '5010')->first();
+        $this->payable = ChartOfAccount::query()->where('account_number', '2010')->first();
+    });
+
+    it('debits Inventory/Stock for a product purchase and credits Accounts Payable with the net total', function () {
+        $supplier = Supplier::factory()->create();
+
+        $purchaseId = $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->assertStatus(201)
+            ->json('data.id');
+
+        $purchase = Purchase::find($purchaseId);
+
+        expect((float) $this->inventory->fresh()->balance)->toBe(88.0)
+            ->and((float) $this->payable->fresh()->balance)->toBe(88.0)
+            ->and($purchase->journalEntry->source->is($purchase))->toBeTrue()
+            ->and($purchase->ledgerTransaction->account_transaction_id)->toBe($purchase->journalEntry->id);
+    });
+
+    it('debits Purchase for a service purchase', function () {
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/purchases', purchasePayload(Supplier::factory()->create()->id, ['purchase_type' => 'service']))
+            ->assertStatus(201);
+
+        expect((float) $this->purchaseAccount->fresh()->balance)->toBe(88.0)
+            ->and((float) $this->inventory->fresh()->balance)->toBe(0.0);
+    });
+
+    it('posts to the debit and credit accounts chosen on the purchase', function () {
+        $cash = ChartOfAccount::query()->where('account_number', '1010')->first();
+        $repairs = ChartOfAccount::query()->where('account_number', '5060')->first();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/purchases', purchasePayload(Supplier::factory()->create()->id, [
+                'debit_account_id' => $repairs->id,
+                'credit_account_id' => $cash->id,
+            ]))
+            ->assertStatus(201);
+
+        expect((float) $repairs->fresh()->balance)->toBe(88.0)
+            ->and((float) $cash->fresh()->balance)->toBe(-88.0)
+            ->and((float) $this->payable->fresh()->balance)->toBe(0.0);
+    });
+
+    it('rewrites its journal entry in place when the items change', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+
+        $purchaseId = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->json('data.id');
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/purchases/{$purchaseId}", [
+                'items' => [['item_name' => 'Paper', 'qty' => 20, 'unit_price' => 5, 'discount' => 0, 'vat' => 0]],
+            ])
+            ->assertOk();
+
+        expect((float) $this->inventory->fresh()->balance)->toBe(100.0)
+            ->and((float) $this->payable->fresh()->balance)->toBe(100.0)
+            ->and(AccountTransaction::count())->toBe(1);
+    });
+
+    it('reverses the posting when the purchase is deleted', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+
+        $purchaseId = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->json('data.id');
+
+        $this->actingAs($actor, 'sanctum')->deleteJson("/api/purchases/{$purchaseId}")->assertOk();
+
+        expect((float) $this->inventory->fresh()->balance)->toBe(0.0)
+            ->and((float) $this->payable->fresh()->balance)->toBe(0.0)
+            ->and(AccountTransaction::count())->toBe(0);
+    });
+
+    it('deletes a purchase that never posted a journal entry', function () {
+        $purchase = Purchase::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')->deleteJson("/api/purchases/{$purchase->id}")->assertOk();
+
+        expect((float) $this->payable->fresh()->balance)->toBe(0.0);
+    });
+
+    it('nets Accounts Payable to zero once a supplier payment settles the purchase', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $cash = ChartOfAccount::query()->where('account_number', '1010')->first();
+
+        $purchaseId = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->json('data.id');
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/accounting/purchase/payment/store', [
+                'supplier_id' => $supplier->id,
+                'purchase_id' => $purchaseId,
+                'payment_account_id' => $cash->id,
+                'payment_date' => today()->toDateString(),
+                'bill_amount' => 88,
+                'bank_charge' => 0,
+            ])
+            ->assertStatus(201);
+
+        expect((float) $this->payable->fresh()->balance)->toBe(0.0)
+            ->and((float) $cash->fresh()->balance)->toBe(-88.0);
+    });
+});
+
+describe('work order', function () {
+    it('tags a purchase with a work order', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $workOrder = WorkOrder::factory()->create(['work_order_no' => 'WO-PUR-1']);
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, ['work_order_id' => $workOrder->id]));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.work_order_id', $workOrder->id)
+            ->assertJsonPath('data.work_order_no', 'WO-PUR-1');
+    });
+
+    it('rejects a deleted work order', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $workOrder = WorkOrder::factory()->create();
+        $workOrder->delete();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, ['work_order_id' => $workOrder->id]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['work_order_id']]);
+    });
+
+    it('moves a purchase to another work order or clears it', function () {
+        $actor = adminUser();
+        $purchase = Purchase::factory()->create(['work_order_id' => WorkOrder::factory()]);
+        $other = WorkOrder::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/purchases/{$purchase->id}", ['work_order_id' => $other->id])
+            ->assertOk()
+            ->assertJsonPath('data.work_order_id', $other->id);
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/purchases/{$purchase->id}", ['work_order_id' => null])
+            ->assertOk()
+            ->assertJsonPath('data.work_order_id', null);
+    });
+});
+
+describe('units, overall discount/VAT and purchased by', function () {
+    it('stores line units and adds the overall discount and VAT to the totals', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create(['opening_balance' => 0]);
+        $buyer = Employee::factory()->create();
+
+        // Lines: 90 gross, 5 discount, 3 VAT (see the totals test). Overall: -8 discount, +10 VAT.
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, [
+                'items' => [
+                    ['item_name' => 'Paper', 'qty' => 10, 'unit' => 'Ream', 'unit_price' => 5],
+                    ['item_name' => 'Pens', 'qty' => 20, 'unit' => 'Pcs', 'unit_price' => 2, 'discount' => 5, 'vat' => 3],
+                ],
+                'overall_discount' => 8,
+                'overall_vat' => 10,
+                'purchased_by_id' => $buyer->id,
+            ]));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.items.0.unit', 'Ream')
+            ->assertJsonPath('data.overall_discount', 8)
+            ->assertJsonPath('data.overall_vat', 10)
+            ->assertJsonPath('data.discount_amount', 13)
+            ->assertJsonPath('data.vat_amount', 13)
+            ->assertJsonPath('data.net_total', 90)
+            ->assertJsonPath('data.purchased_by_id', $buyer->id)
+            ->assertJsonPath('data.purchased_by_name', "{$buyer->name} ({$buyer->employee_code})");
+
+        expect($supplier->fresh()->current_balance)->toEqual('90.00');
+    });
+
+    it('recomputes the totals when only the overall discount changes', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+        $purchase = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id))
+            ->json('data');
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/purchases/{$purchase['id']}", ['overall_discount' => 8])
+            ->assertOk()
+            ->assertJsonPath('data.discount_amount', 13)
+            ->assertJsonPath('data.net_total', 80)
+            ->assertJsonCount(2, 'data.items');
+    });
+
+    it('rejects a discount larger than the invoice amount', function () {
+        $actor = adminUser();
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, ['overall_discount' => 1000]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['overall_discount']]);
+    });
+});
+
+describe('attachment', function () {
+    it('stores an uploaded invoice file and replaces it on update', function () {
+        Storage::fake('public');
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, ['attachment' => UploadedFile::fake()->create('bill.pdf', 100, 'application/pdf')]))
+            ->assertStatus(201);
+        $purchase = Purchase::sole();
+        $oldAttachment = $purchase->attachment;
+        Storage::disk('public')->assertExists($oldAttachment);
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->post("/api/purchases/{$purchase->id}", ['_method' => 'PUT', 'attachment' => UploadedFile::fake()->image('bill.jpg')], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.attachment_url', Storage::disk('public')->url($purchase->fresh()->attachment));
+
+        Storage::disk('public')->assertMissing($oldAttachment);
+    });
+});
+
+describe('zero total', function () {
+    it('rejects a purchase whose total is zero instead of failing to post it', function () {
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/purchases', purchasePayload($supplier->id, [
+                'items' => [['item_name' => 'Paper', 'qty' => 1, 'unit_price' => 0]],
+            ]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['items']]);
+
+        expect(Purchase::count())->toBe(0);
     });
 });

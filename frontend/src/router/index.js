@@ -2,6 +2,8 @@ import AppLayout from '@/layout/AuthenticatedLayout.vue';
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from '@/stores/auth'
 import { setToast } from "@/helpers/toast";
+import { locale, t } from "@/i18n";
+import { watch } from "vue";
 
 import { toast } from "vue3-toastify";
 
@@ -61,6 +63,9 @@ const routes = [
                     permissions: ['roles.view']
                 }
             },
+         
+
+
 
             {
                 path: 'role-add',
@@ -79,6 +84,16 @@ const routes = [
                 meta: {
                     title: 'Edit Role',
                     permissions: ['roles.update']
+                }
+            },
+
+            {
+                path: 'permissions',
+                name: 'admin_permissions',
+                component: () => import('@/views/permissions/Index.vue'),
+                meta: {
+                    title: 'Permissions',
+                    permissions: ['permissions.view']
                 }
             },
             /* ====================== User Route  ====================== */
@@ -154,6 +169,301 @@ const routes = [
             },
             /* ====================== Customer Route END ====================== */
 
+            /* ====================== Work Order Route START ====================== */
+            {
+                path: 'work-orders',
+                name: 'admin_work_orders_list',
+                component: () => import('@/views/work-orders/Index.vue'),
+                meta: {
+                    title: 'All Work Order List',
+                    permissions: ['work-orders.view']
+                }
+            },
+
+            {
+                path: 'work-order-add',
+                name: 'admin_work_order_add',
+                component: () => import('@/views/work-orders/Add.vue'),
+                meta: {
+                    title: 'Add Work Order',
+                    permissions: ['work-orders.create']
+                }
+            },
+
+            {
+                path: 'work-order-edit/:id',
+                name: 'admin_work_order_edit',
+                component: () => import('@/views/work-orders/Edit.vue'),
+                meta: {
+                    title: 'Edit Work Order',
+                    permissions: ['work-orders.update']
+                }
+            },
+            /* ====================== Work Order Route END ====================== */
+
+            /* ====================== HR Route START ====================== */
+            {
+                path: 'hr/dashboard',
+                name: 'admin_hr_dashboard',
+                component: () => import('@/views/hr/Dashboard.vue'),
+                meta: {
+                    title: 'HR Dashboard',
+                    permissions: ['employees.view', 'payroll.view']
+                }
+            },
+
+            {
+                path: 'hr/departments',
+                name: 'admin_hr_departments',
+                component: () => import('@/views/hr/setup/Departments.vue'),
+                meta: {
+                    title: 'Departments',
+                    permissions: ['departments.view']
+                }
+            },
+
+            {
+                path: 'hr/designations',
+                name: 'admin_hr_designations',
+                component: () => import('@/views/hr/setup/Designations.vue'),
+                meta: {
+                    title: 'Designations',
+                    permissions: ['designations.view']
+                }
+            },
+
+            {
+                path: 'hr/employees',
+                name: 'admin_hr_employees_list',
+                component: () => import('@/views/hr/employees/Index.vue'),
+                meta: {
+                    title: 'Employees',
+                    permissions: ['employees.view']
+                }
+            },
+
+            {
+                path: 'hr/employee-add',
+                name: 'admin_hr_employee_add',
+                component: () => import('@/views/hr/employees/Add.vue'),
+                meta: {
+                    title: 'Add Employee',
+                    permissions: ['employees.create']
+                }
+            },
+
+            {
+                path: 'hr/employee-edit/:id',
+                name: 'admin_hr_employee_edit',
+                component: () => import('@/views/hr/employees/Edit.vue'),
+                meta: {
+                    title: 'Edit Employee',
+                    permissions: ['employees.update']
+                }
+            },
+
+            {
+                path: 'hr/employees/:id',
+                name: 'admin_hr_employee_show',
+                component: () => import('@/views/hr/employees/Show.vue'),
+                meta: {
+                    title: 'Employee Details',
+                    permissions: ['employees.view']
+                }
+            },
+
+            {
+                path: 'hr/work-history',
+                name: 'admin_hr_works_list',
+                component: () => import('@/views/hr/works/Index.vue'),
+                meta: {
+                    title: 'Monthly Work History',
+                    permissions: ['employee-works.view']
+                }
+            },
+
+            {
+                path: 'hr/work-entry',
+                name: 'admin_hr_works_entry',
+                component: () => import('@/views/hr/works/Entry.vue'),
+                meta: {
+                    title: 'Monthly Work Entry',
+                    permissions: ['employee-works.create', 'employee-works.update']
+                }
+            },
+
+            {
+                path: 'hr/advance-salary',
+                name: 'admin_hr_advances',
+                component: () => import('@/views/hr/advances/Index.vue'),
+                meta: {
+                    title: 'Advance Salary',
+                    permissions: ['employee-advances.view']
+                }
+            },
+
+            {
+                path: 'hr/salary-generate',
+                name: 'admin_hr_payroll_generate',
+                component: () => import('@/views/hr/payroll/Generate.vue'),
+                meta: {
+                    title: 'Generate Salary',
+                    permissions: ['payroll.generate']
+                }
+            },
+
+            {
+                path: 'hr/salary-sheet',
+                name: 'admin_hr_salary_sheet',
+                component: () => import('@/views/hr/payroll/SalarySheet.vue'),
+                meta: {
+                    title: 'Salary Sheet',
+                    permissions: ['payroll.view']
+                }
+            },
+
+            {
+                path: 'hr/reports',
+                name: 'admin_hr_reports',
+                component: () => import('@/views/hr/reports/Index.vue'),
+                meta: {
+                    title: 'HR Reports',
+                    permissions: ['hr-reports.view']
+                }
+            },
+            {
+                path: 'hr/attendance',
+                name: 'admin_hr_attendance',
+                component: () => import('@/views/hr/payroll/attendance/Index.vue'),
+                meta: {
+                    title: 'HR Attendance',
+                    permissions: ['hr-attendance.view']
+                }
+            },
+            /* ====================== HR Route END ====================== */
+
+            /* ====================== Asset Route START ====================== */
+            {
+                path: 'asset/item-categories',
+                name: 'admin_asset_item_categories',
+                component: () => import('@/views/asset/categories/Index.vue'),
+                meta: {
+                    title: 'Item Categories',
+                    permissions: ['item-categories.view']
+                }
+            },
+
+            {
+                path: 'asset/item-sub-categories',
+                name: 'admin_asset_item_sub_categories',
+                component: () => import('@/views/asset/sub-categories/Index.vue'),
+                meta: {
+                    title: 'Item Sub Categories',
+                    permissions: ['item-sub-categories.view']
+                }
+            },
+
+            {
+                path: 'asset/item-names',
+                name: 'admin_asset_item_names',
+                component: () => import('@/views/asset/items/Index.vue'),
+                meta: {
+                    title: 'Item Names',
+                    permissions: ['item-names.view']
+                }
+            },
+
+            {
+                path: 'asset/units',
+                name: 'admin_asset_units',
+                component: () => import('@/views/asset/units/Index.vue'),
+                meta: {
+                    title: 'Units',
+                    permissions: ['inventory-units.view']
+                }
+            },
+
+            {
+                path: 'asset/warehouses',
+                name: 'admin_asset_warehouses',
+                component: () => import('@/views/asset/warehouses/Index.vue'),
+                meta: {
+                    title: 'Stores / Warehouses',
+                    permissions: ['warehouses.view']
+                }
+            },
+
+            {
+                path: 'asset/material-requests',
+                name: 'admin_asset_material_requests',
+                component: () => import('@/views/asset/material-requests/Index.vue'),
+                meta: {
+                    title: 'Material Requests',
+                    permissions: ['material-requests.view']
+                }
+            },
+
+            {
+                path: 'asset/purchase-orders',
+                name: 'admin_asset_purchase_orders',
+                component: () => import('@/views/asset/purchase-orders/Index.vue'),
+                meta: {
+                    title: 'Purchase Orders',
+                    permissions: ['purchase-orders.view']
+                }
+            },
+
+            {
+                path: 'asset/transfers',
+                name: 'admin_asset_transfers',
+                component: () => import('@/views/asset/transfers/Index.vue'),
+                meta: {
+                    title: 'Store Transfers',
+                    permissions: ['inventory-transfers.view']
+                }
+            },
+
+            {
+                path: 'asset/stocks',
+                name: 'admin_asset_stocks',
+                component: () => import('@/views/asset/stocks/Index.vue'),
+                meta: {
+                    title: 'Inventory Stock',
+                    permissions: ['inventory-stocks.view']
+                }
+            },
+
+            {
+                path: 'asset/register',
+                name: 'admin_asset_register',
+                component: () => import('@/views/asset/assets/Index.vue'),
+                meta: {
+                    title: 'Asset Register',
+                    permissions: ['assets.view']
+                }
+            },
+
+            {
+                path: 'asset/employee-issues',
+                name: 'admin_asset_employee_issues',
+                component: () => import('@/views/asset/employee-inventory/Index.vue'),
+                meta: {
+                    title: 'Employee Issues',
+                    permissions: ['employee-inventory.view']
+                }
+            },
+
+            {
+                path: 'asset/disposals',
+                name: 'admin_asset_disposals',
+                component: () => import('@/views/asset/disposals/Index.vue'),
+                meta: {
+                    title: 'Disposals',
+                    permissions: ['inventory-disposals.view']
+                }
+            },
+            /* ====================== Asset Route END ====================== */
+
             /* ====================== Supplier Route START ====================== */
             {
                 path: 'suppliers',
@@ -228,6 +538,40 @@ const routes = [
             },
             /* ====================== Purchase Route END ====================== */
 
+            /* ====================== Supplier Payment Route START ====================== */
+            {
+                path: 'accounting/purchase/payment/list',
+                name: 'admin_supplier_payments_list',
+                component: () => import('@/views/supplier-payments/Index.vue'),
+                meta: {
+                    title: 'Supplier Payments',
+                    permissions: ['supplier-payments.view']
+                }
+            },
+
+            {
+                path: 'accounting/purchase/payment/index',
+                name: 'admin_supplier_payment_add',
+                component: () => import('@/views/supplier-payments/Add.vue'),
+                meta: {
+                    title: 'Supplier Payment',
+                    permissions: ['supplier-payments.create']
+                }
+            },
+            /* ====================== Supplier Payment Route END ====================== */
+
+            /* ====================== Product Route START ====================== */
+            {
+                path: 'accounting/product/list',
+                name: 'admin_products_list',
+                component: () => import('@/views/products/Index.vue'),
+                meta: {
+                    title: 'Products',
+                    permissions: ['products.view']
+                }
+            },
+            /* ====================== Product Route END ====================== */
+
             /* ====================== Sale Route START ====================== */
             {
                 path: 'sales',
@@ -259,7 +603,17 @@ const routes = [
                 }
             },
             /* ====================== Sale Route END ====================== */
+            {
+                path: 'quotation',
+                name: 'admin_quotation',
+                component: () => import('@/views/quotation/Index.vue'),
+                meta: {
+                    title: 'quoation',
+                  permissions: ['quotation.view']
 
+                    
+                }
+            },
             /* ====================== Ledger Account Route START ====================== */
             {
                 path: 'ledger-accounts',
@@ -291,6 +645,38 @@ const routes = [
                 }
             },
             /* ====================== Ledger Account Route END ====================== */
+
+            {
+                path: 'accounting/reports',
+                name: 'admin_account_reports',
+                component: () => import('@/views/account-reports/Index.vue'),
+                meta: {
+                    title: 'Account Reports',
+                    permissions: ['account-reports.view']
+                }
+            },
+
+            /* ====================== Internal Fund Transfer Route START ====================== */
+            {
+                path: 'accounting/internal-fund-transfer',
+                name: 'admin_fund_transfer_add',
+                component: () => import('@/views/fund-transfers/Add.vue'),
+                meta: {
+                    title: 'Internal Fund Transfer',
+                    permissions: ['fund-transfers.create']
+                }
+            },
+
+            {
+                path: 'accounting/internal-fund-transfer/list',
+                name: 'admin_fund_transfers_list',
+                component: () => import('@/views/fund-transfers/Index.vue'),
+                meta: {
+                    title: 'Internal Fund Transfers',
+                    permissions: ['fund-transfers.view']
+                }
+            },
+            /* ====================== Internal Fund Transfer Route END ====================== */
 
             /* ====================== Income/Expense Route START ====================== */
             {
@@ -325,6 +711,16 @@ const routes = [
             /* ====================== Income/Expense Route END ====================== */
 
             {
+                path: 'settings',
+                name: 'admin_settings',
+                component: () => import('@/views/settings/Index.vue'),
+                meta: {
+                    title: 'Settings',
+                    permissions: ['settings.update']
+                }
+            },
+
+            {
                 path: 'profile',
                 name: 'admin_profile',
                 component: () => import('@/views/Profile.vue'),
@@ -350,10 +746,13 @@ const router = createRouter({
 });
 
 
-// title
-router.afterEach((to) => {
-    document.title = to.meta.title || 'Admin Dashboard'
-})
+// title (route meta titles are English phrases, translated for the active locale)
+const updateDocumentTitle = (route) => {
+    document.title = route.meta.title ? t(route.meta.title) : t('common.adminDashboard')
+}
+
+router.afterEach((to) => updateDocumentTitle(to))
+watch(locale, () => updateDocumentTitle(router.currentRoute.value))
 
 
 router.beforeEach(async (to) => {
@@ -381,10 +780,12 @@ router.beforeEach(async (to) => {
     // Check for permissions
     if (to.meta.permissions && auth.isAuthenticated) {
         const userPermissions = auth.user?.permissions || [];
-        const hasPermission = to.meta.permissions.some(p => userPermissions.includes(p));
+        // Super Admin passes every check, matching the backend's Gate::before.
+        const isSuperAdmin = (auth.user?.roles || []).includes('Super Admin');
+        const hasPermission = isSuperAdmin || to.meta.permissions.some(p => userPermissions.includes(p));
 
         if (!hasPermission) {
-            setToast('error', "You don't have permission to access this page.");
+            setToast('error', t('common.noPermission'));
             return { name: 'access_block' };
         }
     }

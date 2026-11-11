@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Http\Controllers\Api\Hr;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Hr\StoreEmployeeFileRequest;
+use App\Http\Resources\EmployeeFileResource;
+use App\Http\Responses\ApiResponse;
+use App\Models\Employee;
+use App\Models\EmployeeFile;
+use App\Services\EmployeeFileService;
+use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class EmployeeFileController extends Controller
+{
+    public function __construct(private readonly EmployeeFileService $fileService) {}
+
+    public function store(StoreEmployeeFileRequest $request, Employee $employee): JsonResponse
+    {
+        $file = $this->fileService->store(
+            $employee,
+            $request->file('file'),
+            $request->validated('document_type'),
+            $request->validated('title'),
+        );
+
+        return ApiResponse::success(new EmployeeFileResource($file), __('Document uploaded successfully.'), 201);
+    }
+
+    public function download(EmployeeFile $employeeFile): StreamedResponse|JsonResponse
+    {
+        if (! $this->fileService->exists($employeeFile)) {
+            return ApiResponse::error(__('The file could not be found.'), 404);
+        }
+
+        return $this->fileService->download($employeeFile);
+    }
+
+    public function destroy(EmployeeFile $employeeFile): JsonResponse
+    {
+        $this->fileService->delete($employeeFile);
+
+        return ApiResponse::success(message: __('Document deleted successfully.'));
+    }
+}

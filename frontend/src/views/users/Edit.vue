@@ -14,7 +14,7 @@
                                 <div class="col-md-12">
                                     <!-- Name -->
                                     <div class="form-group mb-3">
-                                        <label for="name">Name:</label>
+                                        <label for="name">{{ $t('Name:') }}</label>
                                         <input type="text" id="name" class="form-control" v-model="form.name"
                                             required />
                                         <div v-if="errors.name" class="error-msg">{{ errors.name }}</div>
@@ -22,20 +22,20 @@
 
                                     <!-- Email -->
                                     <div class="form-group mb-3">
-                                        <label for="email">Email:</label>
+                                        <label for="email">{{ $t('Email:') }}</label>
                                         <input type="email" id="email" class="form-control" v-model="form.email"
                                             required />
                                         <div v-if="errors.email" class="error-msg">{{ errors.email }}</div>
                                     </div>
 
                                     <div class="mb-3 mt-3">
-                                        <h5 class="mb-3">Update Password</h5>
-                                        <p class="text-muted">Leave blank if you don't want to change the password.</p>
+                                        <h5 class="mb-3">{{ $t('Update Password') }}</h5>
+                                        <p class="text-muted">{{ $t('Leave blank if you don\'t want to change the password.') }}</p>
                                     </div>
 
                                     <!-- Password -->
                                     <div class="form-group mb-3">
-                                        <label for="password">Password:</label>
+                                        <label for="password">{{ $t('Password:') }}</label>
                                         <input type="password" id="password" class="form-control"
                                             v-model="form.password" />
                                         <div v-if="errors.password" class="error-msg">{{ errors.password }}</div>
@@ -43,16 +43,16 @@
 
                                     <!-- Confirm Password -->
                                     <div class="form-group mb-3">
-                                        <label for="password_confirmation">Confirm Password:</label>
+                                        <label for="password_confirmation">{{ $t('Confirm Password:') }}</label>
                                         <input type="password" id="password_confirmation" class="form-control"
                                             v-model="form.password_confirmation" />
                                     </div>
 
                                     <!-- Role Selection -->
                                     <div class="form-group mb-3" v-if="form.role != 'Super Admin'">
-                                        <label for="role">Assign Role:</label>
+                                        <label for="role">{{ $t('Assign Role:') }}</label>
                                         <select id="role" class="form-control" v-model="form.role" required>
-                                            <option value="" disabled>Select a Role</option>
+                                            <option value="" disabled>{{ $t('Select a Role') }}</option>
                                             <option v-for="item in roles" :key="item.id" :value="item.name">
                                                 {{ item.name }}
                                             </option>
@@ -65,7 +65,7 @@
                                 <div class="col-md-12">
                                     <v-btn type="submit" class="text-none text-white mr-2" color="blue-darken-4"
                                         rounded="0" variant="flat" :disabled="isSubmitting" :loading="isSubmitting">
-                                        Submit
+                                        {{ $t('Submit') }}
                                     </v-btn>
                                 </div>
                             </div>
@@ -82,6 +82,7 @@ import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
 import { useRouter, useRoute } from 'vue-router';
+import { t } from '@/i18n';
 
 
 const router = useRouter();
@@ -116,7 +117,7 @@ const handleSubmit = async () => {
             setToast('success', resp.message)
             router.push({ name: 'admin_users' })
         } catch (e) {
-            setToast('error', e.response?.data?.message || 'User updated, but role assignment failed.')
+            setToast('error', e.response?.data?.message || t('User updated, but role assignment failed.'))
         }
     }
 }

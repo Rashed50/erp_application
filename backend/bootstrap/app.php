@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SetLocale;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -23,6 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->api(prepend: [SetLocale::class]);
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
@@ -46,31 +49,31 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
-                return ApiResponse::error(message: 'Unauthenticated.', code: 401);
+                return ApiResponse::error(message: __('Unauthenticated.'), code: 401);
             }
         });
 
         $exceptions->render(function (AuthorizationException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
-                return ApiResponse::error(message: $e->getMessage() ?: 'This action is unauthorized.', code: 403);
+                return ApiResponse::error(message: __($e->getMessage() ?: 'This action is unauthorized.'), code: 403);
             }
         });
 
         $exceptions->render(function (ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
-                return ApiResponse::error(message: 'Resource not found.', code: 404);
+                return ApiResponse::error(message: __('Resource not found.'), code: 404);
             }
         });
 
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
-                return ApiResponse::error(message: 'Not found.', code: 404);
+                return ApiResponse::error(message: __('Not found.'), code: 404);
             }
         });
 
         $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
-                return ApiResponse::error(message: $e->getMessage() ?: 'Error.', code: $e->getStatusCode());
+                return ApiResponse::error(message: __($e->getMessage() ?: 'Error.'), code: $e->getStatusCode());
             }
         });
     })->create();

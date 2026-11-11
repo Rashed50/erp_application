@@ -1,0 +1,411 @@
+<template lang="html">
+    <Breadcrumb title="HR & Payroll Reports" />
+
+    <div class="main-content-wrapper mt-4">
+        <div class="container-fluid">
+            <v-card style="padding: 15px; margin-top: 15px;">
+                <div class="row align-items-end g-2">
+                    <div class="col-md-3">
+                        <label>{{ $t('Report:') }}</label>
+                        <SearchSelect v-model="reportKey" :items="reportItems" item-value="key" :clearable="false" />
+                    </div>
+                    <div class="col-md-2" v-if="report.filters.includes('month')">
+                        <label>{{ $t(report.monthLabel || 'Month:') }}</label>
+                        <input type="month" class="form-control" v-model="filters.month" />
+                    </div>
+                    <template v-if="report.filters.includes('dates')">
+                        <div class="col-md-2">
+                            <label>{{ $t('From:') }}</label>
+                            <input type="date" class="form-control" v-model="filters.from" />
+                        </div>
+                        <div class="col-md-2">
+                            <label>{{ $t('To:') }}</label>
+                            <input type="date" class="form-control" v-model="filters.to" />
+                        </div>
+                    </template>
+                    <div class="col-md-2" v-if="report.filters.includes('year')">
+                        <label>{{ $t('Year:') }}</label>
+                        <input type="number" min="2000" max="2100" class="form-control" v-model.number="filters.year" />
+                    </div>
+                    <div class="col-md-3" v-if="report.filters.includes('employee')">
+                        <label>{{ $t('Employee:') }}</label>
+                        <SearchSelect v-model="filters.employee_id" :items="employees"
+                            :item-title="(e) => `${e.employee_code} - ${e.name}`"
+                            :placeholder="$t(report.requiresEmployee ? 'Select an employee' : 'All Employees')" />
+                    </div>
+                    <div class="col-md-2" v-if="report.filters.includes('department')">
+                        <label>{{ $t('Department:') }}</label>
+                        <SearchSelect v-model="filters.department" :items="options.departments" item-value="name"
+                            :placeholder="$t('All')" />
+                    </div>
+                    <div class="col-md-2" v-if="report.filters.includes('designation')">
+                        <label>{{ $t('Designation:') }}</label>
+                        <SearchSelect v-model="filters.designation" :items="options.designations" item-value="name"
+                            :placeholder="$t('All')" />
+                    </div>
+                    <div class="col-md-2" v-if="report.filters.includes('status')">
+                        <label>{{ $t('Status:') }}</label>
+                        <SearchSelect v-model="filters.status" :items="report.statuses" :item-title="(s) => $t(s)"
+                            :item-value="(s) => s" :placeholder="$t('All')" />
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <v-btn class="text-none text-white" color="blue-darken-3" rounded="0" variant="flat"
+                            :loading="loading" @click="run">
+                            {{ $t('Show') }}
+                        </v-btn>
+                        <v-btn class="text-none" color="grey-lighten-3" rounded="0" variant="flat"
+                            :disabled="!rows.length" @click="print">
+                            <i class="fa-solid fa-print me-1"></i> {{ $t('Print') }}
+                        </v-btn>
+                    </div>
+                </div>
+            </v-card>
+
+            <v-card style="padding: 5px; margin-top: 15px;">
+                <div class="table-responsive">
+                    <v-table class="custom-bordered" density="compact">
+                        <thead>
+                            <tr>
+                                <th v-for="column in report.columns" :key="column.key"
+                                    :class="column.align === 'right' ? 'text-right' : 'text-left'">
+                                    {{ $t(column.label) }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="loading">
+                                <td :colspan="report.columns.length" class="text-center py-4">
+                                    <v-progress-linear indeterminate color="primary"></v-progress-linear>
+                                </td>
+                            </tr>
+                            <tr v-else-if="!rows.length">
+                                <td :colspan="report.columns.length" class="text-center py-4">
+                                    {{ message || $t('No records found.') }}
+                                </td>
+                            </tr>
+                            <tr v-else v-for="(row, index) in rows" :key="index">
+                                <td v-for="column in report.columns" :key="column.key"
+                                    :class="column.align === 'right' ? 'text-right' : 'text-left'">
+                                    {{ cell(column, row, index) }}
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot v-if="rows.length && totalRow">
+                            <tr class="fw-bold">
+                                <td v-for="column in report.columns" :key="column.key"
+                                    :class="column.align === 'right' ? 'text-right' : 'text-left'">
+                                    {{ totalRow[column.key] ?? '' }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </v-table>
+                </div>
+            </v-card>
+        </div>
+    </div>
+</template>
+
+<script setup>
+import axios from 'axios';
+import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import SearchSelect from '@/components/common/SearchSelect.vue';
+import { usePrintable } from '@/composables/usePrintable';
+import { useRoute } from 'vue-router';
+import { SALARY_STATUSES, currentMonth, fieldChangesText, money, monthLabel, signedMoney } from '../helpers';
+import { t } from '@/i18n';
+
+const { printTable } = usePrintable()
+
+const ALL = 100000
+
+const moneyColumn = (key, label) => ({ key, label, align: 'right', format: money, sum: true })
+
+// Each report: its endpoint, filters, columns and how to read the rows.
+const reports = {
+    employees: {
+        title: 'Employee List',
+        endpoint: '/api/hr/employees',
+        filters: ['department', 'designation', 'status'],
+        statuses: ['Active', 'Inactive', 'Resigned', 'Terminated'],
+        rows: (data) => data.employees ?? [],
+        columns: [
+            { key: 'index', label: '#' },
+            { key: 'employee_code', label: 'Employee ID' },
+            { key: 'name', label: 'Name' },
+            { key: 'department', label: 'Department' },
+            { key: 'designation', label: 'Designation' },
+            { key: 'employment_type', label: 'Type' },
+            { key: 'phone', label: 'Phone' },
+            { key: 'joining_date', label: 'Joining Date' },
+            { key: 'status', label: 'Status' },
+        ],
+    },
+    work: {
+        title: 'Employee Work History',
+        endpoint: '/api/hr/employee-works',
+        filters: ['month', 'employee', 'department', 'designation'],
+        rows: (data) => data.works ?? [],
+        columns: [
+            { key: 'salary_month', label: 'Month', format: monthLabel },
+            { key: 'employee_code', label: 'ID' },
+            { key: 'employee_name', label: 'Name' },
+            { key: 'department', label: 'Department' },
+            { key: 'working_days', label: 'Working', align: 'right' },
+            { key: 'present_days', label: 'Present', align: 'right' },
+            { key: 'absent_days', label: 'Absent', align: 'right' },
+            { key: 'paid_leave_days', label: 'Paid Leave', align: 'right' },
+            { key: 'unpaid_leave_days', label: 'Unpaid Leave', align: 'right' },
+            { key: 'overtime_hours', label: 'OT Hours', align: 'right' },
+            moneyColumn('bonus', 'Bonus'),
+        ],
+    },
+    payroll: {
+        title: 'Monthly Payroll',
+        endpoint: '/api/hr/salary-histories',
+        filters: ['month', 'department', 'designation', 'status'],
+        statuses: SALARY_STATUSES,
+        rows: (data) => data.salaries ?? [],
+        columns: [
+            { key: 'index', label: '#' },
+            { key: 'employee_code', label: 'ID' },
+            { key: 'employee_name', label: 'Name' },
+            { key: 'designation', label: 'Designation' },
+            moneyColumn('basic_salary', 'Basic'),
+            moneyColumn('total_allowance', 'Allowances'),
+            moneyColumn('overtime_amount', 'Overtime'),
+            moneyColumn('bonus', 'Bonus'),
+            moneyColumn('gross_salary', 'Gross'),
+            moneyColumn('total_deduction', 'Deduction'),
+            moneyColumn('net_salary', 'Net'),
+            moneyColumn('paid_amount', 'Paid'),
+            moneyColumn('due_amount', 'Due'),
+            { key: 'status', label: 'Status', format: (s) => t(s) },
+        ],
+    },
+    employeeSalary: {
+        title: 'Employee Salary History',
+        endpoint: '/api/hr/salary-histories',
+        filters: ['employee', 'status'],
+        statuses: SALARY_STATUSES,
+        requiresEmployee: true,
+        extraParams: { include_cancelled: 1 },
+        rows: (data) => data.salaries ?? [],
+        columns: [
+            { key: 'salary_month', label: 'Month', format: monthLabel },
+            { key: 'designation', label: 'Designation' },
+            moneyColumn('basic_salary', 'Basic'),
+            moneyColumn('total_allowance', 'Allowances'),
+            moneyColumn('overtime_amount', 'Overtime'),
+            moneyColumn('gross_salary', 'Gross'),
+            moneyColumn('total_deduction', 'Deduction'),
+            moneyColumn('net_salary', 'Net'),
+            moneyColumn('paid_amount', 'Paid'),
+            moneyColumn('due_amount', 'Due'),
+            { key: 'status', label: 'Status', format: (s) => t(s) },
+        ],
+    },
+    // Approved salaries not fully paid, for months up to the one chosen.
+    salaryDue: {
+        title: 'Due Salary',
+        endpoint: '/api/hr/reports/salary-due',
+        filters: ['month', 'employee', 'department'],
+        monthLabel: 'Up to Month:',
+        rows: (data) => data.rows ?? [],
+        columns: [
+            { key: 'index', label: '#' },
+            { key: 'salary_month', label: 'Month', format: monthLabel },
+            { key: 'employee_code', label: 'ID' },
+            { key: 'employee_name', label: 'Name' },
+            { key: 'department', label: 'Department' },
+            moneyColumn('net_salary', 'Net'),
+            moneyColumn('paid_amount', 'Paid'),
+            moneyColumn('due_amount', 'Due'),
+            { key: 'status', label: 'Status', format: (s) => t(s) },
+        ],
+    },
+    salaryDueByEmployee: {
+        title: 'Due Salary by Employee',
+        endpoint: '/api/hr/reports/salary-due',
+        filters: ['month', 'department'],
+        monthLabel: 'Up to Month:',
+        rows: (data) => data.employees ?? [],
+        columns: [
+            { key: 'index', label: '#' },
+            { key: 'employee_code', label: 'ID' },
+            { key: 'employee_name', label: 'Name' },
+            { key: 'months', label: 'Months Due', align: 'right', sum: true },
+            moneyColumn('due_amount', 'Due'),
+        ],
+    },
+    // Every salary revision compared with the one before it.
+    salaryChanges: {
+        title: 'Salary Increment / Decrement History',
+        endpoint: '/api/hr/reports/salary-changes',
+        filters: ['dates', 'employee', 'department'],
+        rows: (data) => data.rows ?? [],
+        columns: [
+            { key: 'index', label: '#' },
+            { key: 'effective_date', label: 'Effective Date' },
+            { key: 'employee_code', label: 'ID' },
+            { key: 'employee_name', label: 'Name' },
+            { key: 'department', label: 'Department' },
+            { key: 'change_type', label: 'Change', format: (s) => t(s) },
+            { key: 'change_reason', label: 'Reason', format: (s) => (s ? t(s) : '') },
+            { key: 'designation', label: 'Designation' },
+            { key: 'previous_monthly_gross', label: 'Previous Gross', align: 'right', format: money },
+            { key: 'monthly_gross', label: 'New Gross', align: 'right', format: money },
+            { key: 'change_amount', label: 'Difference', align: 'right', format: signedMoney },
+            { key: 'field_changes', label: 'What Changed', format: (changes) => fieldChangesText(changes, t) },
+        ],
+    },
+    department: {
+        title: 'Department-wise Payroll',
+        endpoint: '/api/hr/reports/department-wise',
+        filters: ['month', 'status'],
+        statuses: SALARY_STATUSES.filter((s) => s !== 'Cancelled'),
+        rows: (data) => data.rows ?? [],
+        columns: [
+            { key: 'department', label: 'Department' },
+            { key: 'employees', label: 'Employees', align: 'right', sum: true },
+            moneyColumn('basic_salary', 'Basic'),
+            moneyColumn('total_allowance', 'Allowances'),
+            moneyColumn('overtime_amount', 'Overtime'),
+            moneyColumn('gross_salary', 'Gross'),
+            moneyColumn('total_deduction', 'Deduction'),
+            moneyColumn('net_salary', 'Net'),
+        ],
+    },
+    summary: {
+        title: 'Salary Summary',
+        endpoint: '/api/hr/reports/salary-summary',
+        filters: ['year', 'department'],
+        rows: (data) => data.rows ?? [],
+        columns: [
+            { key: 'month', label: 'Month', format: monthLabel },
+            { key: 'employees', label: 'Employees', align: 'right' },
+            moneyColumn('gross_salary', 'Gross'),
+            moneyColumn('total_deduction', 'Deduction'),
+            moneyColumn('net_salary', 'Net'),
+            moneyColumn('paid_amount', 'Paid'),
+            moneyColumn('unpaid_amount', 'Unpaid'),
+        ],
+    },
+}
+
+const route = useRoute()
+const reportKey = ref(reports[route.query.report] ? route.query.report : 'payroll')
+const report = computed(() => reports[reportKey.value])
+
+const filters = reactive({
+    month: currentMonth(),
+    year: new Date().getFullYear(),
+    from: `${new Date().getFullYear()}-01-01`,
+    to: new Date().toISOString().slice(0, 10),
+    employee_id: '',
+    department: '',
+    designation: '',
+    status: '',
+})
+
+const rows = ref([])
+const loading = ref(false)
+const message = ref('')
+const employees = ref([])
+const options = ref({ departments: [], designations: [] })
+const reportItems = computed(() => Object.entries(reports).map(([key, r]) => ({ key, name: t(r.title) })))
+
+const cell = (column, row, index) => {
+    if (column.key === 'index') return index + 1
+    const value = row[column.key]
+    return column.format ? column.format(value, row) : value
+}
+
+const totalRow = computed(() => {
+    const summed = report.value.columns.filter((c) => c.sum)
+    if (!summed.length) return null
+    const total = { [report.value.columns[0].key]: t('Total') }
+    for (const column of summed) {
+        const sum = rows.value.reduce((acc, row) => acc + (Number(row[column.key]) || 0), 0)
+        total[column.key] = column.format ? column.format(sum) : sum
+    }
+    return total
+})
+
+const params = () => {
+    const current = report.value
+    const result = { per_page: ALL, ...(current.extraParams || {}) }
+    if (current.filters.includes('month')) result.month = filters.month
+    if (current.filters.includes('year')) result.year = filters.year
+    if (current.filters.includes('dates')) {
+        if (filters.from) result.from = filters.from
+        if (filters.to) result.to = filters.to
+    }
+    if (current.filters.includes('employee') && filters.employee_id) result.employee_id = filters.employee_id
+    for (const key of ['department', 'designation', 'status']) {
+        if (current.filters.includes(key) && filters[key]) result[key] = filters[key]
+    }
+    return result
+}
+
+const run = async () => {
+    rows.value = []
+    message.value = ''
+    if (report.value.requiresEmployee && !filters.employee_id) {
+        message.value = t('Select an employee to see their salary history.')
+        return
+    }
+
+    loading.value = true
+    try {
+        const { data } = await axios.get(report.value.endpoint, { params: params() })
+        rows.value = report.value.rows(data.data ?? {})
+    } catch (e) {
+        message.value = e.response?.data?.message || t('Failed to load the report.')
+    } finally {
+        loading.value = false
+    }
+}
+
+const print = () => {
+    const subtitle = [
+        report.value.filters.includes('month') ? monthLabel(filters.month) : null,
+        report.value.filters.includes('year') ? filters.year : null,
+        report.value.filters.includes('dates') ? [filters.from, filters.to].filter(Boolean).join(' - ') : null,
+        filters.department && report.value.filters.includes('department') ? filters.department : null,
+    ].filter(Boolean).join(' · ')
+
+    printTable({
+        title: `${t(report.value.title)}${subtitle ? ` - ${subtitle}` : ''}`,
+        items: totalRow.value ? [...rows.value, { ...totalRow.value, __total: true }] : rows.value,
+        columns: report.value.columns.map((column) => ({
+            ...column,
+            label: t(column.label),
+            key: column.key === 'index' ? '__index' : column.key,
+            format: (value, row) => {
+                if (row.__total) return value ?? ''
+                if (column.key === 'index') return rows.value.indexOf(row) + 1
+                return column.format ? column.format(value, row) : (value ?? '')
+            },
+        })),
+    })
+}
+
+watch(reportKey, () => {
+    filters.status = ''
+    run()
+})
+
+onMounted(async () => {
+    try {
+        const [optionsResponse, employeesResponse] = await Promise.all([
+            axios.get('/api/hr/employees/options'),
+            axios.get('/api/hr/employees', { params: { per_page: ALL } }),
+        ])
+        options.value = optionsResponse.data.data
+        employees.value = employeesResponse.data.data?.employees ?? []
+    } catch (e) {
+        console.error(e)
+    }
+    run()
+})
+</script>

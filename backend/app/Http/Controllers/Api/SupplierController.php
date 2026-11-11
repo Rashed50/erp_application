@@ -44,24 +44,24 @@ class SupplierController extends Controller
     {
         $supplier = $this->supplierService->create($request->validated());
 
-        return ApiResponse::success(new SupplierResource($supplier), 'Supplier created successfully.', 201);
+        return ApiResponse::success(new SupplierResource($supplier), __('Supplier created successfully.'), 201);
     }
 
     public function update(UpdateSupplierRequest $request, Supplier $supplier): JsonResponse
     {
         $supplier = $this->supplierService->update($supplier, $request->validated());
 
-        return ApiResponse::success(new SupplierResource($supplier), 'Supplier updated successfully.');
+        return ApiResponse::success(new SupplierResource($supplier), __('Supplier updated successfully.'));
     }
 
     public function destroy(Supplier $supplier): JsonResponse
     {
         if (! $supplier->canBeDeleted()) {
-            return ApiResponse::error('This supplier has ledger transactions or purchases and cannot be deleted.', 422);
+            return ApiResponse::error(__('This supplier has ledger transactions or purchases and cannot be deleted.'), 422);
         }
 
         $this->supplierService->delete($supplier);
 
-        return ApiResponse::success(message: 'Supplier deleted successfully.');
+        return ApiResponse::success(message: __('Supplier deleted successfully.'));
     }
 }

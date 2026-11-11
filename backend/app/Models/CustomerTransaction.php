@@ -10,6 +10,8 @@ class CustomerTransaction extends Model
 {
     use HasFactory;
 
+    public const TYPE_PAYMENT_RECEIVED = 'Payment Received';
+
     protected $guarded = [];
 
     /**
@@ -28,6 +30,19 @@ class CustomerTransaction extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function workOrder(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrder::class)->withTrashed();
+    }
+
+    /**
+     * The journal entry this ledger entry corresponds to.
+     */
+    public function accountTransaction(): BelongsTo
+    {
+        return $this->belongsTo(AccountTransaction::class);
     }
 
     public function creator(): BelongsTo

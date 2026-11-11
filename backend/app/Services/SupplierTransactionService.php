@@ -13,6 +13,7 @@ class SupplierTransactionService
     public function listForSupplier(Supplier $supplier, int $perPage = 15, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
     {
         return $supplier->transactions()
+            ->with('creator:id,name')
             ->when($fromDate && $toDate, fn ($query) => $query->whereBetween('transaction_date', [$fromDate, $toDate]))
             ->latest('transaction_date')
             ->paginate($perPage);
@@ -25,7 +26,10 @@ class SupplierTransactionService
      * payment) and internally by PurchaseService to post the "Purchase" entry
      * a new purchase invoice generates.
      *
-     * @param  array{transaction_type: string, invoice_no?: ?string, debit?: ?float, credit?: ?float, transaction_date: string, notes?: ?string}  $data
+     * `account_transaction_id` links the entry to the journal entry that
+     * posted it to the general ledger, if any.
+     *
+     * @param  array{transaction_type: string, invoice_no?: ?string, debit?: ?float, credit?: ?float, account_transaction_id?: ?int, transaction_date: string, notes?: ?string}  $data
      */
     public function create(Supplier $supplier, array $data): SupplierTransaction
     {
@@ -35,6 +39,7 @@ class SupplierTransactionService
                 'invoice_no' => $data['invoice_no'] ?? null,
                 'debit' => $data['debit'] ?? 0,
                 'credit' => $data['credit'] ?? 0,
+                'account_transaction_id' => $data['account_transaction_id'] ?? null,
                 'transaction_date' => $data['transaction_date'],
                 'notes' => $data['notes'] ?? null,
                 // Set explicitly rather than relying on the DB column default,
@@ -44,8 +49,6 @@ class SupplierTransactionService
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
-
-            $this->recalculateBalance($supplier);
 
             return $transaction;
         });
@@ -65,8 +68,6 @@ class SupplierTransactionService
             $transaction->fill([...$data, 'updated_by' => Auth::id()]);
             $transaction->save();
 
-            $this->recalculateBalance($transaction->supplier);
-
             return $transaction;
         });
     }
@@ -83,31 +84,8 @@ class SupplierTransactionService
             $transaction->updated_by = Auth::id();
             $transaction->save();
 
-            $this->recalculateBalance($transaction->supplier);
-
             return $transaction;
         });
-    }
-
-    /**
-     * Recompute the supplier's running balance from its opening balance plus
-     * every non-reversed ledger entry, rather than trusting incremental
-     * updates that could drift out of sync.
-     *
-     * A credit increases what is owed to the supplier (a purchase); a debit
-     * decreases it (a bill payment) — the inverse of the customer ledger,
-     * where a debit is what is owed *to* the business.
-     */
-    private function recalculateBalance(Supplier $supplier): void
-    {
-        $totals = $supplier->transactions()
-            ->where('status', true)
-            ->selectRaw('SUM(debit) as total_debit, SUM(credit) as total_credit')
-            ->first();
-
-        $supplier->update([
-            'current_balance' => $supplier->opening_balance + ($totals->total_credit ?? 0) - ($totals->total_debit ?? 0),
-        ]);
     }
 
     private function today(): string

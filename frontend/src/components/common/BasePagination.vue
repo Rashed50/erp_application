@@ -2,18 +2,17 @@
     <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
         <!-- Info text -->
         <div class="pagination-info">
-            মোট {{ total.toLocaleString() }} রেকর্ডের মধ্যে
-            {{ from.toLocaleString() }} থেকে {{ to.toLocaleString() }} দেখানো হচ্ছে
+            {{ $t('pagination.summary', { total: $n(total), from: $n(from), to: $n(to) }) }}
         </div>
 
         <div class="d-flex align-items-center gap-5">
             <!-- Per page -->
             <div class="d-flex align-items-center gap-3">
-                রেকর্ড দেখাও :
+                {{ $t('pagination.perPage') }}
                 <select class="form-select form-select-sm w-auto" :value="perPage"
                     @change="changePerPage($event.target.value)">
                     <option v-for="size in perPageOptions" :key="size" :value="size">
-                        {{ size }}
+                        {{ size === 'All' ? $t('pagination.all') : size }}
                     </option>
                 </select>
             </div>
@@ -25,7 +24,7 @@
                 <!-- Previous -->
                 <li class="page-item" :class="{ disabled: currentPage === 1 }">
                     <a class="page-link" href="#" @click.prevent="change(currentPage - 1)">
-                        « পূর্ববর্তী
+                        {{ $t('pagination.previous') }}
                     </a>
                 </li>
 
@@ -33,7 +32,7 @@
                 <li v-for="page in pages" :key="page" class="page-item"
                     :class="{ active: page === currentPage, disabled: page === '...' }">
                     <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="change(page)">
-                        {{ page }}
+                        {{ $n(page, { useGrouping: false }) }}
                     </a>
                     <span v-else class="page-link">…</span>
                 </li>
@@ -41,7 +40,7 @@
                 <!-- Next -->
                 <li class="page-item" :class="{ disabled: currentPage === lastPage }">
                     <a class="page-link" href="#" @click.prevent="change(currentPage + 1)">
-                        পরবর্তী »
+                        {{ $t('pagination.next') }}
                     </a>
                 </li>
             </ul>

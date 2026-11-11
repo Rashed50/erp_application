@@ -1,12 +1,12 @@
 <template>
     <div class="access-denied-wrapper">
         <h1>403</h1>
-        <p>Access Denied</p>
-        <span>You do not have permission to access this page.</span>
+        <p>{{ $t('Access Denied') }}</p>
+        <span>{{ $t('You do not have permission to access this page.') }}</span>
 
         <div class="actions">
-            <button class="btn-back" @click="goBack">Go Back</button>
-            <button class="btn-home" @click="goHome">Go Home</button>
+            <button class="btn-back" @click="goBack">{{ $t('Go Back') }}</button>
+            <button class="btn-home" @click="goHome">{{ $t('Go Home') }}</button>
         </div>
     </div>
 </template>

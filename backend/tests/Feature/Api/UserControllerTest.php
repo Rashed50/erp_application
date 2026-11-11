@@ -195,3 +195,28 @@ describe('destroy', function () {
         $this->assertDatabaseMissing('users', ['id' => $target->id]);
     });
 });
+
+describe('inserted by', function () {
+    it('records who created a user or role and lists their name', function () {
+        $actor = adminUser();
+
+        $this->actingAs($actor, 'sanctum')->postJson('/api/users', [
+            'name' => 'New User',
+            'email' => 'new-user@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertStatus(201);
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/roles', ['name' => 'Accountant'])
+            ->assertStatus(201);
+
+        expect(User::query()->where('email', 'new-user@example.com')->value('created_by'))->toBe($actor->id);
+
+        $users = $this->actingAs($actor, 'sanctum')->getJson('/api/users')->assertOk()->json('data.users');
+        expect(collect($users)->firstWhere('email', 'new-user@example.com')['created_by_name'])->toBe($actor->name);
+
+        $roles = $this->actingAs($actor, 'sanctum')->getJson('/api/roles')->assertOk()->json('data.roles');
+        expect(collect($roles)->firstWhere('name', 'Accountant')['created_by_name'])->toBe($actor->name);
+    });
+});
