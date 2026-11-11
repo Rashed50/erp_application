@@ -74,6 +74,7 @@ export default {
         quotationCreate: 'New Quotation',
         profile: 'Profile',
         logout: 'Logout',
+        settings: 'Settings',
     },
 
     auth: {
