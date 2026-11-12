@@ -13,7 +13,7 @@
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
                                         <label for="customer_id">{{ $t('Customer:') }}</label>
-                                        <select id="customer_id" class="form-control" v-model="form.customer_id" required>
+                                        <select id="customer_id" class="form-select" v-model="form.customer_id" required>
                                             <option value="" disabled>{{ $t('Select a Customer') }}</option>
                                             <option v-for="customer in customers" :key="customer.id" :value="customer.id">
                                                 {{ customer.name }}
@@ -105,6 +105,8 @@ import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
 import { useRouter } from 'vue-router';
+import { computed, onMounted, ref, watch } from 'vue';
+const autoGenerateInvoiceNumber = ref(true);
 
 const router = useRouter();
 
@@ -139,7 +141,26 @@ const handleSubmit = async () => {
 }
 
 onMounted(() => {
+    form.invoice_number = generateInvoiceNumber();
     loadCustomers()
     loadProducts()
 })
+
+const generateInvoiceNumber = (customerName, workOrderName) => {
+    const clean = (value) =>
+        String(value || '')
+            .replace(/[^A-Za-z]/g, '')
+            .toUpperCase();
+
+    const customerPart = "SN";// clean(customerName).slice(0, 2).padEnd(2, 'X');
+    const workOrderPart = clean(workOrderName).slice(0, 2).padEnd(2, 'X');
+
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const random = String(Math.floor(Math.random() * 900) + 100); // 100–999
+
+    return `${customerPart}-${yy}${mm}-${random}`;
+};
+
 </script>

@@ -1,7 +1,7 @@
 <template>
     <div class="form-group mb-3">
         <label for="work_order_id">{{ $t('Work Order:') }}</label>
-        <select id="work_order_id" class="form-control" v-model="workOrderId" :disabled="disabled || !customerId">
+        <select id="work_order_id" class="form-select" v-model="workOrderId" :disabled="disabled || !customerId">
             <option value="">{{ placeholder }}</option>
             <option v-for="workOrder in workOrders" :key="workOrder.id" :value="workOrder.id">
                 {{ workOrder.work_order_no }} - {{ workOrder.work_title }}

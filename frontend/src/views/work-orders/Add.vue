@@ -13,7 +13,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
                                         <label for="customer_id">{{ $t('Customer:') }}</label>
-                                        <select id="customer_id" class="form-control" v-model="form.customer_id" required>
+                                        <select id="customer_id" class="form-select" v-model="form.customer_id" required>
                                             <option value="" disabled>{{ $t('Select a Customer') }}</option>
                                             <option v-for="customer in customers" :key="customer.id" :value="customer.id">
                                                 {{ customer.name }}
@@ -26,7 +26,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
                                         <label for="quotation_id">{{ $t('Quotation:') }}</label>
-                                        <select id="quotation_id" class="form-control" v-model="form.quotation_id">
+                                        <select id="quotation_id" class="form-select" v-model="form.quotation_id">
                                             <option value="">{{ $t('Select a Quotation') }}</option>
                                             <option v-for="quotation in quotations" :key="quotation.id"
                                                 :value="quotation.id">

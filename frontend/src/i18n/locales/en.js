@@ -30,8 +30,8 @@ export default {
         customers: 'Customers',
         workOrder: 'Work Order',
         products: 'Products',
-        newSales: 'New Sales',
-        searchSales: 'Search Sales',
+        newSales: 'New Bill',
+        searchSales: 'Search Bill',
         purchase: 'Purchase',
         newPurchase: 'New Purchase',
         purchaseList: 'Purchase List',
@@ -74,6 +74,7 @@ export default {
         quotationCreate: 'New Quotation',
         profile: 'Profile',
         logout: 'Logout',
+        settings: 'Settings',
     },
 
     auth: {
