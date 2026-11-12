@@ -1,0 +1,1 @@
+function p(n,t=new FormData,a=""){for(let e in n){if(n[e]===void 0||n[e]===null)continue;const i=a?`${a}[${e}]`:e;n[e]instanceof File?t.append(i,n[e]):typeof n[e]=="object"&&!(n[e]instanceof Date)?p(n[e],t,i):t.append(i,n[e])}return t}export{p as o};

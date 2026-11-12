@@ -106,7 +106,11 @@ import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
 import { useRouter } from 'vue-router';
 
+
+
 const router = useRouter();
+
+ 
 
 const { form, errors, isSubmitting, submit } = useStoreForm({
     customer_id: '',
@@ -137,6 +141,8 @@ const handleSubmit = async () => {
         router.push({ name: 'admin_sales_list' })
     }
 }
+
+
 
 onMounted(() => {
     loadCustomers()
