@@ -45,7 +45,7 @@ class SaleService
      * accounts can be chosen; they default to Accounts Receivable and Sales
      * Revenue.
      *
-     * @param  array{customer_id: int, work_order_id?: ?int, invoice_number: string, description?: ?string, issue_date: string, due_date?: ?string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, overall_discount?: ?float, overall_vat?: ?float, attachment?: ?UploadedFile, items: array<int, array{item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
+     * @param  array{customer_id: int, work_order_id?: ?int, invoice_number: string, description?: ?string, issue_date: string, due_date?: ?string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, overall_discount?: ?float, overall_vat?: ?float, previous_advance_amount?: ?float, previous_advance_purpose?: ?string, attachment?: ?UploadedFile, items: array<int, array{item_name: string, description?: ?string, qty: float, unit?: ?string, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
      */
     public function create(array $data): Sale
     {
@@ -55,6 +55,7 @@ class SaleService
                 (float) ($data['overall_discount'] ?? 0),
                 (float) ($data['overall_vat'] ?? 0),
             );
+            $advance = $this->previousAdvance($data, $totals['net_total']);
 
             $sale = Sale::create([
                 'customer_id' => $data['customer_id'],
@@ -69,6 +70,8 @@ class SaleService
                 'credit_account_id' => $data['credit_account_id'] ?? $this->ledgerPostingService->predefinedAccount(LedgerPostingService::SALES_REVENUE_NUMBER)?->id,
                 'overall_discount' => $totals['overall_discount'],
                 'overall_vat' => $totals['overall_vat'],
+                'previous_advance_amount' => $advance['amount'],
+                'previous_advance_purpose' => $advance['purpose'],
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
@@ -106,14 +109,19 @@ class SaleService
         return DB::transaction(function () use ($sale, $data) {
             $totals = $this->recalculatedTotals($sale, $data);
 
-            if ($totals && $totals['net_total'] < $sale->paid_amount) {
+            $advance = $this->updatedPreviousAdvance($sale, $data, $totals['net_total'] ?? (float) $sale->net_total);
+            $payable = round(($totals['net_total'] ?? (float) $sale->net_total) - $advance['amount'], 2);
+
+            if (($totals || $advance['changed']) && $payable < $sale->paid_amount) {
                 throw ValidationException::withMessages([
-                    'items' => __('The new total (:total) cannot be less than the amount already paid (:paid).', ['total' => $totals['net_total'], 'paid' => $sale->paid_amount]),
+                    'items' => __('The new payable amount (:total) cannot be less than the amount already paid (:paid).', ['total' => $payable, 'paid' => $sale->paid_amount]),
                 ]);
             }
 
             $sale->fill([
-                ...collect($data)->except(['items', 'overall_discount', 'overall_vat', ...AttachmentService::FIELDS])->all(),
+                ...collect($data)->except(['items', 'overall_discount', 'overall_vat', 'previous_advance_amount', 'previous_advance_purpose', ...AttachmentService::FIELDS])->all(),
+                'previous_advance_amount' => $advance['amount'],
+                'previous_advance_purpose' => $advance['purpose'],
                 'updated_by' => Auth::id(),
             ]);
 
@@ -186,6 +194,49 @@ class SaleService
             (float) (array_key_exists('overall_discount', $data) ? $data['overall_discount'] : $sale->overall_discount),
             (float) (array_key_exists('overall_vat', $data) ? $data['overall_vat'] : $sale->overall_vat),
         );
+    }
+
+    /**
+     * The previous advance to store with a sale: a non-negative amount that
+     * cannot exceed the net total, and its purpose (kept only with an amount).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{amount: float, purpose: ?string}
+     *
+     * @throws ValidationException when the advance is more than the net total.
+     */
+    private function previousAdvance(array $data, float $netTotal): array
+    {
+        $amount = round((float) ($data['previous_advance_amount'] ?? 0), 2);
+
+        if ($amount > round($netTotal, 2)) {
+            throw ValidationException::withMessages([
+                'previous_advance_amount' => __('The adjustment (:amount) cannot be more than the net total (:total).', ['amount' => $amount, 'total' => round($netTotal, 2)]),
+            ]);
+        }
+
+        $purpose = trim((string) ($data['previous_advance_purpose'] ?? ''));
+
+        return ['amount' => $amount, 'purpose' => $amount > 0 && $purpose !== '' ? $purpose : null];
+    }
+
+    /**
+     * The advance after an update: what was sent, else what the sale has now —
+     * re-checked against the (possibly changed) net total.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{amount: float, purpose: ?string, changed: bool}
+     */
+    private function updatedPreviousAdvance(Sale $sale, array $data, float $netTotal): array
+    {
+        $sent = array_key_exists('previous_advance_amount', $data) || array_key_exists('previous_advance_purpose', $data);
+
+        $advance = $this->previousAdvance([
+            'previous_advance_amount' => array_key_exists('previous_advance_amount', $data) ? $data['previous_advance_amount'] : $sale->previous_advance_amount,
+            'previous_advance_purpose' => array_key_exists('previous_advance_purpose', $data) ? $data['previous_advance_purpose'] : $sale->previous_advance_purpose,
+        ], $netTotal);
+
+        return [...$advance, 'changed' => $sent];
     }
 
     /**

@@ -35,6 +35,7 @@ class Sale extends Model
             'due_date' => 'date',
             'overall_discount' => 'decimal:2',
             'overall_vat' => 'decimal:2',
+            'previous_advance_amount' => 'decimal:2',
         ];
     }
 
@@ -113,8 +114,17 @@ class Sale extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    /**
+     * What the customer must still settle for this invoice: the net total less
+     * the previous advance applied to it.
+     */
+    public function getPayableAmountAttribute(): float
+    {
+        return round((float) $this->net_total - (float) $this->previous_advance_amount, 2);
+    }
+
     public function getDueAmountAttribute(): float
     {
-        return (float) $this->net_total - (float) $this->paid_amount;
+        return (float) $this->payable_amount - (float) $this->paid_amount;
     }
 }

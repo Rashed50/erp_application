@@ -699,7 +699,7 @@ class AccountReportService
                 'vat_amount' => (float) $sale->vat_amount,
                 'net_total' => (float) $sale->net_total,
                 'paid_amount' => (float) $sale->paid_amount,
-                'due_amount' => round((float) $sale->net_total - (float) $sale->paid_amount, 2),
+                'due_amount' => round((float) $sale->payable_amount - (float) $sale->paid_amount, 2),
             ]);
 
         $totals = [];

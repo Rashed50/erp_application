@@ -452,6 +452,7 @@ export function usePrintable() {
      *   meta?: Array<{ label: string, value: string }>,
      *   items: Array<{ item_name: string, description?: string, qty: number, unit?: string, unit_price: number, discount: number, vat: number, total_amount: number }>,
      *   totals: { total_amount: number, overall_discount?: number, discount_amount: number, overall_vat?: number, vat_amount: number, net_total: number, paid_amount: number, due_amount: number },
+     *   previousAdvance?: { amount: number, purpose?: string },
      *   notes?: string,
      *   signatures?: string[],
      * }} invoice
@@ -463,6 +464,7 @@ export function usePrintable() {
         meta = [],
         items = [],
         totals = {},
+        previousAdvance = null,
         notes = '',
         signatures = ['Received by', 'Authorized Signature'],
     }) => {
@@ -515,6 +517,14 @@ export function usePrintable() {
 
         // Discount and VAT are the invoice totals; the overall (invoice-level)
         // part is shown on its own line when there is one.
+        // A previous advance / bill adjusted against the invoice lowers the amount payable.
+        const advanceAmount = Number(previousAdvance?.amount) || 0
+        const advanceRows = advanceAmount > 0
+            ? [
+                ['Previous Advance / Bill Adjustment', advanceAmount],
+                ['Payable Amount', (Number(totals.net_total) || 0) - advanceAmount],
+            ]
+            : []
         const totalRows = [
             ['Total Amount', totals.total_amount],
             ...(Number(totals.overall_discount) ? [['Overall Discount', totals.overall_discount]] : []),
@@ -522,6 +532,7 @@ export function usePrintable() {
             ...(Number(totals.overall_vat) ? [['Overall VAT', totals.overall_vat]] : []),
             ['VAT', totals.vat_amount],
             ['Net Total', totals.net_total],
+            ...advanceRows,
             ['Paid', totals.paid_amount],
             ['Due', totals.due_amount],
         ]
@@ -536,6 +547,10 @@ export function usePrintable() {
             </table>
         `
 
+        const advancePurposeHtml = advanceAmount > 0 && previousAdvance?.purpose
+            ? `<div class="notes"><strong>${escapeHtml(t('Adjustment Purpose'))}:</strong> ${escapeHtml(previousAdvance.purpose)}</div>`
+            : ''
+
         const notesHtml = notes
             ? `<div class="notes"><strong>${escapeHtml(t('Notes:'))}</strong> ${escapeHtml(notes)}</div>`
             : ''
@@ -543,7 +558,7 @@ export function usePrintable() {
         printDocument({
             title: t(title),
             signatures,
-            contentHtml: infoHtml + itemsHtml + totalsHtml + notesHtml,
+            contentHtml: infoHtml + itemsHtml + totalsHtml + advancePurposeHtml + notesHtml,
         })
     }
 
