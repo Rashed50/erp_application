@@ -129,14 +129,14 @@ describe('store', function () {
             ->assertJsonPath('data.parent_name', $group->name);
     });
 
-    it('rejects a child under a transaction account', function () {
+    it('allows a child under a transaction account', function () {
         $actor = adminUser();
         $leaf = ChartOfAccount::factory()->asset()->create();
 
         $this->actingAs($actor, 'sanctum')
             ->postJson('/api/ledger-accounts', ['name' => 'Sub', 'parent_id' => $leaf->id])
-            ->assertStatus(422)
-            ->assertJsonStructure(['data' => ['parent_id']]);
+            ->assertCreated()
+            ->assertJsonPath('data.parent_id', $leaf->id);
     });
 
     it('rejects a child whose type differs from its parent', function () {
@@ -265,15 +265,14 @@ describe('update', function () {
             ->assertJsonStructure(['data' => ['parent_id']]);
     });
 
-    it('rejects turning an account with children into a transaction account', function () {
+    it('allows turning an account with children into a transaction account', function () {
         $actor = adminUser();
         $parent = ChartOfAccount::factory()->asset()->group()->create();
         ChartOfAccount::factory()->asset()->create(['parent_id' => $parent->id]);
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$parent->id}", ['is_transaction' => true])
-            ->assertStatus(422)
-            ->assertJsonStructure(['data' => ['is_transaction']]);
+            ->assertOk();
     });
 
     it('only lets a predefined account be renamed or deactivated', function () {

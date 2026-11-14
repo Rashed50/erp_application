@@ -580,6 +580,52 @@ describe('work order collections', function () {
     });
 });
 
+describe('sales dashboard', function () {
+    it('summarises work orders by status and lists completed work orders still owing money', function () {
+        $customer = Customer::factory()->create(['name' => 'Dash Customer']);
+        $completed = WorkOrder::factory()->for($customer)->create(['issue_date' => '2026-05-02', 'total_amount' => 10000, 'status' => 'Completed']);
+        $settled = WorkOrder::factory()->for($customer)->create(['issue_date' => '2026-05-03', 'total_amount' => 4000, 'status' => 'Completed']);
+        WorkOrder::factory()->for($customer)->create(['issue_date' => '2026-05-04', 'total_amount' => 3000, 'status' => 'In Progress']);
+        WorkOrder::factory()->for($customer)->create(['issue_date' => '2026-07-04', 'total_amount' => 9999, 'status' => 'Pending']);
+        CustomerTransaction::factory()->for($customer)->create(['work_order_id' => $completed->id, 'debit' => 0, 'credit' => 2500, 'transaction_type' => 'Payment Received', 'transaction_date' => '2026-05-10']);
+        CustomerTransaction::factory()->for($customer)->create(['work_order_id' => $completed->id, 'debit' => 0, 'credit' => 900, 'transaction_type' => 'Payment Received', 'transaction_date' => '2026-05-11', 'status' => false]);
+        CustomerTransaction::factory()->for($customer)->create(['work_order_id' => $settled->id, 'debit' => 0, 'credit' => 4000, 'transaction_type' => 'Payment Received', 'transaction_date' => '2026-05-12']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/sales-dashboard?from_date=2026-05-01&to_date=2026-05-31')
+            ->assertOk()
+            ->assertJsonPath('data.work_orders.count', 3)
+            ->assertJsonPath('data.work_orders.total_amount', 17000)
+            ->assertJsonPath('data.completed.count', 2)
+            ->assertJsonPath('data.completed.total_amount', 14000)
+            ->assertJsonPath('data.outstanding_due.count', 1)
+            ->assertJsonPath('data.outstanding_due.amount', 7500)
+            ->assertJsonCount(1, 'data.due_rows')
+            ->assertJsonPath('data.due_rows.0.customer_name', 'Dash Customer')
+            ->assertJsonPath('data.due_rows.0.paid_amount', 2500)
+            ->assertJsonPath('data.due_rows.0.due_amount', 7500)
+            ->assertJsonPath('data.status_overview.0.status', 'Pending')
+            ->assertJsonPath('data.status_overview.0.count', 0);
+    });
+
+    it('narrows the work order totals by status and validates it', function () {
+        WorkOrder::factory()->create(['status' => 'Pending', 'total_amount' => 100]);
+        WorkOrder::factory()->create(['status' => 'Completed', 'total_amount' => 200]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/sales-dashboard?status=Pending')
+            ->assertOk()
+            ->assertJsonPath('data.work_orders.count', 1)
+            ->assertJsonPath('data.work_orders.total_amount', 100)
+            ->assertJsonCount(1, 'data.status_overview');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/sales-dashboard?status=Unknown')
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['status']]);
+    });
+});
+
 describe('customer collections', function () {
     beforeEach(function () {
         $this->customer = Customer::factory()->create(['name' => 'Monthly Customer', 'opening_balance' => 100]);
