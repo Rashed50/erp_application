@@ -71,15 +71,11 @@ class UpdateChartOfAccountRequest extends FormRequest
 
                 if ($parent->id === $account->id || in_array($parent->id, $account->descendantIds(), true)) {
                     $validator->errors()->add('parent_id', __('An account cannot be moved under itself or one of its own children.'));
-                } elseif ($parent->is_transaction || $parent->is_closed) {
-                    $validator->errors()->add('parent_id', __('The parent must be an open group account.'));
+                } elseif ($parent->is_closed) {
+                    $validator->errors()->add('parent_id', __('A closed account cannot have child accounts.'));
                 } elseif ($parent->account_type_id !== $account->account_type_id) {
                     $validator->errors()->add('parent_id', __('A child account must have the same type as its parent.'));
                 }
-            }
-
-            if ($this->boolean('is_transaction') && $account->children()->exists()) {
-                $validator->errors()->add('is_transaction', __('An account with child accounts cannot be a transaction account.'));
             }
 
             if ($this->has('is_transaction') && ! $this->boolean('is_transaction')

@@ -309,6 +309,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/expense-details', [AccountReportController::class, 'expenseDetails'])->name('expense-details');
         Route::get('/sales-purchase-summary', [AccountReportController::class, 'salesPurchaseSummary'])->name('sales-purchase-summary');
         Route::get('/sales', [AccountReportController::class, 'salesRegister'])->name('sales');
+        Route::get('/sales-dashboard', [AccountReportController::class, 'salesDashboard'])->name('sales-dashboard');
         Route::get('/work-order-collections', [AccountReportController::class, 'workOrderCollections'])->name('work-order-collections');
         Route::get('/work-order-profitability', [AccountReportController::class, 'workOrderProfitability'])->name('work-order-profitability');
         Route::get('/work-order-details', [AccountReportController::class, 'workOrderDetails'])->name('work-order-details');
