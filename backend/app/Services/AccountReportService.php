@@ -764,6 +764,106 @@ class AccountReportService
     }
 
     /**
+     * The Sales Dashboard: work orders (by issue date) with their status
+     * breakdown, completed work orders still owing money, and the sales
+     * invoices (by issue date) with what has been collected on them.
+     *
+     * A work order's paid amount is its active "Payment Received" ledger
+     * entries and its due is the work order amount less that, as the work
+     * order collections report computes it. An invoice's paid amount is the
+     * same kind of entries carrying its invoice number. The two are reported
+     * separately and never added together, as one payment can belong to both.
+     * The status filter narrows the work order totals and status overview;
+     * the due list always covers completed work orders.
+     *
+     * @return array<string, mixed>
+     */
+    public function salesDashboard(?string $status, ?string $fromDate, ?string $toDate): array
+    {
+        $workOrders = WorkOrder::query()
+            ->with('customer:id,name')
+            ->withPaymentTotals()
+            ->when($fromDate, fn ($query) => $query->whereDate('issue_date', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('issue_date', '<=', $toDate))
+            ->orderBy('issue_date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (WorkOrder $workOrder) => [
+                'id' => $workOrder->id,
+                'work_order_no' => $workOrder->work_order_no,
+                'work_title' => $workOrder->work_title,
+                'customer_name' => $workOrder->customer?->name,
+                'issue_date' => $workOrder->issue_date?->toDateString(),
+                'status' => $workOrder->status,
+                'total_amount' => round((float) $workOrder->total_amount, 2),
+                'paid_amount' => round((float) $workOrder->paid_amount, 2),
+                'due_amount' => round((float) $workOrder->total_amount - (float) $workOrder->paid_amount, 2),
+            ]);
+
+        $summarise = fn (Collection $rows) => [
+            'count' => $rows->count(),
+            'total_amount' => round($rows->sum('total_amount'), 2),
+            'paid_amount' => round($rows->sum('paid_amount'), 2),
+        ];
+
+        $statuses = collect(WorkOrder::STATUSES)->merge($workOrders->pluck('status'))->unique()->values();
+        $statusRows = $statuses
+            ->filter(fn (string $name) => ! $status || $name === $status)
+            ->map(fn (string $name) => ['status' => $name, ...$summarise($workOrders->where('status', $name))])
+            ->values();
+
+        $completed = $workOrders->where('status', 'Completed');
+        $dueRows = $completed->filter(fn (array $row) => $row['due_amount'] > 0)->values();
+
+        $sales = Sale::query()
+            ->withLineTotals()
+            ->withPaidAmount()
+            ->when($fromDate, fn ($query) => $query->whereDate('issue_date', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('issue_date', '<=', $toDate))
+            ->orderBy('issue_date')
+            ->get()
+            ->map(fn (Sale $sale) => [
+                'month' => $sale->issue_date?->format('Y-m'),
+                'net_total' => (float) $sale->net_total,
+                'payable' => (float) $sale->payable_amount,
+                'paid' => (float) $sale->paid_amount,
+            ]);
+
+        $totalSales = round($sales->sum('net_total'), 2);
+        $payable = round($sales->sum('payable'), 2);
+        $received = round($sales->sum('paid'), 2);
+
+        return [
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'status' => $status,
+            'statuses' => $statuses->all(),
+            'work_orders' => $summarise($status ? $workOrders->where('status', $status) : $workOrders),
+            'status_overview' => $statusRows->all(),
+            'completed' => $summarise($completed),
+            'outstanding_due' => [
+                'count' => $dueRows->count(),
+                'amount' => round($dueRows->sum('due_amount'), 2),
+            ],
+            'due_rows' => $dueRows->all(),
+            'sales_summary' => [
+                'invoice_count' => $sales->count(),
+                'total_sales' => $totalSales,
+                'total_received' => $received,
+                'outstanding' => round($sales->sum(fn (array $row) => max($row['payable'] - $row['paid'], 0)), 2),
+                'average_invoice' => $sales->isEmpty() ? 0.0 : round($totalSales / $sales->count(), 2),
+                'largest_invoice' => round((float) $sales->max('net_total'), 2),
+                'collection_rate' => $payable > 0 ? round($received / $payable * 100, 2) : 0.0,
+            ],
+            'monthly_sales' => $sales->groupBy('month')->map(fn (Collection $rows, string $month) => [
+                'month' => $month,
+                'sales' => round($rows->sum('net_total'), 2),
+                'received' => round($rows->sum('paid'), 2),
+            ])->values()->all(),
+        ];
+    }
+
+    /**
      * Each work order's sales against what was spent on it: the net total of
      * its sales and purchases, and its income and expense entries, dated in
      * the range when one is given, with the profit or loss they leave.

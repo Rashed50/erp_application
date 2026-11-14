@@ -30,6 +30,7 @@ export default {
         customers: 'Customers',
         workOrder: 'Work Order',
         products: 'Products',
+        salesDashboard: 'Sales Dashboard',
         newSales: 'New Bill',
         searchSales: 'Search Bill',
         purchase: 'Purchase',

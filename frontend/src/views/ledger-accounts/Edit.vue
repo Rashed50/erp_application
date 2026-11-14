@@ -29,16 +29,19 @@
                             </div>
                         </div>
 
-                        <div class="col-md-6" v-if="!isPredefined">
+                        <div class="col-md-6" v-for="(level, index) in levels" :key="index" v-show="!isPredefined">
                             <div class="form-group mb-3">
-                                <label for="parent_id">{{ $t('Sub Account Of:') }}</label>
-                                <select id="parent_id" class="form-control" v-model="form.parent_id">
-                                    <option value="">{{ $t('None (top-level account)') }}</option>
-                                    <option v-for="group in groupAccounts" :key="group.id" :value="group.id">
-                                        {{ group.account_number }} {{ group.name }}
+                                <label :for="`parent_level_${index}`">{{ $t('Sub Account Of:') }}</label>
+                                <select :id="`parent_level_${index}`" class="form-control" v-model="level.selected"
+                                    @change="onLevelChange(index)">
+                                    <option value="">
+                                        {{ index === 0 ? $t('None (top-level account)') : $t('None (stay at this level)') }}
+                                    </option>
+                                    <option v-for="account in level.options" :key="account.id" :value="account.id">
+                                        {{ account.account_number }} {{ account.name }}
                                     </option>
                                 </select>
-                                <div v-if="errors.parent_id" class="error-msg">{{ errors.parent_id }}</div>
+                                <div v-if="index === 0 && errors.parent_id" class="error-msg">{{ errors.parent_id }}</div>
                             </div>
                         </div>
 
@@ -112,7 +115,6 @@
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
-import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
 import { useRouter, useRoute } from 'vue-router';
@@ -137,19 +139,86 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     active_status: true,
 })
 
-// Candidate parents: open group accounts of the same type. The account itself
-// and its own descendants are rejected by the API, so they are only filtered
-// here for the account itself.
-const { items: allGroups, fetchData: loadGroupAccounts } = useFetch('/api/ledger-accounts', {
-    per_page: 500,
-    is_transaction: 0,
-    is_closed: 0,
-})
+// One select per level of the hierarchy, loaded lazily from the parent-child
+// links. The account itself is left out so it cannot be moved under its own
+// descendants.
+const levels = ref([])
 
-const groupAccounts = computed(() => allGroups.value.filter((g) =>
-    g.id !== Number(route.params.id)
-    && g.account_type_id === accountTypeId.value
-))
+// When the type has a single top-level account (e.g. "1000 Assets"), that root
+// is the implicit parent and the picker starts from its children.
+const rootAccountId = ref('')
+
+const fetchChildren = async (params) => {
+    try {
+        const { data } = await axios.get('/api/ledger-accounts/children', { params })
+        return data.data.filter((account) => account.id !== Number(route.params.id))
+    } catch (e) {
+        toast.error(t('Failed to load accounts, try again.'))
+        return []
+    }
+}
+
+// The deepest chosen account is the account's parent.
+const syncParent = () => {
+    const chosen = levels.value.map((level) => level.selected).filter(Boolean)
+    form.parent_id = chosen.length ? chosen[chosen.length - 1] : rootAccountId.value
+}
+
+const onLevelChange = async (index) => {
+    levels.value.splice(index + 1)
+    syncParent()
+
+    const selectedId = levels.value[index].selected
+    if (!selectedId) {
+        return
+    }
+
+    const options = await fetchChildren({ parent_id: selectedId })
+    if (options.length && levels.value[index]?.selected === selectedId) {
+        levels.value.push({ options, selected: '' })
+    }
+}
+
+// Parent ids from the top of the chart down to the account's own parent.
+const loadAncestorIds = async (parentId) => {
+    const ids = []
+    const seen = new Set()
+
+    while (parentId && !seen.has(parentId)) {
+        seen.add(parentId)
+        ids.unshift(parentId)
+        const { data } = await axios.get(`/api/ledger-accounts/${parentId}`)
+        parentId = data.data.parent_id
+    }
+
+    return ids
+}
+
+// Rebuild the selects so the account's current parent chain is preselected.
+const buildLevels = async (typeId, parentId) => {
+    const chain = await loadAncestorIds(parentId)
+    const roots = await fetchChildren({ account_type_id: typeId })
+
+    let parentOfLevel = null
+    if (roots.length === 1 && chain[0] === roots[0].id) {
+        rootAccountId.value = chain.shift()
+        parentOfLevel = rootAccountId.value
+    }
+
+    const built = []
+    for (let i = 0; i <= chain.length; i++) {
+        const options = i === 0 && !parentOfLevel
+            ? roots
+            : await fetchChildren({ parent_id: parentOfLevel })
+
+        if (options.length || i === 0) {
+            built.push({ options, selected: chain[i] ?? '' })
+        }
+        parentOfLevel = chain[i]
+    }
+
+    levels.value = built
+}
 
 // Like the payroll module, moving the account under a new parent suggests
 // the next child number there. The initial load must not overwrite the number.
@@ -200,6 +269,11 @@ const loadAccount = async () => {
                 delete form.is_closed
             }
 
+            if (!account.is_predefined) {
+                await buildLevels(account.account_type_id, account.parent_id)
+                syncParent()
+            }
+
             await nextTick()
             isLoaded.value = true
         }
@@ -209,7 +283,6 @@ const loadAccount = async () => {
 }
 
 onMounted(() => {
-    loadGroupAccounts()
     loadAccount()
 })
 </script>

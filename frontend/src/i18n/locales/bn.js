@@ -30,6 +30,7 @@ export default {
         customers: 'গ্রাহক',
         workOrder: 'ওয়ার্ক অর্ডার',
         products: 'পণ্য',
+        salesDashboard: 'সেলস ড্যাশবোর্ড',
         newSales: 'নতুন বিক্রয়',
         searchSales: 'বিক্রয় খুঁজুন',
         purchase: 'ক্রয়',

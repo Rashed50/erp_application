@@ -42,7 +42,7 @@ class StoreChartOfAccountRequest extends FormRequest
     }
 
     /**
-     * A child account must hang under an open group account of its own type.
+     * A child account must hang under an open account of its own type.
      */
     public function withValidator(Validator $validator): void
     {
@@ -52,10 +52,6 @@ class StoreChartOfAccountRequest extends FormRequest
             }
 
             $parent = ChartOfAccount::find($this->input('parent_id'));
-
-            if ($parent->is_transaction) {
-                $validator->errors()->add('parent_id', __('A transaction account cannot have child accounts.'));
-            }
 
             if ($parent->is_closed) {
                 $validator->errors()->add('parent_id', __('A closed account cannot have child accounts.'));
