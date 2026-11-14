@@ -29,19 +29,21 @@
                             </div>
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-6" v-for="(level, index) in levels" :key="index">
                             <div class="form-group mb-3">
-                                <label for="parent_id">{{ $t('Sub Account Of:') }}</label>
-                                <select id="parent_id" class="form-control" v-model="form.parent_id"
-                                    :disabled="!form.account_type_id">
-                                    <option value="">{{ $t('None (top-level account)') }}</option>
-                                    <option v-for="group in parentOptions" :key="group.id" :value="group.id">
-                                        {{ group.account_number }} {{ group.name }}
+                                <label :for="`parent_level_${index}`">{{ $t('Sub Account Of:') }}</label>
+                                <select :id="`parent_level_${index}`" class="form-control" v-model="level.selected"
+                                    @change="onLevelChange(index)">
+                                    <option value="">
+                                        {{ index === 0 ? $t('None (top-level account)') : $t('None (stay at this level)') }}
+                                    </option>
+                                    <option v-for="account in level.options" :key="account.id" :value="account.id">
+                                        {{ account.account_number }} {{ account.name }}
                                     </option>
                                 </select>
-                                <div v-if="errors.parent_id" class="error-msg">{{ errors.parent_id }}</div>
-                                <small class="text-muted">
-                                    {{ $t(form.account_type_id ? 'Open group accounts of the selected type.' : 'Select an account type first.') }}
+                                <div v-if="index === 0 && errors.parent_id" class="error-msg">{{ errors.parent_id }}</div>
+                                <small class="text-muted" v-if="index === 0">
+                                    {{ $t(form.account_type_id ? 'Open accounts of the selected type.' : 'Select an account type first.') }}
                                 </small>
                             </div>
                         </div>
@@ -134,21 +136,66 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
 
 const { items: accountTypes, fetchData: loadAccountTypes } = useFetch('/api/account-types')
 
-// Only open, active group accounts can be a parent.
-const { items: groupAccounts, fetchData: loadGroupAccounts } = useFetch('/api/ledger-accounts', {
-    per_page: 500,
-    is_transaction: 0,
-    active_status: 1,
-    is_closed: 0,
-})
+// One select per level of the hierarchy, loaded lazily from the parent-child
+// links: the type's top-level accounts first, then the children of each pick.
+const levels = ref([])
 
-// A child must share its parent's type, so only offer parents of the selected type.
-const parentOptions = computed(() => groupAccounts.value.filter((g) => g.account_type_id === form.account_type_id))
+// When a type has a single top-level account (e.g. "1000 Assets"), that root is
+// the implicit parent and the picker starts from its children.
+const rootAccountId = ref('')
 
-watch(() => form.account_type_id, () => {
-    if (!parentOptions.value.some((g) => g.id === form.parent_id)) {
-        form.parent_id = ''
+const fetchChildren = async (params) => {
+    try {
+        const { data } = await axios.get('/api/ledger-accounts/children', { params })
+        return data.data
+    } catch (e) {
+        toast.error(t('Failed to load accounts, try again.'))
+        return []
     }
+}
+
+// The deepest chosen account is the new account's parent.
+const syncParent = () => {
+    const chosen = levels.value.map((level) => level.selected).filter(Boolean)
+    form.parent_id = chosen.length ? chosen[chosen.length - 1] : rootAccountId.value
+}
+
+const onLevelChange = async (index) => {
+    levels.value.splice(index + 1)
+    syncParent()
+
+    const selectedId = levels.value[index].selected
+    if (!selectedId) {
+        return
+    }
+
+    const options = await fetchChildren({ parent_id: selectedId })
+    if (options.length && levels.value[index]?.selected === selectedId) {
+        levels.value.push({ options, selected: '' })
+    }
+}
+
+watch(() => form.account_type_id, async (typeId) => {
+    levels.value = []
+    rootAccountId.value = ''
+    form.parent_id = ''
+
+    if (!typeId) {
+        return
+    }
+
+    const roots = await fetchChildren({ account_type_id: typeId })
+    if (roots.length === 1) {
+        const children = await fetchChildren({ parent_id: roots[0].id })
+        if (children.length) {
+            rootAccountId.value = roots[0].id
+            levels.value = [{ options: children, selected: '' }]
+            syncParent()
+            return
+        }
+    }
+
+    levels.value = [{ options: roots, selected: '' }]
 })
 
 // Like the payroll module, picking a parent suggests the next child number, e.g. 1000.3.
@@ -177,6 +224,5 @@ const handleSubmit = async () => {
 
 onMounted(() => {
     loadAccountTypes()
-    loadGroupAccounts()
 })
 </script>

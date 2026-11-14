@@ -10,7 +10,7 @@
             </div>
         </div>
         <!-- sidebar body -->
-        <v-list dense>
+        <v-list dense open-strategy="single">
             <!-- menu start -->
 
             <v-list-item class="">
@@ -123,7 +123,7 @@
 
                 <!-- Sales -->
                 <v-list-group value="accounts-sales"
-                    v-if="canAny(['customers.view', 'work-orders.view', 'products.view', 'sales.create', 'sales.view'])">
+                    v-if="canAny(['customers.view', 'work-orders.view', 'products.view', 'sales.create', 'sales.view', 'account-reports.view'])">
                     <template v-slot:activator="{ props }">
                         <v-list-item v-bind="props">
                             <div class="custom_dropdown_router_link custom_mb_10 ml-3">
@@ -135,6 +135,13 @@
                         </v-list-item>
                     </template>
                     <div>
+                        <router-link :to="{ name: 'admin_sales_dashboard' }" class="custom_router_sub_link"
+                            v-if="can(['account-reports.view'])">
+                            <span class="ml-5">
+                                <span class="dot_list"><i class="fa-solid fa-circle"></i></span>
+                                {{ $t('nav.salesDashboard') }}
+                            </span>
+                        </router-link>
                         <router-link :to="{ name: 'admin_customers_list' }" class="custom_router_sub_link"
                             v-if="can(['customers.view'])">
                             <span class="ml-5">

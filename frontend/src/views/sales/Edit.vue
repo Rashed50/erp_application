@@ -75,15 +75,42 @@
 
                             <InvoiceLineItems v-model:items="form.items" v-model:overall-discount="form.overall_discount"
                                 v-model:overall-vat="form.overall_vat" :products="products" :errors="errors"
-                                :note="$t('Totals are recalculated by the server on save; the linked customer ledger entry is kept in sync automatically. Reducing the total below the amount already paid is rejected.')">
-                                <template #totals>
+                                :note="$t('Totals are recalculated by the server on save; the linked customer ledger entry is kept in sync automatically. Reducing the payable amount below the amount already paid is rejected.')">
+                                <template #totals="{ netTotal }">
+                                    <tr>
+                                        <td>
+                                            {{ $t('Previous Advance / Bill Adjustment') }}
+                                            <div v-if="errors.previous_advance_amount" class="error-msg">{{ errors.previous_advance_amount }}</div>
+                                        </td>
+                                        <td class="text-end" style="width: 150px;">
+                                            <input type="number" min="0" step="0.01" class="form-control form-control-sm text-end"
+                                                v-model.number="form.previous_advance_amount" />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            {{ $t('Adjustment Purpose') }}
+                                            <div v-if="errors.previous_advance_purpose" class="error-msg">{{ errors.previous_advance_purpose }}</div>
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="text" maxlength="255" list="previous-advance-purposes"
+                                                class="form-control form-control-sm" v-model="form.previous_advance_purpose" />
+                                            <datalist id="previous-advance-purposes">
+                                                <option v-for="purpose in adjustmentPurposes" :key="purpose" :value="purpose" />
+                                            </datalist>
+                                        </td>
+                                    </tr>
+                                    <tr class="fw-bold">
+                                        <td>{{ $t('Payable Amount') }}</td>
+                                        <td class="text-end">{{ payable(netTotal).toFixed(2) }}</td>
+                                    </tr>
                                     <tr>
                                         <td>{{ $t('Paid Amount') }}</td>
                                         <td class="text-end">{{ paidAmount.toFixed(2) }}</td>
                                     </tr>
                                     <tr class="fw-bold">
                                         <td>{{ $t('Due Amount') }}</td>
-                                        <td class="text-end">{{ dueAmount.toFixed(2) }}</td>
+                                        <td class="text-end">{{ (payable(netTotal) - paidAmount).toFixed(2) }}</td>
                                     </tr>
                                 </template>
                             </InvoiceLineItems>
@@ -121,7 +148,6 @@ const route = useRoute();
 const customerName = ref('')
 const customerId = ref('')
 const paidAmount = ref(0)
-const dueAmount = ref(0)
 const attachmentUrl = ref('')
 
 // customer_id is intentionally not part of the submitted form — the backend
@@ -137,13 +163,21 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     remove_attachment: 0,
     overall_discount: 0,
     overall_vat: 0,
+    previous_advance_amount: 0,
+    previous_advance_purpose: '',
     items: [emptyInvoiceItem()],
 })
+
+// Suggestions only; the purpose is free text.
+const adjustmentPurposes = ['Previous Advance', 'Previous Bill', 'Previous Due Adjustment', 'Other']
+const payable = (netTotal) => netTotal - (Number(form.previous_advance_amount) || 0)
 
 // Only active products are offered; a line can still be a free-text custom item.
 const { items: products, fetchData: loadProducts } = useFetch('/api/products', { per_page: 500, active_status: 1 })
 
 const handleSubmit = async () => {
+    if (!form.previous_advance_amount) form.previous_advance_purpose = ''
+
     const resp = await submit(`/api/sales/${route.params.id}`, 'put')
 
     if (resp && resp.success) {
@@ -161,7 +195,6 @@ const loadSale = async () => {
             customerId.value = sale.customer_id
             form.work_order_id = sale.work_order_id ?? ''
             paidAmount.value = Number(sale.paid_amount)
-            dueAmount.value = Number(sale.due_amount)
             form.invoice_number = sale.invoice_number
             form.issue_date = sale.issue_date
             form.due_date = sale.due_date
@@ -172,6 +205,8 @@ const loadSale = async () => {
             if (!form.items.length) form.items = [emptyInvoiceItem()]
             form.overall_discount = sale.overall_discount ?? 0
             form.overall_vat = sale.overall_vat ?? 0
+            form.previous_advance_amount = sale.previous_advance_amount ?? 0
+            form.previous_advance_purpose = sale.previous_advance_purpose ?? ''
         }
     } catch (e) {
         console.error(e)

@@ -55,6 +55,9 @@ export function usePrintable() {
         orientation = 'portrait',
         signatures = [],
         logo = settings.company?.logo_url || '',
+        extraCss = '',
+        logoLeft = false,
+        footerNoteHtml = '',
     }) => {
         const sheet = A4[orientation] ?? A4.portrait
         const pageMargin = 12 // mm
@@ -74,19 +77,25 @@ export function usePrintable() {
             company.email ? `${escapeHtml(t('Email:'))} ${escapeHtml(company.email)}` : '',
         ].filter(Boolean).join(' &nbsp;|&nbsp; ')
         const printDate = new Date().toLocaleString(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' })
+        const printDateHtml = `
+            <div class="side-box print-date" ${logoLeft ? 'style="text-align:right"' : ''}>
+                <strong>${escapeHtml(t('Print Date:'))}</strong><br>${escapeHtml(printDate)}
+            </div>
+        `
+        const logoHtml = `
+            <div class="side-box logo-box" ${logoLeft ? 'style="text-align:left"' : ''}>
+                ${logo ? `<img src="${escapeHtml(logo)}" onerror="this.onerror=null;this.src='${placeholderUrl}'" />` : ''}
+            </div>
+        `
         const headerHtml = `
             <div class="header">
-                <div class="side-box print-date">
-                    <strong>${escapeHtml(t('Print Date:'))}</strong><br>${escapeHtml(printDate)}
-                </div>
+                ${logoLeft ? logoHtml : printDateHtml}
                 <div class="title-box">
                     ${company.company_name ? `<h5>${escapeHtml(company.company_name)}</h5>` : ''}
                     ${company.address ? `<p>${escapeHtml(company.address)}</p>` : ''}
                     ${contactLine ? `<p>${contactLine}</p>` : ''}
                 </div>
-                <div class="side-box logo-box">
-                    ${logo ? `<img src="${escapeHtml(logo)}" onerror="this.onerror=null;this.src='${placeholderUrl}'" />` : ''}
-                </div>
+                ${logoLeft ? printDateHtml : logoHtml}
             </div>
         `
 
@@ -114,7 +123,7 @@ export function usePrintable() {
         const footerHtml = `
             <div class="print-footer">
                 ${signaturesHtml}
-                <p class="system-note">${escapeHtml(t('This report is computer system generated, and authentic without signature'))}</p>
+                ${footerNoteHtml || `<p class="system-note">${escapeHtml(t('This report is computer system generated, and authentic without signature'))}</p>`}
             </div>
         `
 
@@ -333,6 +342,8 @@ export function usePrintable() {
                     border-top: 1px solid #000;
                     margin: 0 auto 5px;
                 }
+
+                ${extraCss}
             </style>
         </head>
 
@@ -442,6 +453,162 @@ export function usePrintable() {
         })
     }
 
+    // Whole-taka amount in words, Bangladeshi grouping (lakh, crore).
+    const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve',
+        'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+    const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+    const belowThousand = (n) => {
+        const words = []
+        if (n >= 100) {
+            words.push(`${ONES[Math.floor(n / 100)]} Hundred`)
+            n %= 100
+        }
+        if (n >= 20) {
+            words.push(TENS[Math.floor(n / 10)] + (n % 10 ? ` ${ONES[n % 10]}` : ''))
+        } else if (n > 0) {
+            words.push(ONES[n])
+        }
+        return words.join(' ')
+    }
+
+    const amountInWords = (value) => {
+        const amount = Math.round((Number(value) || 0) * 100) / 100
+        let taka = Math.floor(amount)
+        const paisa = Math.round((amount - taka) * 100)
+        if (taka === 0 && paisa === 0) return 'Zero Taka Only'
+
+        const parts = []
+        for (const [size, name] of [[10000000, 'Crore'], [100000, 'Lakh'], [1000, 'Thousand']]) {
+            if (taka >= size) {
+                parts.push(`${belowThousand(Math.floor(taka / size))} ${name}`)
+                taka %= size
+            }
+        }
+        if (taka > 0) parts.push(belowThousand(taka))
+
+        const takaWords = parts.length ? `${parts.join(' ')} Taka` : ''
+        const paisaWords = paisa ? `${belowThousand(paisa)} Paisa` : ''
+        return `${[takaWords, paisaWords].filter(Boolean).join(' and ')} Only`
+    }
+
+    const BILL_CSS = `
+        .bill-title { text-align: center; font-size: 18px; letter-spacing: 3px; margin: 4px 0 10px; text-transform: uppercase; }
+        .bill-info p { margin: 4px 0; }
+        .bill-info .to-name { font-weight: bold; }
+        table.bill-items th { text-align: center; }
+        table.bill-items tbody td { border-top: 0; border-bottom: 0; }
+        table.bill-items tbody tr:last-child td { border-bottom: 1px solid #000; }
+        .bill-filler td { height: 22px; }
+        table.bill-totals { width: 52%; margin-left: auto; margin-top: 0; }
+        table.bill-totals th, table.bill-totals td { border: 0; border-bottom: 1px solid #000; background: transparent; padding: 4px 5px; }
+        table.bill-totals th { text-align: left; font-weight: normal; }
+        table.bill-totals td { text-align: right; }
+        table.bill-totals tr.strong th, table.bill-totals tr.strong td { font-weight: bold; }
+        .bill-words { margin-top: 12px; }
+        .footer-box { border: 1px solid #000; padding: 6px 10px; text-align: center; }
+        .footer-box p { margin: 0 0 6px; font-style: italic; }
+        .footer-box .contacts { display: flex; justify-content: space-between; font-style: normal; font-size: 11px; }
+    `
+
+    // The bill layout drawn on the owner's sketch: logo left, company centre,
+    // print date right; BILL title; To / PO / Sub; item table; totals with the
+    // amount in words; signatures; and a computer-generated note with the
+    // company email and contact number.
+    const printBillInvoice = ({ title, partyName, partyAddress, billNo, reference, subject, items, totals, previousAdvance, notes, signatures }) => {
+        const company = settings.company ?? {}
+        const gross = Number(totals.total_amount) || 0
+        const discount = Number(totals.discount_amount) || 0
+        const vat = Number(totals.vat_amount) || 0
+        const taxable = gross - discount
+        const vatPercent = vat > 0 && taxable > 0 ? ` (${Number((vat / taxable * 100).toFixed(2))}%)` : ''
+        // The advance applied to the bill plus anything already paid against it.
+        const advance = (Number(previousAdvance?.amount) || 0) + (Number(totals.paid_amount) || 0)
+        const netPayable = Number(totals.due_amount) || 0
+
+        const infoHtml = `
+            <div class="bill-info">
+                <p><strong>${escapeHtml(t('Bill No:'))}</strong> ${escapeHtml(billNo)}</p>
+                <p style="margin-top:10px"><strong>${escapeHtml(t('To'))}</strong></p>
+                <p class="to-name">${escapeHtml(partyName)}</p>
+                ${partyAddress ? `<p>${escapeHtml(partyAddress)}</p>` : ''}
+                ${reference ? `<p><strong>${escapeHtml(t('PO:'))}</strong> ${escapeHtml(reference)}</p>` : ''}
+                ${subject ? `<p><strong>${escapeHtml(t('Sub:'))}</strong> ${escapeHtml(subject)}</p>` : ''}
+            </div>
+        `
+
+        const fillerRows = Math.max(0, 6 - items.length)
+        const itemsHtml = `
+            <table class="bill-items">
+                <thead>
+                    <tr>
+                        <th style="width:6%">${escapeHtml(t('SL'))}</th>
+                        <th>${escapeHtml(t('Description of Item'))}</th>
+                        <th style="width:9%">${escapeHtml(t('Unit'))}</th>
+                        <th style="width:9%">${escapeHtml(t('Qty'))}</th>
+                        <th style="width:14%">${escapeHtml(t('Unit Rate'))}</th>
+                        <th style="width:16%">${escapeHtml(t('Sub Total'))}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map((item, i) => `
+                        <tr>
+                            <td style="text-align:center">${i + 1}</td>
+                            <td>
+                                ${escapeHtml(item.item_name)}
+                                ${item.description ? `<br><small>${escapeHtml(item.description)}</small>` : ''}
+                            </td>
+                            <td style="text-align:center">${escapeHtml(item.unit)}</td>
+                            <td style="text-align:right">${escapeHtml(item.qty)}</td>
+                            <td style="text-align:right">${formatAmount(item.unit_price)}</td>
+                            <td style="text-align:right">${formatAmount((Number(item.qty) || 0) * (Number(item.unit_price) || 0))}</td>
+                        </tr>
+                    `).join('')}
+                    ${Array.from({ length: fillerRows }, () => '<tr class="bill-filler"><td></td><td></td><td></td><td></td><td></td><td></td></tr>').join('')}
+                </tbody>
+            </table>
+        `
+
+        const totalRows = [
+            ['Total', gross],
+            ...(discount > 0 ? [['Discount', discount]] : []),
+            ['VAT', vat, '', vatPercent],
+            ['Sub Total', totals.net_total, 'strong'],
+            ['Advance Paid', advance],
+            ['Net Payable', netPayable, 'strong'],
+        ]
+        const totalsHtml = `
+            <table class="bill-totals">
+                ${totalRows.map(([label, value, kind = '', suffix = '']) => `
+                    <tr class="${kind}"><th>${escapeHtml(t(label) + suffix)}</th><td>${formatAmount(value)}</td></tr>
+                `).join('')}
+            </table>
+        `
+
+        const wordsHtml = `<p class="bill-words"><strong>${escapeHtml(t('In word:'))}</strong> ${escapeHtml(amountInWords(netPayable))}</p>`
+        const notesHtml = notes
+            ? `<p><strong>${escapeHtml(t('Notes:'))}</strong> ${escapeHtml(notes)}</p>`
+            : ''
+
+        const footerNoteHtml = `
+            <div class="footer-box">
+                <p>${escapeHtml(t('This is a computer generated bill.'))}</p>
+                <div class="contacts">
+                    <span>${escapeHtml(t('Email:'))} ${escapeHtml(company.email)}</span>
+                    <span>${escapeHtml(t('Contact No:'))} ${escapeHtml(company.phone)}</span>
+                </div>
+            </div>
+        `
+
+        printDocument({
+            signatures,
+            logoLeft: true,
+            extraCss: BILL_CSS,
+            footerNoteHtml,
+            contentHtml: `<h3 class="bill-title">${escapeHtml(t(title))}</h3>${infoHtml}${itemsHtml}${totalsHtml}${wordsHtml}${notesHtml}`,
+        })
+    }
+
     /**
      * Print a sale or purchase invoice in the shared company layout.
      *
@@ -452,6 +619,7 @@ export function usePrintable() {
      *   meta?: Array<{ label: string, value: string }>,
      *   items: Array<{ item_name: string, description?: string, qty: number, unit?: string, unit_price: number, discount: number, vat: number, total_amount: number }>,
      *   totals: { total_amount: number, overall_discount?: number, discount_amount: number, overall_vat?: number, vat_amount: number, net_total: number, paid_amount: number, due_amount: number },
+     *   previousAdvance?: { amount: number, purpose?: string },
      *   notes?: string,
      *   signatures?: string[],
      * }} invoice
@@ -463,9 +631,19 @@ export function usePrintable() {
         meta = [],
         items = [],
         totals = {},
+        previousAdvance = null,
         notes = '',
         signatures = ['Received by', 'Authorized Signature'],
+        variant = 'classic',
+        partyAddress = '',
+        billNo = '',
+        reference = '',
+        subject = '',
     }) => {
+        if (variant === 'bill') {
+            return printBillInvoice({ title, partyName, partyAddress, billNo, reference, subject, items, totals, previousAdvance, notes, signatures })
+        }
+
         const infoHtml = `
             <div class="invoice-info">
                 <div>
@@ -515,6 +693,14 @@ export function usePrintable() {
 
         // Discount and VAT are the invoice totals; the overall (invoice-level)
         // part is shown on its own line when there is one.
+        // A previous advance / bill adjusted against the invoice lowers the amount payable.
+        const advanceAmount = Number(previousAdvance?.amount) || 0
+        const advanceRows = advanceAmount > 0
+            ? [
+                ['Previous Advance / Bill Adjustment', advanceAmount],
+                ['Payable Amount', (Number(totals.net_total) || 0) - advanceAmount],
+            ]
+            : []
         const totalRows = [
             ['Total Amount', totals.total_amount],
             ...(Number(totals.overall_discount) ? [['Overall Discount', totals.overall_discount]] : []),
@@ -522,6 +708,7 @@ export function usePrintable() {
             ...(Number(totals.overall_vat) ? [['Overall VAT', totals.overall_vat]] : []),
             ['VAT', totals.vat_amount],
             ['Net Total', totals.net_total],
+            ...advanceRows,
             ['Paid', totals.paid_amount],
             ['Due', totals.due_amount],
         ]
@@ -536,6 +723,10 @@ export function usePrintable() {
             </table>
         `
 
+        const advancePurposeHtml = advanceAmount > 0 && previousAdvance?.purpose
+            ? `<div class="notes"><strong>${escapeHtml(t('Adjustment Purpose'))}:</strong> ${escapeHtml(previousAdvance.purpose)}</div>`
+            : ''
+
         const notesHtml = notes
             ? `<div class="notes"><strong>${escapeHtml(t('Notes:'))}</strong> ${escapeHtml(notes)}</div>`
             : ''
@@ -543,7 +734,7 @@ export function usePrintable() {
         printDocument({
             title: t(title),
             signatures,
-            contentHtml: infoHtml + itemsHtml + totalsHtml + notesHtml,
+            contentHtml: infoHtml + itemsHtml + totalsHtml + advancePurposeHtml + notesHtml,
         })
     }
 

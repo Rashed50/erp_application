@@ -13,7 +13,7 @@
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
                                         <label for="customer_id">{{ $t('Customer:') }}</label>
-                                        <select id="customer_id" class="form-control" v-model="form.customer_id" required>
+                                        <select id="customer_id" class="form-select" v-model="form.customer_id" required>
                                             <option value="" disabled>{{ $t('Select a Customer') }}</option>
                                             <option v-for="customer in customers" :key="customer.id" :value="customer.id">
                                                 {{ customer.name }}
@@ -78,7 +78,37 @@
                             <hr>
 
                             <InvoiceLineItems v-model:items="form.items" v-model:overall-discount="form.overall_discount"
-                                v-model:overall-vat="form.overall_vat" :products="products" :errors="errors" />
+                                v-model:overall-vat="form.overall_vat" :products="products" :errors="errors">
+                                <template #totals="{ netTotal }">
+                                    <tr>
+                                        <td>
+                                            {{ $t('Previous Advance / Bill Adjustment') }}
+                                            <div v-if="errors.previous_advance_amount" class="error-msg">{{ errors.previous_advance_amount }}</div>
+                                        </td>
+                                        <td class="text-end" style="width: 150px;">
+                                            <input type="number" min="0" step="0.01" class="form-control form-control-sm text-end"
+                                                v-model.number="form.previous_advance_amount" />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            {{ $t('Adjustment Purpose') }}
+                                            <div v-if="errors.previous_advance_purpose" class="error-msg">{{ errors.previous_advance_purpose }}</div>
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="text" maxlength="255" list="previous-advance-purposes"
+                                                class="form-control form-control-sm" v-model="form.previous_advance_purpose" />
+                                            <datalist id="previous-advance-purposes">
+                                                <option v-for="purpose in adjustmentPurposes" :key="purpose" :value="purpose" />
+                                            </datalist>
+                                        </td>
+                                    </tr>
+                                    <tr class="fw-bold">
+                                        <td>{{ $t('Payable Amount') }}</td>
+                                        <td class="text-end">{{ payable(netTotal).toFixed(2) }}</td>
+                                    </tr>
+                                </template>
+                            </InvoiceLineItems>
 
                             <div class="row">
                                 <div class="col-md-12">
@@ -105,6 +135,8 @@ import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
 import { setToast } from "@/helpers/toast";
 import { useRouter } from 'vue-router';
+import { computed, onMounted, ref, watch } from 'vue';
+const autoGenerateInvoiceNumber = ref(true);
 
 
 
@@ -123,8 +155,14 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     attachment: null,
     overall_discount: 0,
     overall_vat: 0,
+    previous_advance_amount: 0,
+    previous_advance_purpose: '',
     items: [emptyInvoiceItem()],
 })
+
+// Suggestions only; the purpose is free text.
+const adjustmentPurposes = ['Previous Advance', 'Previous Bill', 'Previous Due Adjustment', 'Other']
+const payable = (netTotal) => netTotal - (Number(form.previous_advance_amount) || 0)
 
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
 
@@ -133,6 +171,7 @@ const { items: products, fetchData: loadProducts } = useFetch('/api/products', {
 
 const handleSubmit = async () => {
     if (!form.due_date) delete form.due_date
+    if (!form.previous_advance_amount) form.previous_advance_purpose = ''
 
     const resp = await submit('/api/sales', 'post')
 
@@ -145,7 +184,26 @@ const handleSubmit = async () => {
 
 
 onMounted(() => {
+    form.invoice_number = generateInvoiceNumber();
     loadCustomers()
     loadProducts()
 })
+
+const generateInvoiceNumber = (customerName, workOrderName) => {
+    const clean = (value) =>
+        String(value || '')
+            .replace(/[^A-Za-z]/g, '')
+            .toUpperCase();
+
+    const customerPart = "SN";// clean(customerName).slice(0, 2).padEnd(2, 'X');
+    const workOrderPart = clean(workOrderName).slice(0, 2).padEnd(2, 'X');
+
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const random = String(Math.floor(Math.random() * 900) + 100); // 100–999
+
+    return `${customerPart}-${yy}${mm}-${random}`;
+};
+
 </script>

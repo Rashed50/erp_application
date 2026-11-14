@@ -229,6 +229,19 @@ class AccountReportController extends Controller
         ));
     }
 
+    public function salesDashboard(Request $request): JsonResponse
+    {
+        $request->validate([
+            ...$this->dateRangeRules(),
+            'status' => ['nullable', Rule::in(WorkOrder::STATUSES)],
+        ]);
+
+        return ApiResponse::success($this->reportService->salesDashboard(
+            $request->string('status')->value() ?: null,
+            ...$this->dateRange($request),
+        ));
+    }
+
     public function workOrderProfitability(Request $request): JsonResponse
     {
         $request->validate([

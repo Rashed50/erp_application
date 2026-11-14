@@ -647,6 +647,16 @@ const routes = [
             /* ====================== Ledger Account Route END ====================== */
 
             {
+                path: 'sales-dashboard',
+                name: 'admin_sales_dashboard',
+                component: () => import('@/views/sales/Dashboard.vue'),
+                meta: {
+                    title: 'Sales Dashboard',
+                    permissions: ['account-reports.view']
+                }
+            },
+
+            {
                 path: 'accounting/reports',
                 name: 'admin_account_reports',
                 component: () => import('@/views/account-reports/Index.vue'),

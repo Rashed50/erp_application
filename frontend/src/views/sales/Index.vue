@@ -200,7 +200,7 @@ const handlePrintInvoice = async (item) => {
         if (!data.success) return
         const sale = data.data
         printInvoice({
-            title: 'Sales Invoice',
+            title: 'Bill',
             partyLabel: 'Customer:',
             partyName: sale.customer_name,
             meta: [
@@ -210,7 +210,14 @@ const handlePrintInvoice = async (item) => {
             ],
             items: sale.items ?? [],
             totals: sale,
+            previousAdvance: { amount: sale.previous_advance_amount, purpose: sale.previous_advance_purpose },
             notes: sale.notes,
+            variant: 'bill',
+            partyAddress: sale.customer_address,
+            billNo: sale.invoice_number,
+            reference: sale.work_order_no,
+            subject: sale.work_order_title,
+            signatures: ['Receiver Signature', 'Authorized Signature'],
         })
     } catch (e) {
         toast.error(e.response?.data?.message || t('Failed to load the invoice.'))

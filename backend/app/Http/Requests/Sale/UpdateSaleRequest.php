@@ -51,7 +51,7 @@ class UpdateSaleRequest extends FormRequest
             'items.*.item_name' => ['required_without:items.*.product_id', 'nullable', 'string', 'max:255'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
-            'items.*.unit' => ['nullable', 'string', 'max:50'],
+            'items.*.unit_id' => ['nullable', 'integer', Rule::exists('inventory_units', 'id')],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'items.*.vat' => ['nullable', 'numeric', 'min:0'],
@@ -59,6 +59,10 @@ class UpdateSaleRequest extends FormRequest
             // Invoice-level amounts on top of the per-line discount and VAT.
             'overall_discount' => ['nullable', 'numeric', 'min:0'],
             'overall_vat' => ['nullable', 'numeric', 'min:0'],
+
+            // A previous advance / bill applied against the invoice; kept apart from the discount.
+            'previous_advance_amount' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'previous_advance_purpose' => ['nullable', 'string', 'max:255'],
         ];
     }
 

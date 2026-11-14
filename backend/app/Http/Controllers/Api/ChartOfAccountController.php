@@ -60,6 +60,31 @@ class ChartOfAccountController extends Controller
         return ApiResponse::success($accounts);
     }
 
+    /**
+     * The direct children of one level of the chart, so a picker can load
+     * the hierarchy one level at a time: the top-level accounts of an
+     * account type, or the open accounts under a parent account.
+     */
+    public function children(Request $request): JsonResponse
+    {
+        $parentId = $request->filled('parent_id') ? $request->integer('parent_id') : null;
+
+        $accounts = ChartOfAccount::query()
+            ->when(
+                $parentId,
+                fn ($query) => $query->where('parent_id', $parentId),
+                fn ($query) => $query->whereNull('parent_id')->where('account_type_id', $request->integer('account_type_id')),
+            )
+            ->active()
+            ->where('is_closed', false)
+            ->withExists('children as has_children')
+            ->orderBy('account_number')
+            ->orderBy('name')
+            ->get(['id', 'account_type_id', 'parent_id', 'account_number', 'name', 'is_transaction']);
+
+        return ApiResponse::success($accounts);
+    }
+
     public function show(ChartOfAccount $ledger_account): JsonResponse
     {
         return ApiResponse::success(new ChartOfAccountResource($this->accountService->find($ledger_account)));

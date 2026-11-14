@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\PurchasePaymentController;
+use App\Http\Controllers\Api\QuotationController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SalePaymentController;
@@ -57,17 +58,9 @@ use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\QuotationController;
-
-
 
 // Device endpoint: add a dedicated ADMS authentication middleware before production.
-//Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
-
-
-
-
-
+// Route::post('/attendance/adms/cdata', [AdmsController::class, 'cdata']);
 
 Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     Route::get('/get-employees-for-attendance-in', [AttendanceController::class, 'getEmployeesForAttendanceIN']);
@@ -90,7 +83,6 @@ Route::middleware('auth:sanctum')->prefix('attendance')->group(function () {
     Route::post('/generate-monthly-records', [AttendanceController::class, 'generateMonthlyRecords'])->middleware('permission:attendance.process');
 });
 
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('quotations', [QuotationController::class, 'index'])->middleware('permission:quotations.view');
     Route::get('quotations/{quotation}', [QuotationController::class, 'show'])->middleware('permission:quotations.view');
@@ -98,8 +90,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('quotations/{quotation}', [QuotationController::class, 'update'])->middleware('permission:quotations.update');
     Route::delete('quotations/{quotation}', [QuotationController::class, 'destroy'])->middleware('permission:quotations.delete');
 });
-
-
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/branding', [CompanySettingController::class, 'branding'])->name('branding');
@@ -188,15 +178,13 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middlewareFor('store', 'permission:work-orders.create')
         ->middlewareFor('update', 'permission:work-orders.update')
         ->middlewareFor('destroy', 'permission:work-orders.delete');
-    
+
     Route::get('/work-orders-list', [WorkOrderController::class, 'getWorkOrderListForDropdownMenu'])->middleware('permission:work-orders.view');
 
     // The sale form needs a customer's work orders even without work-orders.view.
     Route::get('/customers/{customer}/work-orders', [WorkOrderController::class, 'forCustomer'])
         ->name('customers.work-orders.index')
         ->middleware('permission:work-orders.view|sales.create|sales.update');
-    
-    
 
     Route::apiResource('products', ProductController::class)
         ->middlewareFor(['index', 'show'], 'permission:products.view')
@@ -292,6 +280,10 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('account-types.index')
         ->middleware('permission:ledger-accounts.view');
 
+    Route::get('/ledger-accounts/children', [ChartOfAccountController::class, 'children'])
+        ->name('ledger-accounts.children')
+        ->middleware('permission:ledger-accounts.create|ledger-accounts.update');
+
     Route::get('/ledger-accounts/{ledger_account}/next-account-number', [ChartOfAccountController::class, 'nextAccountNumber'])
         ->name('ledger-accounts.next-account-number')
         ->middleware('permission:ledger-accounts.create|ledger-accounts.update');
@@ -317,6 +309,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/expense-details', [AccountReportController::class, 'expenseDetails'])->name('expense-details');
         Route::get('/sales-purchase-summary', [AccountReportController::class, 'salesPurchaseSummary'])->name('sales-purchase-summary');
         Route::get('/sales', [AccountReportController::class, 'salesRegister'])->name('sales');
+        Route::get('/sales-dashboard', [AccountReportController::class, 'salesDashboard'])->name('sales-dashboard');
         Route::get('/work-order-collections', [AccountReportController::class, 'workOrderCollections'])->name('work-order-collections');
         Route::get('/work-order-profitability', [AccountReportController::class, 'workOrderProfitability'])->name('work-order-profitability');
         Route::get('/work-order-details', [AccountReportController::class, 'workOrderDetails'])->name('work-order-details');
@@ -544,7 +537,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/item-names/{item_name}/status', [ItemNameController::class, 'updateStatus'])
             ->name('item-names.status')
             ->middleware('permission:item-names.update');
-
 
         Route::get('lookups/inventory-units', [InventoryUnitController::class, 'getInventoryUnit'])
             ->middleware('permission:quotations.create|quotations.update');
