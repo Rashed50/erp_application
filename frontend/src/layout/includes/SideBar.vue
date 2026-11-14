@@ -10,7 +10,7 @@
             </div>
         </div>
         <!-- sidebar body -->
-        <v-list dense>
+        <v-list dense open-strategy="single">
             <!-- menu start -->
 
             <v-list-item class="">
