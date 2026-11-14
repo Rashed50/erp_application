@@ -78,7 +78,37 @@
                             <hr>
 
                             <InvoiceLineItems v-model:items="form.items" v-model:overall-discount="form.overall_discount"
-                                v-model:overall-vat="form.overall_vat" :products="products" :errors="errors" />
+                                v-model:overall-vat="form.overall_vat" :products="products" :errors="errors">
+                                <template #totals="{ netTotal }">
+                                    <tr>
+                                        <td>
+                                            {{ $t('Previous Advance / Bill Adjustment') }}
+                                            <div v-if="errors.previous_advance_amount" class="error-msg">{{ errors.previous_advance_amount }}</div>
+                                        </td>
+                                        <td class="text-end" style="width: 150px;">
+                                            <input type="number" min="0" step="0.01" class="form-control form-control-sm text-end"
+                                                v-model.number="form.previous_advance_amount" />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            {{ $t('Adjustment Purpose') }}
+                                            <div v-if="errors.previous_advance_purpose" class="error-msg">{{ errors.previous_advance_purpose }}</div>
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="text" maxlength="255" list="previous-advance-purposes"
+                                                class="form-control form-control-sm" v-model="form.previous_advance_purpose" />
+                                            <datalist id="previous-advance-purposes">
+                                                <option v-for="purpose in adjustmentPurposes" :key="purpose" :value="purpose" />
+                                            </datalist>
+                                        </td>
+                                    </tr>
+                                    <tr class="fw-bold">
+                                        <td>{{ $t('Payable Amount') }}</td>
+                                        <td class="text-end">{{ payable(netTotal).toFixed(2) }}</td>
+                                    </tr>
+                                </template>
+                            </InvoiceLineItems>
 
                             <div class="row">
                                 <div class="col-md-12">
@@ -121,8 +151,14 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     attachment: null,
     overall_discount: 0,
     overall_vat: 0,
+    previous_advance_amount: 0,
+    previous_advance_purpose: '',
     items: [emptyInvoiceItem()],
 })
+
+// Suggestions only; the purpose is free text.
+const adjustmentPurposes = ['Previous Advance', 'Previous Bill', 'Previous Due Adjustment', 'Other']
+const payable = (netTotal) => netTotal - (Number(form.previous_advance_amount) || 0)
 
 const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
 
@@ -131,6 +167,7 @@ const { items: products, fetchData: loadProducts } = useFetch('/api/products', {
 
 const handleSubmit = async () => {
     if (!form.due_date) delete form.due_date
+    if (!form.previous_advance_amount) form.previous_advance_purpose = ''
 
     const resp = await submit('/api/sales', 'post')
 

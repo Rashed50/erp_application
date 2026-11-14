@@ -210,6 +210,7 @@ const handlePrintInvoice = async (item) => {
             ],
             items: sale.items ?? [],
             totals: sale,
+            previousAdvance: { amount: sale.previous_advance_amount, purpose: sale.previous_advance_purpose },
             notes: sale.notes,
         })
     } catch (e) {

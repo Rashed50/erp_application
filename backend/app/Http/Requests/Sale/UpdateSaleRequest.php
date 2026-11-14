@@ -59,6 +59,10 @@ class UpdateSaleRequest extends FormRequest
             // Invoice-level amounts on top of the per-line discount and VAT.
             'overall_discount' => ['nullable', 'numeric', 'min:0'],
             'overall_vat' => ['nullable', 'numeric', 'min:0'],
+
+            // A previous advance / bill applied against the invoice; kept apart from the discount.
+            'previous_advance_amount' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'previous_advance_purpose' => ['nullable', 'string', 'max:255'],
         ];
     }
 

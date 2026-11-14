@@ -554,3 +554,64 @@ describe('zero total', function () {
             ->assertJsonStructure(['data' => ['items']]);
     });
 });
+
+describe('previous advance adjustment', function () {
+    // Net total of salePayload() is 50 + 40 - 5 + 3 = 88.
+    it('stores the adjustment apart from the discount and lowers the payable and due amounts', function () {
+        $actor = adminUser();
+        $customer = Customer::factory()->create();
+
+        $response = $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id, [
+            'previous_advance_amount' => 20,
+            'previous_advance_purpose' => 'Previous Advance',
+        ]));
+
+        $response->assertCreated();
+        $sale = Sale::query()->latest('id')->first();
+        expect((float) $sale->discount_amount)->toBe(5.0)
+            ->and((float) $sale->net_total)->toBe(88.0)
+            ->and((float) $sale->previous_advance_amount)->toBe(20.0)
+            ->and($sale->previous_advance_purpose)->toBe('Previous Advance')
+            ->and($sale->payable_amount)->toBe(68.0)
+            ->and($sale->due_amount)->toBe(68.0);
+
+        // The customer ledger still carries the full invoice.
+        expect((float) $sale->ledgerTransaction->debit)->toBe(88.0);
+    });
+
+    it('rejects an adjustment above the net total or a negative one', function () {
+        $actor = adminUser();
+        $customer = Customer::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id, ['previous_advance_amount' => 88.01]))
+            ->assertStatus(422)->assertJsonStructure(['data' => ['previous_advance_amount']]);
+        $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id, ['previous_advance_amount' => -1]))
+            ->assertStatus(422)->assertJsonStructure(['data' => ['previous_advance_amount']]);
+    });
+
+    it('defaults to no adjustment', function () {
+        $actor = adminUser();
+        $customer = Customer::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id))->assertCreated();
+
+        $sale = Sale::query()->latest('id')->first();
+        expect((float) $sale->previous_advance_amount)->toBe(0.0)
+            ->and($sale->payable_amount)->toBe(88.0);
+    });
+
+    it('updates and removes the adjustment', function () {
+        $actor = adminUser();
+        $customer = Customer::factory()->create();
+        $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id, ['previous_advance_amount' => 20, 'previous_advance_purpose' => 'Other']))->assertCreated();
+        $sale = Sale::query()->latest('id')->first();
+
+        $this->actingAs($actor, 'sanctum')->putJson("/api/sales/{$sale->id}", ['previous_advance_amount' => 30])->assertOk();
+        expect((float) $sale->fresh()->previous_advance_amount)->toBe(30.0)
+            ->and($sale->fresh()->previous_advance_purpose)->toBe('Other');
+
+        $this->actingAs($actor, 'sanctum')->putJson("/api/sales/{$sale->id}", ['previous_advance_amount' => 0])->assertOk();
+        expect((float) $sale->fresh()->previous_advance_amount)->toBe(0.0)
+            ->and($sale->fresh()->previous_advance_purpose)->toBeNull();
+    });
+});

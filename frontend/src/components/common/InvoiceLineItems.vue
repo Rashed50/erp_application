@@ -95,7 +95,7 @@
                         <td>{{ $t('Net Total') }}</td>
                         <td class="text-end">{{ totals.netTotal.toFixed(2) }}</td>
                     </tr>
-                    <slot name="totals" />
+                    <slot name="totals" :net-total="totals.netTotal" />
                 </tbody>
             </table>
             <small class="text-muted">{{ note || $t('Totals are recalculated by the server on save.') }}</small>
