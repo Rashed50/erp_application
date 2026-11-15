@@ -1064,6 +1064,8 @@ export default {
         'Break-Even: No profit, no loss.': 'লাভ-ক্ষতি সমান: কোনো লাভ বা ক্ষতি নেই।',
         'Total Assets': 'মোট সম্পদ',
         'Total Liabilities': 'মোট দায়',
+        "Owner's Equity": 'মালিকের ইকুইটি',
+        'Current Period Profit/Loss': 'চলতি সময়ের লাভ/ক্ষতি',
         "Total Owner's Equity": 'মোট মালিকের ইকুইটি',
         "Liabilities + Owner's Equity": 'দায় + মালিকের ইকুইটি',
         'The balance sheet is balanced.': 'ব্যালেন্স শিট মিলেছে।',

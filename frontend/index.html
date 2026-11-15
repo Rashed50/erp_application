@@ -45,6 +45,18 @@
             border: 1px solid #ddd;
         }
 
+        /* Highlight the row under the mouse, and keep it highlighted while its
+           action menu is open, so it is clear which record is being edited
+           or deleted. */
+        .custom-bordered tbody tr > td {
+            transition: background-color 0.15s ease;
+        }
+
+        .custom-bordered tbody tr:hover > td,
+        .custom-bordered tbody tr:has(.table-action-button[aria-expanded="true"]) > td {
+            background-color: #eef3fd;
+        }
+
         .search-wrapper {
             display: flex;
             gap: 15px;

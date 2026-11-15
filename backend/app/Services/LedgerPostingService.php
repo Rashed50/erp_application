@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AccountTransaction;
+use App\Models\AccountTransactionDetail;
 use App\Models\ChartOfAccount;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -68,7 +69,7 @@ class LedgerPostingService
      * Record a journal entry. Zero-amount lines are skipped, and the entry is
      * refused unless its debits equal its credits.
      *
-     * @param  array{tr_no?: ?string, date: string, general_particular?: ?string}  $header
+     * @param  array{tr_no?: ?string, date: string, general_particular?: ?string, reversal_of_id?: ?int}  $header
      * @param  array<int, array{account_id: int, debit?: float, credit?: float, particular?: ?string}>  $lines
      */
     public function post(?Model $source, array $header, array $lines): AccountTransaction
@@ -116,7 +117,37 @@ class LedgerPostingService
      */
     public function entryFor(Model $source): ?AccountTransaction
     {
-        return AccountTransaction::query()->whereMorphedTo('source', $source)->latest('id')->first();
+        return AccountTransaction::query()->whereMorphedTo('source', $source)->whereNull('reversal_of_id')->latest('id')->first();
+    }
+
+    /**
+     * Cancel every entry a record posted with a mirror-image reversal entry
+     * (debits become credits), keeping the originals as accounting history.
+     * Entries already reversed are skipped, so calling this twice never
+     * double-reverses.
+     */
+    public function postReversal(Model $source, string $generalParticular, ?string $date = null): void
+    {
+        DB::transaction(function () use ($source, $generalParticular, $date) {
+            AccountTransaction::query()
+                ->whereMorphedTo('source', $source)
+                ->whereNull('reversal_of_id')
+                ->whereDoesntHave('reversal')
+                ->with('details')
+                ->lockForUpdate()
+                ->get()
+                ->each(fn (AccountTransaction $entry) => $this->post($source, [
+                    'tr_no' => $entry->tr_no,
+                    'date' => $date ?? today()->toDateString(),
+                    'general_particular' => $generalParticular,
+                    'reversal_of_id' => $entry->id,
+                ], $entry->details->map(fn (AccountTransactionDetail $line) => [
+                    'account_id' => $line->chart_of_account_id,
+                    'debit' => (float) $line->credit,
+                    'credit' => (float) $line->debit,
+                    'particular' => "Reversal: {$line->particular}",
+                ])->all()));
+        });
     }
 
     /**

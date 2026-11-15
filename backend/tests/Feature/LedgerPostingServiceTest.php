@@ -56,6 +56,25 @@ it('removes every entry a record posted', function () {
         ->and($this->bank->balance)->toBe(0.0);
 });
 
+it('cancels a record\'s entries with mirror-image reversal entries, only once', function () {
+    $supplier = Supplier::factory()->create();
+    $lines = [['account_id' => $this->bank->id, 'debit' => 10], ['account_id' => $this->cash->id, 'credit' => 10]];
+    $original = $this->ledger->post($supplier, ['tr_no' => 'TR-9', 'date' => '2026-03-01'], $lines);
+
+    $this->ledger->postReversal($supplier, 'Reversal', '2026-03-05');
+    $this->ledger->postReversal($supplier, 'Reversal', '2026-03-05');
+
+    $reversal = AccountTransaction::query()->where('reversal_of_id', $original->id)->with('details')->sole();
+
+    expect(AccountTransaction::count())->toBe(2)
+        ->and($reversal->tr_no)->toBe('TR-9')
+        ->and($reversal->date->toDateString())->toBe('2026-03-05')
+        ->and((float) $reversal->details->firstWhere('chart_of_account_id', $this->bank->id)->credit)->toBe(10.0)
+        ->and($this->bank->balance)->toBe(0.0)
+        ->and($this->cash->balance)->toBe(0.0)
+        ->and($this->ledger->entryFor($supplier)->id)->toBe($original->id);
+});
+
 it('posts a supplier opening balance against the Assets group account', function () {
     $supplier = app(SupplierService::class)->create(['name' => 'Opening Supplier', 'opening_balance' => 700]);
 

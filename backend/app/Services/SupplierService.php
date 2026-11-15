@@ -66,9 +66,17 @@ class SupplierService
         return $supplier;
     }
 
+    /**
+     * The opening balance entry is cancelled by a reversal entry rather
+     * than erased, so Accounts Payable no longer counts a deleted supplier
+     * while the books keep the history.
+     */
     public function delete(Supplier $supplier): void
     {
-        $supplier->delete();
+        DB::transaction(function () use ($supplier) {
+            $this->ledgerPostingService->postReversal($supplier, 'reverse deleted supplier account');
+            $supplier->delete();
+        });
     }
 
     /**

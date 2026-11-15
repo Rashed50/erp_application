@@ -175,6 +175,37 @@ describe('balance sheet', function () {
         expect(ChartOfAccount::query()->where('account_number', '1030')->first()->balance)->toBe(500.0)
             ->and(Customer::query()->where('name', 'Opening Customer')->first()->current_balance)->toEqual(500.0);
     });
+
+    it('counts the unclosed profit or loss in equity', function () {
+        $ledger = app(LedgerPostingService::class);
+        $ledger->post(null, ['date' => '2026-03-01'], [
+            ['account_id' => $this->bank->id, 'debit' => 100],
+            ['account_id' => $this->revenue->id, 'credit' => 100],
+        ]);
+        $ledger->post(null, ['date' => '2026-03-02'], [
+            ['account_id' => $this->rent->id, 'debit' => 30],
+            ['account_id' => $this->bank->id, 'credit' => 30],
+        ]);
+        $ledger->post(null, ['date' => '2026-04-01'], [
+            ['account_id' => $this->bank->id, 'debit' => 50],
+            ['account_id' => $this->revenue->id, 'credit' => 50],
+        ]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/balance-sheet')
+            ->assertOk()
+            ->assertJsonPath('data.total_assets', 120)
+            ->assertJsonPath('data.owner_equity', 0)
+            ->assertJsonPath('data.current_period_profit', 120)
+            ->assertJsonPath('data.total_equity', 120)
+            ->assertJsonPath('data.is_balanced', true);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/balance-sheet?to_date=2026-03-31')
+            ->assertJsonPath('data.total_assets', 70)
+            ->assertJsonPath('data.current_period_profit', 70)
+            ->assertJsonPath('data.is_balanced', true);
+    });
 });
 
 describe('dashboard', function () {

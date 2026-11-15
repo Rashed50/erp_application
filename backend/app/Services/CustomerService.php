@@ -65,9 +65,17 @@ class CustomerService
         return $customer;
     }
 
+    /**
+     * The opening balance entry is cancelled by a reversal entry rather
+     * than erased, so Accounts Receivable no longer counts a deleted
+     * customer while the books keep the history.
+     */
     public function delete(Customer $customer): void
     {
-        $customer->delete();
+        DB::transaction(function () use ($customer) {
+            $this->ledgerPostingService->postReversal($customer, 'reverse deleted Customer Sales account');
+            $customer->delete();
+        });
     }
 
     /**

@@ -426,17 +426,27 @@ class AccountReportService
      * Assets (debit minus credit) against liabilities and owner's equity
      * (credit minus debit), as the payroll module's balance sheet sums them.
      *
-     * @return array{total_assets: float, total_liabilities: float, total_equity: float, is_balanced: bool}
+     * Revenue and expenses are never closed into equity by a journal entry,
+     * so the profit or loss they add up to (revenue less expenses, up to
+     * `to_date`) is shown as the current period's profit and counted in
+     * total equity; without it the sheet is out by exactly that amount.
+     *
+     * @return array{total_assets: float, total_liabilities: float, owner_equity: float, current_period_profit: float, total_equity: float, is_balanced: bool}
      */
     public function balanceSheet(?string $toDate = null): array
     {
         $assets = $this->netOfType(AccountType::ASSET, null, $toDate);
-        $liabilities = -$this->netOfType(AccountType::LIABILITY, null, $toDate);
-        $equity = -$this->netOfType(AccountType::OWNER_EQUITY, null, $toDate);
+        // Adding 0.0 turns the -0.0 that negating a zero balance gives into 0.0.
+        $liabilities = -$this->netOfType(AccountType::LIABILITY, null, $toDate) + 0.0;
+        $ownerEquity = -$this->netOfType(AccountType::OWNER_EQUITY, null, $toDate) + 0.0;
+        $currentPeriodProfit = round(-$this->netOfType(AccountType::REVENUE, null, $toDate) - $this->netOfType(AccountType::EXPENSE, null, $toDate), 2) + 0.0;
+        $equity = round($ownerEquity + $currentPeriodProfit, 2);
 
         return [
             'total_assets' => $assets,
             'total_liabilities' => $liabilities,
+            'owner_equity' => $ownerEquity,
+            'current_period_profit' => $currentPeriodProfit,
             'total_equity' => $equity,
             'is_balanced' => round($assets, 2) === round($liabilities + $equity, 2),
         ];

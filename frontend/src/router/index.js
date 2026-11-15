@@ -813,7 +813,7 @@ router.afterEach(() => {
         toast[type](message, {
           autoClose: 3000,
           hideProgressBar: true,
-          position: toast.POSITION.TOP_RIGHT,
+          position: toast.POSITION.BOTTOM_RIGHT,
         });
       } else {
         toast.success(message); // fallback
