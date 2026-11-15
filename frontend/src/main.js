@@ -18,7 +18,13 @@ import router from './router/index'
 import i18n from './i18n'
 import { registerImageFallback } from './helpers/imagePlaceholder'
 import axios from 'axios'
+import { updateGlobalOptions } from 'vue3-toastify'
 import { touchSession, useAuthStore } from './stores/auth'
+
+// Toasts sit bottom-right: top-right they covered the breadcrumb's "Add ..."
+// button after a save redirected back to the list, so it could not be
+// clicked until the toast closed.
+updateGlobalOptions({ position: 'bottom-right' })
 
 const vuetify = createVuetify({
   components,

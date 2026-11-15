@@ -32,7 +32,7 @@ class UpdateCustomerRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('customers', 'email')->ignore($this->route('customer'))],
+            'email' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('customers', 'email')->withoutTrashed()->ignore($this->route('customer'))],
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'address' => ['sometimes', 'nullable', 'string'],
             'vat_no' => ['sometimes', 'nullable', 'string', 'max:100'],
