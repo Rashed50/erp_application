@@ -1,0 +1,6 @@
+
+
+After the original repository merges your pull request from github account , update your local main branch
+
+git fetch upstream
+git pull upstream main // pull from main branch

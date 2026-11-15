@@ -129,3 +129,15 @@
 </body>
 <!-- Mirrored from demo.hasthemes.com/brenda-preview/brenda/index.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 15 Mar 2020 20:52:41 GMT -->
 </html>
+
+
+EMG_Amplitude, 
+EMG_Activity,
+EMG_Onsets,
+EMG_Offsets, 
+digital_input_1,
+digital_input_2,
+digital_input_3,
+digital_input_4
+
+
