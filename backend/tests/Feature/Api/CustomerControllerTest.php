@@ -1,6 +1,10 @@
 <?php
 
+use App\Models\AccountTransaction;
+use App\Models\ChartOfAccount;
 use App\Models\Customer;
+use App\Services\LedgerPostingService;
+use Database\Seeders\ChartOfAccountSeeder;
 
 describe('index', function () {
     it('returns 401 when no token is provided', function () {
@@ -93,6 +97,18 @@ describe('store', function () {
             ->assertJsonStructure(['data' => ['email']]);
     });
 
+    it('allows reusing the email of a deleted customer', function () {
+        $actor = adminUser();
+        $deleted = Customer::factory()->create(['email' => 'reused@example.com']);
+        $deleted->delete();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/customers', ['name' => 'New Customer', 'email' => 'reused@example.com'])
+            ->assertStatus(201);
+
+        expect(Customer::withTrashed()->where('email', 'reused@example.com')->count())->toBe(2);
+    });
+
     it('creates a customer with the opening balance mirrored as the current balance', function () {
         $actor = adminUser();
 
@@ -122,6 +138,18 @@ describe('update', function () {
             ->putJson("/api/customers/{$target->id}", ['email' => $other->email])
             ->assertStatus(422)
             ->assertJsonStructure(['data' => ['email']]);
+    });
+
+    it('allows taking the email of a deleted customer on update', function () {
+        $actor = adminUser();
+        $deleted = Customer::factory()->create(['email' => 'reused@example.com']);
+        $deleted->delete();
+        $target = Customer::factory()->create();
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/customers/{$target->id}", ['email' => 'reused@example.com'])
+            ->assertOk()
+            ->assertJsonPath('data.email', 'reused@example.com');
     });
 
     it('updates the customer and persists the change', function () {
@@ -159,6 +187,29 @@ describe('destroy', function () {
             ->assertJson(['success' => true, 'message' => 'Customer deleted successfully.']);
 
         $this->assertSoftDeleted('customers', ['id' => $target->id]);
+    });
+
+    it('reverses the opening balance entry so a deleted customer no longer affects Accounts Receivable', function () {
+        $this->seed(ChartOfAccountSeeder::class);
+        $actor = adminUser();
+        $receivable = ChartOfAccount::where('account_number', LedgerPostingService::ACCOUNTS_RECEIVABLE_NUMBER)->first();
+
+        $id = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/customers', ['name' => 'Opening Customer', 'opening_balance' => 1200])
+            ->assertStatus(201)
+            ->json('data.id');
+
+        expect($receivable->balance)->toBe(1200.0);
+
+        $this->actingAs($actor, 'sanctum')
+            ->deleteJson("/api/customers/{$id}")
+            ->assertOk();
+
+        $entries = AccountTransaction::query()->whereMorphedTo('source', Customer::withTrashed()->find($id))->get();
+
+        expect($receivable->balance)->toBe(0.0)
+            ->and($entries)->toHaveCount(2)
+            ->and($entries->last()->reversal_of_id)->toBe($entries->first()->id);
     });
 
     it('rejects deleting a customer that has ledger transactions', function () {

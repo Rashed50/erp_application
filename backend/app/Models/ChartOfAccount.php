@@ -187,14 +187,15 @@ class ChartOfAccount extends Model
 
     /**
      * An account can only be removed once it is not predefined, has no child
-     * accounts, no journal lines, and no entry references it from either
+     * accounts, no journal lines other than its own opening balance entry
+     * (which deleting reverses), and no entry references it from either
      * side, otherwise deleting it would silently erase accounting records.
      */
     public function canBeDeleted(): bool
     {
         return ! $this->is_predefined
             && ! $this->children()->exists()
-            && ! $this->journalLines()->exists()
+            && ! $this->journalLines()->whereDoesntHave('transaction', fn (Builder $query) => $query->whereMorphedTo('source', $this))->exists()
             && ! $this->categoryEntries()->exists()
             && ! $this->paymentEntries()->exists();
     }

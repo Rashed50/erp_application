@@ -46,9 +46,9 @@ class ChartOfAccountService
     }
 
     /**
-     * Create an account. As in the payroll module, a positive opening
-     * balance on an asset account is posted as a journal entry: debit the new
-     * account, credit the Owner's Equity group account.
+     * Create an account. A positive opening balance is posted as a balanced
+     * journal entry against the Owner's Equity group account (see
+     * postOpeningBalance()).
      *
      * @param  array{name: string, account_number?: ?string, account_type_id?: ?int, parent_id?: ?int, opening_date?: ?string, opening_balance?: ?float, is_transaction?: ?bool, active_status?: ?bool}  $data
      */
@@ -75,13 +75,21 @@ class ChartOfAccountService
     }
 
     /**
+     * The opening balance itself cannot be edited, so editing never posts a
+     * second opening entry; a changed opening date moves the existing entry.
+     *
      * @param  array<string, mixed>  $data
      */
     public function update(ChartOfAccount $account, array $data): ChartOfAccount
     {
         return DB::transaction(function () use ($account, $data) {
             $account->fill([...$data, 'updated_by' => Auth::id()]);
+            $openingDateChanged = $account->isDirty('opening_date');
             $account->save();
+
+            if ($openingDateChanged && $entry = $this->ledgerPostingService->entryFor($account)) {
+                $entry->update(['date' => $account->opening_date->toDateString()]);
+            }
 
             return $this->find($account);
         });
@@ -103,30 +111,53 @@ class ChartOfAccountService
         return $accountNumber;
     }
 
+    /**
+     * An account whose only journal lines are its own opening balance can
+     * be deleted; that entry is cancelled by a reversal entry so equity and
+     * the trial balance stay correct.
+     */
     public function delete(ChartOfAccount $account): void
     {
-        $account->delete();
+        DB::transaction(function () use ($account) {
+            $this->ledgerPostingService->postReversal($account, 'reverse deleted Ledger account');
+            $account->delete();
+        });
     }
 
     /**
+     * Post the opening balance on the account's normal side against the
+     * Owner's Equity group account, which serves as opening balance equity:
+     *
+     * - assets and expenses (normal debit): debit the account, credit equity
+     * - liabilities, equity and revenue (normal credit): debit equity, credit the account
+     *
      * Skipped when the Owner's Equity group account has not been seeded, as
-     * the payroll module skips it when the account is missing.
+     * the payroll module skips it when the account is missing, or when the
+     * new account is that group account itself.
      */
     private function postOpeningBalance(ChartOfAccount $account): void
     {
         $amount = (float) $account->opening_balance;
         $equity = $this->ledgerPostingService->rootAccount(AccountType::OWNER_EQUITY);
 
-        if ($amount <= 0 || $account->account_type_id !== AccountType::ASSET || ! $equity) {
+        if ($amount <= 0 || ! $equity || $equity->is($account)) {
             return;
+        }
+
+        $accountLine = ['account_id' => $account->id];
+        $equityLine = ['account_id' => $equity->id];
+
+        if (AccountType::find($account->account_type_id)->increasesOnDebit()) {
+            $accountLine += ['debit' => $amount, 'particular' => "{$amount} amt dr from {$account->name}"];
+            $equityLine += ['credit' => $amount, 'particular' => "{$amount} amt cr from {$equity->name}"];
+        } else {
+            $accountLine += ['credit' => $amount, 'particular' => "{$amount} amt cr from {$account->name}"];
+            $equityLine += ['debit' => $amount, 'particular' => "{$amount} amt dr from {$equity->name}"];
         }
 
         $this->ledgerPostingService->post($account, [
             'date' => $account->opening_date->toDateString(),
             'general_particular' => 'Initial Ledger account setup',
-        ], [
-            ['account_id' => $account->id, 'debit' => $amount, 'particular' => "{$amount} amt dr from {$account->name}"],
-            ['account_id' => $equity->id, 'credit' => $amount, 'particular' => "{$amount} amt cr from {$equity->name}"],
-        ]);
+        ], [$accountLine, $equityLine]);
     }
 }

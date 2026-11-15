@@ -1,7 +1,12 @@
 <?php
 
+use App\Models\AccountTransaction;
+use App\Models\ChartOfAccount;
 use App\Models\Purchase;
 use App\Models\Supplier;
+use App\Services\AccountReportService;
+use App\Services\LedgerPostingService;
+use Database\Seeders\ChartOfAccountSeeder;
 
 describe('index', function () {
     it('returns 401 when no token is provided', function () {
@@ -92,6 +97,18 @@ describe('store', function () {
             ->assertJsonStructure(['data' => ['email']]);
     });
 
+    it('allows reusing the email of a deleted supplier', function () {
+        $actor = adminUser();
+        $deleted = Supplier::factory()->create(['email' => 'reused@example.com']);
+        $deleted->delete();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/suppliers', ['name' => 'New Supplier', 'email' => 'reused@example.com'])
+            ->assertStatus(201);
+
+        expect(Supplier::withTrashed()->where('email', 'reused@example.com')->count())->toBe(2);
+    });
+
     it('creates a supplier with the opening balance mirrored as the current balance', function () {
         $actor = adminUser();
 
@@ -158,6 +175,39 @@ describe('destroy', function () {
             ->assertJson(['success' => true, 'message' => 'Supplier deleted successfully.']);
 
         $this->assertSoftDeleted('suppliers', ['id' => $target->id]);
+    });
+
+    it('reverses the opening balance entry so a deleted supplier no longer affects Accounts Payable', function () {
+        $this->seed(ChartOfAccountSeeder::class);
+        $actor = adminUser();
+        $payable = ChartOfAccount::where('account_number', LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->first();
+
+        $id = $this->actingAs($actor, 'sanctum')
+            ->postJson('/api/suppliers', ['name' => 'Opening Supplier', 'opening_balance' => 3000])
+            ->assertStatus(201)
+            ->json('data.id');
+
+        expect($payable->balance)->toBe(3000.0);
+
+        $this->actingAs($actor, 'sanctum')
+            ->deleteJson("/api/suppliers/{$id}")
+            ->assertOk();
+
+        $supplier = Supplier::withTrashed()->find($id);
+        $entries = AccountTransaction::query()->whereMorphedTo('source', $supplier)->with('details')->get();
+
+        expect($payable->balance)->toBe(0.0)
+            ->and(ChartOfAccount::where('account_number', '1000')->first()->balance)->toBe(0.0)
+            ->and($entries)->toHaveCount(2)
+            ->and($entries->last()->reversal_of_id)->toBe($entries->first()->id)
+            ->and((float) $entries->last()->details->firstWhere('chart_of_account_id', $payable->id)->debit)->toBe(3000.0)
+            ->and(app(AccountReportService::class)->balanceSheet()['is_balanced'])->toBeTrue();
+
+        // A repeated reversal must not post a second, duplicate reversal.
+        app(LedgerPostingService::class)->postReversal($supplier, 'reverse deleted supplier account');
+
+        expect(AccountTransaction::query()->whereMorphedTo('source', $supplier)->count())->toBe(2)
+            ->and($payable->balance)->toBe(0.0);
     });
 
     it('rejects deleting a supplier that has ledger transactions', function () {

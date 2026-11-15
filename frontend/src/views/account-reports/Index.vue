@@ -317,6 +317,8 @@ const reports = {
         rows: (data) => [
             { label: 'Total Assets', amount: data.total_assets },
             { label: 'Total Liabilities', amount: data.total_liabilities },
+            { label: "Owner's Equity", amount: data.owner_equity },
+            { label: 'Current Period Profit/Loss', amount: data.current_period_profit },
             { label: "Total Owner's Equity", amount: data.total_equity },
         ],
         totals: (data) => labelRow('label', "Liabilities + Owner's Equity", { amount: data.total_liabilities + data.total_equity }),

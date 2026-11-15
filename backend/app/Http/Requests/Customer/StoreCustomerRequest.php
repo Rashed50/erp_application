@@ -28,7 +28,7 @@ class StoreCustomerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255', Rule::unique('customers', 'email')],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('customers', 'email')->withoutTrashed()],
             'phone' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string'],
             'vat_no' => ['nullable', 'string', 'max:100'],

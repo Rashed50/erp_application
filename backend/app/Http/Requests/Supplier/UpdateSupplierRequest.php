@@ -32,7 +32,7 @@ class UpdateSupplierRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('suppliers', 'email')->ignore($this->route('supplier'))],
+            'email' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('suppliers', 'email')->withoutTrashed()->ignore($this->route('supplier'))],
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'address' => ['sometimes', 'nullable', 'string'],
             'vat_no' => ['sometimes', 'nullable', 'string', 'max:100'],
