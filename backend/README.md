@@ -54,4 +54,29 @@ to run single seeder
 php artisan db:seed --class=CustomerWorkOrderSeeder
 ```
 
+
+
+
+### Import database 
+Here my_database is the new db and right side is the path where your backup database exist 
+
+```
+mysql -u root -p my_database < "D:\backup\payroll.sql"
+```
+
+### Import database 
+If you use Laragoan to run your database then use below command . In laragoan terminal go to your laragon folder like "C:\laragon" then use below command
+
+```
+mysql -u root -p my_database < "D:\backup\payroll.sql"
+```
+
+
+### Export store procedures only 
+Here payroll_db is your database where store procedures exist and "D:\backup\procedures.sql" is the path where exported store procedure will be saved.
+```
+mysqldump -u root -p --routines --no-data --skip-triggers payroll_db > "D:\backup\procedures.sql"
+```
+
+
  
