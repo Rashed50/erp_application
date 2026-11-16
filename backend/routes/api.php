@@ -300,6 +300,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [AccountReportController::class, 'dashboard'])->name('dashboard');
         Route::get('/general-ledger', [AccountReportController::class, 'generalLedger'])->name('general-ledger');
         Route::get('/trial-balance', [AccountReportController::class, 'trialBalance'])->name('trial-balance');
+        Route::get('/ledger-balances', [AccountReportController::class, 'ledgerBalances'])->name('ledger-balances');
         Route::get('/profit-loss', [AccountReportController::class, 'profitAndLoss'])->name('profit-loss');
         Route::get('/balance-sheet', [AccountReportController::class, 'balanceSheet'])->name('balance-sheet');
         Route::get('/cash-transactions', [AccountReportController::class, 'cashTransactions'])->name('cash-transactions');

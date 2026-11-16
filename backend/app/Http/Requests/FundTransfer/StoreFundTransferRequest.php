@@ -45,8 +45,9 @@ class StoreFundTransferRequest extends FormRequest
     }
 
     /**
-     * Money can only move between open asset (cash/bank) transaction
-     * accounts, and any bank charge or VAT needs the bank charge (Purchase) account.
+     * A transfer can move a balance between any two open transaction
+     * accounts (asset to asset, expense to expense, expense to liability,
+     * ...), and any bank charge or VAT needs the bank charge (Purchase) account.
      */
     public function withValidator(Validator $validator): void
     {
@@ -57,13 +58,13 @@ class StoreFundTransferRequest extends FormRequest
 
             $charges = (float) $this->input('bank_charge', 0) + (float) $this->input('vat', 0);
 
-            $this->validatePaymentAccounts(
+            $this->validateEntryAccount(
                 $validator,
                 'credit_account_id',
                 (int) $this->input('credit_account_id'),
                 $charges > 0 ? [LedgerPostingService::BANK_CHARGES_NUMBER] : [],
             );
-            $this->validatePaymentAccounts($validator, 'debit_account_id', (int) $this->input('debit_account_id'), []);
+            $this->validateEntryAccount($validator, 'debit_account_id', (int) $this->input('debit_account_id'));
         });
     }
 }

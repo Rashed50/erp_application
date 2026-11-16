@@ -18,7 +18,7 @@
                             <div class="col-md-2">
                                 <select class="form-select" v-model="filters.account_id">
                                     <option value="">{{ $t('All Accounts') }}</option>
-                                    <option v-for="account in assetAccounts" :key="account.id" :value="account.id">
+                                    <option v-for="account in transactionAccounts" :key="account.id" :value="account.id">
                                         {{ account.account_number }} {{ account.name }}
                                     </option>
                                 </select>
@@ -149,12 +149,9 @@ const {
     to_date: '',
 })
 
-// Account type id of Asset, as seeded by the backend (account_types table).
-const ASSET = 1
-
-const { items: assetAccounts, fetchData: loadAssetAccounts } = useFetch('/api/ledger-accounts', {
+// Transfers can be between accounts of any type, so any transaction account can be filtered on.
+const { items: transactionAccounts, fetchData: loadTransactionAccounts } = useFetch('/api/ledger-accounts', {
     per_page: 500,
-    account_type_id: ASSET,
     is_transaction: 1,
 })
 
@@ -186,7 +183,7 @@ const handleDelete = async (item) => {
 }
 
 onMounted(() => {
-    loadAssetAccounts()
+    loadTransactionAccounts()
     fetchData()
 })
 </script>

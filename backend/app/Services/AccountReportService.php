@@ -252,6 +252,48 @@ class AccountReportService
     }
 
     /**
+     * Every ledger account that holds a balance as of `to_date` (all dates
+     * when left out), optionally of one account type, with the balance on its
+     * debit or credit side. Accounts whose debits and credits cancel out are
+     * left out.
+     *
+     * @return array{to_date: ?string, account_type_id: ?int, accounts: array<int, array<string, mixed>>, total_debit: float, total_credit: float}
+     */
+    public function ledgerBalances(?string $toDate, ?int $accountTypeId): array
+    {
+        $balances = $this->netByAccount(fn (Builder $query) => $query
+            ->when($toDate, fn (Builder $query) => $query->where('account_transactions.date', '<=', $toDate)))
+            ->reject(fn (float $net) => $net == 0);
+
+        $rows = ChartOfAccount::query()
+            ->with(['accountType:id,name', 'parent:id,name'])
+            ->whereIn('id', $balances->keys())
+            ->when($accountTypeId, fn (Builder $query) => $query->where('account_type_id', $accountTypeId))
+            ->orderBy('account_type_id')
+            ->orderBy('account_number')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (ChartOfAccount $account) => [
+                'account_id' => $account->id,
+                'account_no' => $account->account_number,
+                'account_name' => $account->name,
+                'account_type' => $account->accountType?->name,
+                'parent_name' => $account->parent?->name,
+                ...$this->columns((float) $balances[$account->id]),
+                'balance' => abs((float) $balances[$account->id]),
+                'balance_type' => $this->side((float) $balances[$account->id]),
+            ]);
+
+        return [
+            'to_date' => $toDate,
+            'account_type_id' => $accountTypeId,
+            'accounts' => $rows->values()->all(),
+            'total_debit' => round($rows->sum('debit'), 2),
+            'total_credit' => round($rows->sum('credit'), 2),
+        ];
+    }
+
+    /**
      * Revenue (credit minus debit) less the cost of goods sold, giving the
      * gross profit, less expenses (debit minus credit).
      *

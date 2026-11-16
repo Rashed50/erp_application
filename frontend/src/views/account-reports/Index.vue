@@ -25,6 +25,13 @@
                             <option value="as_of_period">{{ $t('For the period') }}</option>
                         </select>
                     </div>
+                    <div class="col-md-2" v-if="has('accountType')">
+                        <label>{{ $t('Account Type:') }}</label>
+                        <select class="form-select" v-model="filters.account_type_id">
+                            <option value="">{{ $t('All Types') }}</option>
+                            <option v-for="type in ACCOUNT_TYPES" :key="type.id" :value="type.id">{{ $t(type.name) }}</option>
+                        </select>
+                    </div>
                     <div class="col-md-2" v-if="has('fromDate')">
                         <label>{{ $t('From Date:') }}</label>
                         <input type="date" class="form-control" v-model="filters.from_date" />
@@ -182,6 +189,14 @@ const ALL = 100000
 const BASE = '/api/accounting/reports'
 const ASSET = 1
 const WORK_ORDER_STATUSES = ['Pending', 'In Progress', 'Completed', 'Cancelled']
+// Account type ids as seeded by the backend (account_types table).
+const ACCOUNT_TYPES = [
+    { id: 1, name: 'Asset' },
+    { id: 2, name: 'Liability' },
+    { id: 3, name: "Owner's Equity" },
+    { id: 4, name: 'Revenue' },
+    { id: 5, name: 'Expense' },
+]
 
 // Cells hold English phrases (row labels, types) that are translated on display.
 const text = (value) => (value ? t(value) : '')
@@ -286,6 +301,22 @@ const reports = {
         rows: (data) => data.accounts,
         totals: (data) => labelRow('account_name', 'Total', { debit: data.total_debit, credit: data.total_credit }),
     },
+    ledger_balances: {
+        title: 'Ledger Account Balances',
+        endpoint: `${BASE}/ledger-balances`,
+        filters: ['accountType', 'toDate'],
+        columns: () => [
+            column('account_no', 'Account No'),
+            column('account_name', 'Account Name'),
+            column('account_type', 'Account Type', { format: text }),
+            column('parent_name', 'Group'),
+            moneyColumn('debit', 'Debit'),
+            moneyColumn('credit', 'Credit'),
+        ],
+        rows: (data) => data.accounts,
+        totals: (data) => labelRow('account_name', 'Total', { debit: data.total_debit, credit: data.total_credit }),
+        note: (data) => ({ text: 'Accounts with a balance: {count}', params: { count: data.accounts.length } }),
+    },
     profit_loss: {
         title: 'Profit & Loss',
         endpoint: `${BASE}/profit-loss`,
@@ -342,10 +373,10 @@ const reports = {
         totals: (data) => labelRow('ledger_name', 'Total', { debit: data.total_debit, credit: data.total_credit }),
     },
     supplier_statement: {
-        title: 'Supplier Report',
+        title: 'Supplier Transaction History',
         endpoint: `${BASE}/supplier-statement`,
         filters: ['suppliers', 'fromDate', 'toDate'],
-        columns: () => partyColumns('Supplier'),
+        columns: () => [...partyColumns('Supplier').slice(0, 4), column('notes', 'Notes'), ...partyColumns('Supplier').slice(4)],
         rows: (data) => [labelRow('party_name', 'Previous Balance', { due: data.previous_balance }), ...data.rows],
         totals: (data) => labelRow('party_name', 'Total', { amount: data.total_amount, paid: data.total_paid, due: data.total_due }),
     },
@@ -556,6 +587,7 @@ const filters = reactive({
     closing_stock: '',
     period: 'monthly',
     status: '',
+    account_type_id: '',
 })
 
 const data = ref(null)
@@ -605,6 +637,7 @@ const params = () => {
     if (current.filters.includes('customer') && filters.customer_id) result.customer_id = filters.customer_id
     if (current.filters.includes('workOrder') && filters.work_order_id) result.work_order_id = filters.work_order_id
     if (current.filters.includes('period')) result.period = filters.period
+    if (current.filters.includes('accountType') && filters.account_type_id) result.account_type_id = filters.account_type_id
     if (current.filters.includes('workOrderStatus') && filters.status) result.status = filters.status
     if (current.filters.includes('statementBalance') && filters.statement_balance !== '') result.statement_balance = filters.statement_balance
     if (current.filters.includes('stock')) {

@@ -28,6 +28,31 @@ trait ValidatesPaymentAccounts
             $validator->errors()->add($field, __('This account cannot receive transactions (it is a group, inactive or closed).'));
         }
 
+        $this->validatePredefinedAccounts($validator, $field, $requiredAccountNumbers);
+    }
+
+    /**
+     * An account of any type (asset, liability, expense, ...) that must be
+     * an open transaction account, e.g. either side of an internal transfer.
+     *
+     * @param  array<int, string>  $requiredAccountNumbers
+     */
+    protected function validateEntryAccount(Validator $validator, string $field, int $accountId, array $requiredAccountNumbers = []): void
+    {
+        $account = ChartOfAccount::find($accountId);
+
+        if ($account && ! $account->canReceiveEntries()) {
+            $validator->errors()->add($field, __('This account cannot receive transactions (it is a group, inactive or closed).'));
+        }
+
+        $this->validatePredefinedAccounts($validator, $field, $requiredAccountNumbers);
+    }
+
+    /**
+     * @param  array<int, string>  $requiredAccountNumbers
+     */
+    private function validatePredefinedAccounts(Validator $validator, string $field, array $requiredAccountNumbers): void
+    {
         foreach ($requiredAccountNumbers as $accountNumber) {
             if (! ChartOfAccount::query()->where('account_number', $accountNumber)->exists()) {
                 $validator->errors()->add($field, __('The predefined account :number is missing. Run the chart of account seeder.', ['number' => $accountNumber]));

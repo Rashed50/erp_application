@@ -27,6 +27,30 @@
                                 </div>
                             </div>
 
+                            <!-- Debit Account -->
+                            <div class="row mt-2">
+                                <div class="col-md-3">
+                                    <label for="debit_account_id" class="form-label text-end d-block">
+                                        {{ $t('Debit Account') }} <span class="text-danger">*</span>
+                                    </label>
+                                </div>
+                                <div class="col-md-9">
+                                    <select id="debit_account_id" class="form-control input-height"
+                                        v-model="form.debit_account_id" :disabled="!!form.purchase_id" required>
+                                        <option value="" disabled>{{ $t('Select item') }}</option>
+                                        <optgroup v-for="group in debitAccountGroups" :key="group.type" :label="$t(group.type)">
+                                            <option v-for="account in group.accounts" :key="account.id" :value="account.id">
+                                                {{ account.account_number }} - {{ account.name }}
+                                            </option>
+                                        </optgroup>
+                                    </select>
+                                    <div v-if="errors.debit_account_id" class="error-msg">{{ errors.debit_account_id }}</div>
+                                    <small class="text-muted">
+                                        {{ $t('Accounts Payable settles what is owed. Choose an expense account to pay for a service directly (the supplier due does not change).') }}
+                                    </small>
+                                </div>
+                            </div>
+
                             <!-- Payment Date -->
                             <div class="row mt-2">
                                 <div class="col-md-3">
@@ -174,6 +198,7 @@ import { toast } from 'vue3-toastify';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';
+import { groupAccountsByType } from '@/helpers/groupAccountsByType';
 import { objectToFormData } from '@/helpers/objectToFormData';
 import { t } from '@/i18n';
 
@@ -183,6 +208,7 @@ const today = new Date().toISOString().slice(0, 10)
 
 const initialForm = () => ({
     payment_account_id: '',
+    debit_account_id: '',
     payment_date: today,
     bill_amount: '',
     remarks: '',
@@ -208,6 +234,33 @@ const { items: creditAccounts, fetchData: loadCreditAccounts } = useFetch('/api/
     is_transaction: 1,
     active_status: 1,
     is_closed: 0,
+})
+
+// Accounts Payable, as seeded by the backend; the default debit side of a bill payment.
+const ACCOUNTS_PAYABLE_NUMBER = '2010'
+
+// The debit side can be any open transaction account other than the credit account.
+const { items: debitAccounts, fetchData: loadDebitAccounts } = useFetch('/api/ledger-accounts', {
+    per_page: 500,
+    is_transaction: 1,
+    active_status: 1,
+    is_closed: 0,
+})
+
+const payableAccount = computed(() => debitAccounts.value.find((a) => a.account_number === ACCOUNTS_PAYABLE_NUMBER))
+const debitAccountGroups = computed(() => groupAccountsByType(debitAccounts.value.filter((a) => a.id !== form.payment_account_id)))
+
+const defaultDebitAccount = () => {
+    form.debit_account_id = payableAccount.value?.id ?? ''
+}
+
+watch(payableAccount, (account) => {
+    if (account && !form.debit_account_id) defaultDebitAccount()
+})
+
+// A purchase invoice was posted to Accounts Payable, so paying it must debit Accounts Payable.
+watch(() => form.purchase_id, (purchaseId) => {
+    if (purchaseId) defaultDebitAccount()
 })
 
 const { items: suppliers, fetchData: loadSuppliers } = useFetch('/api/suppliers', {
@@ -253,6 +306,7 @@ const clearErrors = () => {
 
 const resetForm = () => {
     Object.assign(form, initialForm())
+    defaultDebitAccount()
     if (attachmentInput.value) {
         attachmentInput.value.value = ''
     }
@@ -294,6 +348,7 @@ const handleSubmit = async () => {
 
 onMounted(() => {
     loadCreditAccounts()
+    loadDebitAccounts()
     loadSuppliers()
 })
 </script>

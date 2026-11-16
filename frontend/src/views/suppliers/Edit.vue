@@ -22,6 +22,17 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
+                                        <label for="supplier_type">{{ $t('Supplier Type:') }}</label>
+                                        <select id="supplier_type" class="form-select" v-model="form.supplier_type">
+                                            <option value="goods">{{ $t('Goods') }}</option>
+                                            <option value="service">{{ $t('Service') }}</option>
+                                        </select>
+                                        <div v-if="errors.supplier_type" class="error-msg">{{ errors.supplier_type }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
                                         <label for="email">{{ $t('Email:') }}</label>
                                         <input type="email" id="email" class="form-control" v-model="form.email" />
                                         <div v-if="errors.email" class="error-msg">{{ errors.email }}</div>
@@ -148,6 +159,7 @@ const currentBalance = ref('0.00')
 
 const { form, errors, isSubmitting, submit } = useStoreForm({
     name: '',
+    supplier_type: 'goods',
     email: '',
     phone: '',
     address: '',
@@ -174,6 +186,7 @@ const loadSupplier = async () => {
         if (data.success) {
             const supplier = data.data
             form.name = supplier.name
+            form.supplier_type = supplier.supplier_type || 'goods'
             form.email = supplier.email
             form.phone = supplier.phone
             form.address = supplier.address

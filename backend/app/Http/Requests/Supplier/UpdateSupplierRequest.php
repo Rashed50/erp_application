@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Supplier;
 
+use App\Models\Supplier;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,6 +33,7 @@ class UpdateSupplierRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'supplier_type' => ['sometimes', Rule::in(Supplier::TYPES)],
             'email' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('suppliers', 'email')->withoutTrashed()->ignore($this->route('supplier'))],
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'address' => ['sometimes', 'nullable', 'string'],

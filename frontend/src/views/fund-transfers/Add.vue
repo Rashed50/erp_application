@@ -19,9 +19,11 @@
                                     <select id="credit_account_id" class="form-control input-height"
                                         v-model="form.credit_account_id" required>
                                         <option value="" disabled>{{ $t('Select item') }}</option>
-                                        <option v-for="account in assetAccounts" :key="account.id" :value="account.id">
-                                            {{ account.account_number }} - {{ account.name }}
-                                        </option>
+                                        <optgroup v-for="group in senderGroups" :key="group.type" :label="$t(group.type)">
+                                            <option v-for="account in group.accounts" :key="account.id" :value="account.id">
+                                                {{ account.account_number }} - {{ account.name }}
+                                            </option>
+                                        </optgroup>
                                     </select>
                                     <div v-if="errors.credit_account_id" class="error-msg">{{ errors.credit_account_id }}</div>
                                 </div>
@@ -92,9 +94,11 @@
                                     <select id="debit_account_id" class="form-control input-height"
                                         v-model="form.debit_account_id" required>
                                         <option value="" disabled>{{ $t('Select item') }}</option>
-                                        <option v-for="account in receiverAccounts" :key="account.id" :value="account.id">
-                                            {{ account.account_number }} - {{ account.name }}
-                                        </option>
+                                        <optgroup v-for="group in receiverGroups" :key="group.type" :label="$t(group.type)">
+                                            <option v-for="account in group.accounts" :key="account.id" :value="account.id">
+                                                {{ account.account_number }} - {{ account.name }}
+                                            </option>
+                                        </optgroup>
                                     </select>
                                     <div v-if="errors.debit_account_id" class="error-msg">{{ errors.debit_account_id }}</div>
                                 </div>
@@ -170,6 +174,7 @@ import { toast } from 'vue3-toastify';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';
+import { groupAccountsByType } from '@/helpers/groupAccountsByType';
 import { objectToFormData } from '@/helpers/objectToFormData';
 import { t } from '@/i18n';
 
@@ -194,20 +199,18 @@ const errors = reactive({})
 const isSubmitting = ref(false)
 const attachmentInput = ref(null)
 
-// Account type id of Asset, as seeded by the backend (account_types table).
-const ASSET = 1
-
-// Money can only move between open asset (cash/bank) transaction accounts.
-const { items: assetAccounts, fetchData: loadAssetAccounts } = useFetch('/api/ledger-accounts', {
+// A balance can move between any two open transaction accounts: asset to asset,
+// expense to expense, expense to liability, and so on.
+const { items: transactionAccounts, fetchData: loadTransactionAccounts } = useFetch('/api/ledger-accounts', {
     per_page: 500,
-    account_type_id: ASSET,
     is_transaction: 1,
     active_status: 1,
     is_closed: 0,
 })
 
 // The receiver cannot be the sender.
-const receiverAccounts = computed(() => assetAccounts.value.filter((a) => a.id !== form.credit_account_id))
+const senderGroups = computed(() => groupAccountsByType(transactionAccounts.value))
+const receiverGroups = computed(() => groupAccountsByType(transactionAccounts.value.filter((a) => a.id !== form.credit_account_id)))
 
 watch(() => form.credit_account_id, (senderId) => {
     if (form.debit_account_id === senderId) {
@@ -260,7 +263,7 @@ const handleSubmit = async () => {
 }
 
 onMounted(() => {
-    loadAssetAccounts()
+    loadTransactionAccounts()
 })
 </script>
 

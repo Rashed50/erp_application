@@ -28,7 +28,7 @@ class SupplierPaymentService
         ?string $toDate = null,
     ): LengthAwarePaginator {
         return SupplierPayment::query()
-            ->with(['supplier:id,name', 'paymentAccount:id,name,account_number', 'purchase:id,invoice_number', 'creator:id,name', 'approver:id,name'])
+            ->with(['supplier:id,name', 'paymentAccount:id,name,account_number', 'debitAccount:id,name,account_number', 'purchase:id,invoice_number', 'creator:id,name', 'approver:id,name'])
             ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('invoice_no', 'like', "%{$search}%")
                     ->orWhere('remarks', 'like', "%{$search}%")
@@ -43,14 +43,20 @@ class SupplierPaymentService
 
     public function find(SupplierPayment $payment): SupplierPayment
     {
-        return $payment->load(['supplier:id,name', 'paymentAccount:id,name,account_number', 'purchase:id,invoice_number', 'creator:id,name', 'approver:id,name']);
+        return $payment->load(['supplier:id,name', 'paymentAccount:id,name,account_number', 'debitAccount:id,name,account_number', 'purchase:id,invoice_number', 'creator:id,name', 'approver:id,name']);
     }
 
     /**
      * Record a bill payment: post it to the supplier ledger, settle the linked
      * purchase (if any), and post its journal entry to the general ledger.
      *
-     * @param  array{supplier_id: int, purchase_id?: ?int, payment_account_id: int, invoice_no?: ?string, payment_date: string, bill_amount: float, bank_charge?: ?float, remarks?: ?string, attachment?: ?UploadedFile}  $data
+     * Debiting Accounts Payable (the default) settles what is owed, so the
+     * supplier's due goes down. Debiting any other account (e.g. an expense
+     * account, for a service paid for on the spot) leaves Accounts Payable
+     * untouched, so the supplier ledger records the bill and its payment
+     * together and the due is unchanged.
+     *
+     * @param  array{supplier_id: int, purchase_id?: ?int, payment_account_id: int, debit_account_id?: ?int, invoice_no?: ?string, payment_date: string, bill_amount: float, bank_charge?: ?float, remarks?: ?string, attachment?: ?UploadedFile}  $data
      */
     public function create(array $data): SupplierPayment
     {
@@ -60,11 +66,15 @@ class SupplierPaymentService
             $billAmount = (float) $data['bill_amount'];
             $bankCharge = (float) ($data['bank_charge'] ?? 0);
             $invoiceNo = $purchase?->invoice_number ?? ($data['invoice_no'] ?? null);
+            $payableId = $this->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->id;
+            $debitAccountId = (int) ($data['debit_account_id'] ?? $payableId);
+            $settlesPayable = $debitAccountId === $payableId;
 
             $transaction = $this->supplierTransactionService->create($supplier, [
-                'transaction_type' => 'Bill Payment',
+                'transaction_type' => $settlesPayable ? 'Bill Payment' : 'Direct Payment',
                 'invoice_no' => $invoiceNo,
                 'debit' => $billAmount,
+                'credit' => $settlesPayable ? 0 : $billAmount,
                 'transaction_date' => $data['payment_date'],
                 'notes' => $data['remarks'] ?? null,
             ]);
@@ -73,6 +83,7 @@ class SupplierPaymentService
                 'supplier_id' => $supplier->id,
                 'purchase_id' => $purchase?->id,
                 'payment_account_id' => $data['payment_account_id'],
+                'debit_account_id' => $debitAccountId,
                 'supplier_transaction_id' => $transaction->id,
                 'invoice_no' => $invoiceNo,
                 'payment_date' => $data['payment_date'],
@@ -109,9 +120,9 @@ class SupplierPaymentService
 
     /**
      * Post the payment's journal entry, as the payroll module's bill payment
-     * does: credit the payment account with the total, debit Accounts
-     * Payable with the bill amount and the bank charge account with the bank
-     * charge.
+     * does: credit the payment account with the total, debit the chosen debit
+     * account (Accounts Payable by default) with the bill amount and the bank
+     * charge account with the bank charge.
      */
     private function post(SupplierPayment $payment): AccountTransaction
     {
@@ -121,7 +132,7 @@ class SupplierPaymentService
             'general_particular' => 'Bill Payment',
         ], [
             ['account_id' => $payment->payment_account_id, 'credit' => (float) $payment->total_amount, 'particular' => 'bill payment'],
-            ['account_id' => $this->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->id, 'debit' => (float) $payment->bill_amount, 'particular' => 'bill payment'],
+            ['account_id' => $payment->debit_account_id ?? $this->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->id, 'debit' => (float) $payment->bill_amount, 'particular' => 'bill payment'],
             ['account_id' => $this->predefinedAccount(LedgerPostingService::BANK_CHARGES_NUMBER)->id, 'debit' => (float) $payment->bank_charge, 'particular' => 'bill payment bank charge'],
         ]);
     }

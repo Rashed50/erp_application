@@ -93,7 +93,23 @@ describe('store', function () {
             ->assertJsonStructure(['data' => ['credit_account_id']]);
     });
 
-    it('rejects accounts that are not open asset transaction accounts', function (string $field, string $accountNumber) {
+    it('moves a balance between accounts of any type', function (string $senderNumber, string $receiverNumber) {
+        $sender = ChartOfAccount::query()->where('account_number', $senderNumber)->first();
+        $receiver = ChartOfAccount::query()->where('account_number', $receiverNumber)->first();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/accounting/internal-fund-transfer-store', fundTransferPayload($sender, $receiver, ['bank_charge' => 0, 'vat' => 0]))
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('account_transaction_details', ['chart_of_account_id' => $sender->id, 'credit' => 1000, 'debit' => 0]);
+        $this->assertDatabaseHas('account_transaction_details', ['chart_of_account_id' => $receiver->id, 'debit' => 1000, 'credit' => 0]);
+    })->with([
+        'expense to expense' => ['5010', '5020'],
+        'liability to expense' => ['2010', '5020'],
+        'expense to liability' => ['5020', '2030'],
+    ]);
+
+    it('rejects accounts that are not open transaction accounts', function (string $field, string $accountNumber) {
         $account = ChartOfAccount::query()->where('account_number', $accountNumber)->first();
         $payload = fundTransferPayload($this->cash, $this->bank, [$field => $account->id]);
 
@@ -102,7 +118,7 @@ describe('store', function () {
             ->assertStatus(422)
             ->assertJsonStructure(['data' => [$field]]);
     })->with([
-        'expense sender' => ['credit_account_id', '5010'],
+        'group sender' => ['credit_account_id', '5000'],
         'group receiver' => ['debit_account_id', '1000'],
     ]);
 

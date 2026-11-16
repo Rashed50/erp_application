@@ -89,6 +89,19 @@ class AccountReportController extends Controller
         ));
     }
 
+    public function ledgerBalances(Request $request): JsonResponse
+    {
+        $request->validate([
+            'to_date' => ['nullable', 'date'],
+            'account_type_id' => ['nullable', 'integer', Rule::exists('account_types', 'id')],
+        ]);
+
+        return ApiResponse::success($this->reportService->ledgerBalances(
+            $request->date('to_date')?->toDateString(),
+            $request->filled('account_type_id') ? $request->integer('account_type_id') : null,
+        ));
+    }
+
     public function profitAndLoss(Request $request): JsonResponse
     {
         $request->validate([
