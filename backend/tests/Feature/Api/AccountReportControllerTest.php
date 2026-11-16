@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AccountTransactionDetail;
+use App\Models\AccountType;
 use App\Models\ChartOfAccount;
 use App\Models\Customer;
 use App\Models\CustomerTransaction;
@@ -110,6 +111,37 @@ describe('trial balance', function () {
         expect($cash['opening_debit'])->toEqual(1000)
             ->and($cash['credit'])->toEqual(250)
             ->and($cash['closing_debit'])->toEqual(750);
+    });
+});
+
+describe('ledger balances', function () {
+    it('lists only the accounts that hold a balance as of the date', function () {
+        postIncomeExpense($this->actor, 'income', $this->revenue, $this->cash, 1000, '2026-01-10');
+        postIncomeExpense($this->actor, 'expense', $this->rent, $this->cash, 1000, '2026-01-15');
+        postIncomeExpense($this->actor, 'expense', $this->rent, $this->bank, 300, '2026-02-15');
+
+        $response = $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/ledger-balances?to_date=2026-01-31')
+            ->assertOk()
+            ->assertJsonPath('data.total_debit', 1000)
+            ->assertJsonPath('data.total_credit', 1000);
+
+        $rows = collect($response->json('data.accounts'))->keyBy('account_no');
+
+        // Cash nets to zero and Bank has nothing until February, so neither is listed.
+        expect($rows->keys()->sort()->values()->all())->toEqual(['4010', '5030'])
+            ->and($rows['4010']['balance_type'])->toBe('Cr')
+            ->and($rows['5030']['debit'])->toEqual(1000);
+    });
+
+    it('filters by account type', function () {
+        postIncomeExpense($this->actor, 'expense', $this->rent, $this->bank, 300, '2026-02-15');
+
+        $response = $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/ledger-balances?account_type_id='.AccountType::EXPENSE)
+            ->assertOk();
+
+        expect(collect($response->json('data.accounts'))->pluck('account_no')->all())->toEqual(['5030']);
     });
 });
 

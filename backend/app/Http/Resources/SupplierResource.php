@@ -17,6 +17,7 @@ class SupplierResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'supplier_type' => $this->supplier_type,
             'email' => $this->email,
             'phone' => $this->phone,
             'address' => $this->address,
@@ -26,6 +27,8 @@ class SupplierResource extends JsonResource
             'contact_person_phone' => $this->contact_person_phone,
             'contact_person_email' => $this->contact_person_email,
             'opening_balance' => (float) $this->opening_balance,
+            'opening_balance_account_id' => $this->opening_balance_account_id,
+            'opening_balance_account_name' => $this->whenLoaded('openingBalanceAccount', fn () => $this->openingBalanceAccount ? "{$this->openingBalanceAccount->account_number} - {$this->openingBalanceAccount->name}" : null),
             'current_balance' => (float) $this->current_balance,
             'active_status' => $this->active_status,
             'branch_office_id' => $this->branch_office_id,

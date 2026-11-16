@@ -41,6 +41,7 @@
                                 <th class="text-left">{{ $t('Supplier') }}</th>
                                 <th class="text-left">{{ $t('Invoice No') }}</th>
                                 <th class="text-left">{{ $t('Credit Account') }}</th>
+                                <th class="text-left">{{ $t('Debit Account') }}</th>
                                 <th class="text-right">{{ $t('Bill Amount') }}</th>
                                 <th class="text-right">{{ $t('Bank Charge') }}</th>
                                 <th class="text-right">{{ $t('Total') }}</th>
@@ -52,13 +53,13 @@
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="12" class="text-center py-4">
+                                <td colspan="13" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="12" class="text-center py-4">{{ $t('No data available in table') }}</td>
+                                <td colspan="13" class="text-center py-4">{{ $t('No data available in table') }}</td>
                             </tr>
                             <tr v-else v-for="(item, index) in items" :key="item.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
@@ -66,6 +67,7 @@
                                 <td>{{ item.supplier_name }}</td>
                                 <td>{{ item.invoice_no || $t('N/A') }}</td>
                                 <td>{{ item.payment_account_number }} {{ item.payment_account_name }}</td>
+                                <td>{{ item.debit_account_number }} {{ item.debit_account_name }}</td>
                                 <td class="text-right">{{ Number(item.bill_amount).toFixed(2) }}</td>
                                 <td class="text-right">{{ Number(item.bank_charge).toFixed(2) }}</td>
                                 <td class="text-right fw-bold">{{ Number(item.total_amount).toFixed(2) }}</td>

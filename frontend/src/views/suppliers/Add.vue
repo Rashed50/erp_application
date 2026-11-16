@@ -22,6 +22,17 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
+                                        <label for="supplier_type">{{ $t('Supplier Type:') }}</label>
+                                        <select id="supplier_type" class="form-select" v-model="form.supplier_type">
+                                            <option value="goods">{{ $t('Goods') }}</option>
+                                            <option value="service">{{ $t('Service') }}</option>
+                                        </select>
+                                        <div v-if="errors.supplier_type" class="error-msg">{{ errors.supplier_type }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
                                         <label for="email">{{ $t('Email:') }}</label>
                                         <input type="email" id="email" class="form-control" v-model="form.email" />
                                         <div v-if="errors.email" class="error-msg">{{ errors.email }}</div>
@@ -90,6 +101,27 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-6" v-if="form.opening_balance > 0">
+                                    <div class="form-group mb-3">
+                                        <label for="opening_balance_account_id">
+                                            {{ $t('Opening Balance Debit Account:') }}
+                                            <span v-if="form.supplier_type === 'service'" class="text-danger">*</span>
+                                        </label>
+                                        <select id="opening_balance_account_id" class="form-select"
+                                            v-model="form.opening_balance_account_id"
+                                            :required="form.supplier_type === 'service'">
+                                            <option value="">{{ $t('Assets (default)') }}</option>
+                                            <optgroup v-for="group in accountGroups" :key="group.type" :label="$t(group.type)">
+                                                <option v-for="account in group.accounts" :key="account.id" :value="account.id">
+                                                    {{ account.account_number }} - {{ account.name }}
+                                                </option>
+                                            </optgroup>
+                                        </select>
+                                        <div v-if="errors.opening_balance_account_id" class="error-msg">{{ errors.opening_balance_account_id }}</div>
+                                        <small class="text-muted">{{ $t('Credited to Accounts Payable; for a service supplier choose the expense account.') }}</small>
+                                    </div>
+                                </div>
+
                                 <div class="col-md-6">
                                     <div class="form-group mb-3 mt-4">
                                         <div class="form-check">
@@ -127,7 +159,9 @@
 </template>
 <script setup>
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import { useFetch } from '@/composables/useFetch';
 import { useStoreForm } from '@/composables/useStoreForm';
+import { groupAccountsByType } from '@/helpers/groupAccountsByType';
 import { setToast } from "@/helpers/toast";
 import { useRouter } from 'vue-router';
 
@@ -135,6 +169,7 @@ const router = useRouter();
 
 const { form, errors, isSubmitting, submit } = useStoreForm({
     name: '',
+    supplier_type: 'goods',
     email: '',
     phone: '',
     address: '',
@@ -144,8 +179,23 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     contact_person_phone: '',
     contact_person_email: '',
     opening_balance: 0,
+    opening_balance_account_id: '',
     active_status: true,
 })
+
+// Accounts Payable is always the credit side, so it is not offered as the debit side.
+const ACCOUNTS_PAYABLE_NUMBER = '2010'
+
+const { items: accounts, fetchData: loadAccounts } = useFetch('/api/ledger-accounts', {
+    per_page: 500,
+    is_transaction: 1,
+    active_status: 1,
+    is_closed: 0,
+})
+
+const accountGroups = computed(() => groupAccountsByType(accounts.value.filter((a) => a.account_number !== ACCOUNTS_PAYABLE_NUMBER)))
+
+onMounted(loadAccounts)
 
 const handleSubmit = async () => {
     const resp = await submit('/api/suppliers', 'post')

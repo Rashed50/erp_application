@@ -128,6 +128,48 @@ describe('store', function () {
     });
 });
 
+describe('service supplier', function () {
+    it('debits the chosen account for the opening balance instead of Assets', function () {
+        $this->seed(ChartOfAccountSeeder::class);
+        $payable = ChartOfAccount::where('account_number', LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->first();
+        $expense = ChartOfAccount::where('account_number', '5030')->first();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/suppliers', [
+                'name' => 'Cleaning Service',
+                'supplier_type' => 'service',
+                'opening_balance' => 2000,
+                'opening_balance_account_id' => $expense->id,
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.supplier_type', 'service')
+            ->assertJsonPath('data.opening_balance_account_id', $expense->id);
+
+        expect($expense->balance)->toBe(2000.0)
+            ->and($payable->balance)->toBe(2000.0)
+            ->and(ChartOfAccount::where('account_number', '1000')->first()->balance)->toBe(0.0);
+    });
+
+    it('requires an opening balance account for a service supplier with an opening balance', function () {
+        $this->seed(ChartOfAccountSeeder::class);
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/suppliers', ['name' => 'Consultant', 'supplier_type' => 'service', 'opening_balance' => 500])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['opening_balance_account_id']]);
+    });
+
+    it('rejects Accounts Payable or a group account as the opening balance account', function (string $accountNumber) {
+        $this->seed(ChartOfAccountSeeder::class);
+        $account = ChartOfAccount::where('account_number', $accountNumber)->first();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/suppliers', ['name' => 'Consultant', 'opening_balance' => 500, 'opening_balance_account_id' => $account->id])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['opening_balance_account_id']]);
+    })->with(['accounts payable' => '2010', 'group account' => '5000']);
+});
+
 describe('update', function () {
     it('rejects an email already taken by another supplier', function () {
         $actor = adminUser();

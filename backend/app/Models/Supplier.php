@@ -22,6 +22,12 @@ class Supplier extends Model
      */
     public const MOVEMENT_SQL = '(select coalesce(sum(supplier_transactions.credit - supplier_transactions.debit), 0) from supplier_transactions where supplier_transactions.supplier_id = suppliers.id and supplier_transactions.status = 1)';
 
+    public const TYPE_GOODS = 'goods';
+
+    public const TYPE_SERVICE = 'service';
+
+    public const TYPES = [self::TYPE_GOODS, self::TYPE_SERVICE];
+
     protected $guarded = [];
 
     /**
@@ -58,6 +64,14 @@ class Supplier extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(SupplierTransaction::class);
+    }
+
+    /**
+     * The account debited against Accounts Payable for the opening balance.
+     */
+    public function openingBalanceAccount(): BelongsTo
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'opening_balance_account_id');
     }
 
     public function purchases(): HasMany

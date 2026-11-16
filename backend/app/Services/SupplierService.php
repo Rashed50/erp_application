@@ -28,11 +28,11 @@ class SupplierService
 
     public function find(Supplier $supplier): Supplier
     {
-        return $supplier->load(['transactions.creator:id,name']);
+        return $supplier->load(['transactions.creator:id,name', 'openingBalanceAccount:id,name,account_number']);
     }
 
     /**
-     * @param  array{name: string, email?: ?string, phone?: ?string, address?: ?string, vat_no?: ?string, payment_term?: ?int, contact_person?: ?string, contact_person_phone?: ?string, contact_person_email?: ?string, opening_balance?: ?float, active_status?: ?bool, branch_office_id?: ?int}  $data
+     * @param  array{name: string, supplier_type?: ?string, opening_balance_account_id?: ?int, email?: ?string, phone?: ?string, address?: ?string, vat_no?: ?string, payment_term?: ?int, contact_person?: ?string, contact_person_phone?: ?string, contact_person_email?: ?string, opening_balance?: ?float, active_status?: ?bool, branch_office_id?: ?int}  $data
      */
     public function create(array $data): Supplier
     {
@@ -44,6 +44,7 @@ class SupplierService
                 // The running balance starts out equal to the opening balance; it only
                 // moves afterwards through ledger transactions and purchases.
                 'opening_balance' => $openingBalance,
+                'supplier_type' => $data['supplier_type'] ?? Supplier::TYPE_GOODS,
                 'active_status' => $data['active_status'] ?? true,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
@@ -80,17 +81,19 @@ class SupplierService
     }
 
     /**
-     * As in the payroll module, a positive opening balance is posted to the
-     * general ledger: debit the Assets group account, credit Accounts
-     * Payable. Skipped when those accounts have not been seeded.
+     * A positive opening balance is posted to the general ledger: credit
+     * Accounts Payable and debit the account chosen for it (e.g. an expense
+     * account for a service supplier), or, as in the payroll module, the
+     * Assets group account when none was chosen. Skipped when those accounts
+     * have not been seeded.
      */
     private function postOpeningBalance(Supplier $supplier): void
     {
         $amount = (float) $supplier->opening_balance;
-        $assets = $this->ledgerPostingService->rootAccount(AccountType::ASSET);
+        $debitAccount = $supplier->openingBalanceAccount ?? $this->ledgerPostingService->rootAccount(AccountType::ASSET);
         $payable = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER);
 
-        if ($amount <= 0 || ! $assets || ! $payable) {
+        if ($amount <= 0 || ! $debitAccount || ! $payable) {
             return;
         }
 
@@ -98,7 +101,7 @@ class SupplierService
             'date' => today()->toDateString(),
             'general_particular' => 'initialize supplier account',
         ], [
-            ['account_id' => $assets->id, 'debit' => $amount, 'particular' => "{$amount} amt dr from {$assets->name}"],
+            ['account_id' => $debitAccount->id, 'debit' => $amount, 'particular' => "{$amount} amt dr from {$debitAccount->name}"],
             ['account_id' => $payable->id, 'credit' => $amount, 'particular' => "{$amount} amt cr from {$payable->name}"],
         ]);
     }

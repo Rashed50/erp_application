@@ -36,6 +36,7 @@ class StoreSupplierPaymentRequest extends FormRequest
             'supplier_id' => ['required', Rule::exists('suppliers', 'id')->whereNull('deleted_at')],
             'purchase_id' => ['nullable', Rule::exists('purchases', 'id')->whereNull('deleted_at')],
             'payment_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
+            'debit_account_id' => ['nullable', 'different:payment_account_id', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
             'invoice_no' => ['nullable', 'string', 'max:255'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'bill_amount' => ['required', 'numeric', 'min:0.01'],
@@ -46,9 +47,11 @@ class StoreSupplierPaymentRequest extends FormRequest
     }
 
     /**
-     * The money must leave an open asset (cash/bank) transaction account, a
-     * linked purchase must belong to the supplier and still owe at least the
-     * bill amount, and the predefined accounts the entry posts to must exist.
+     * The money must leave an open asset (cash/bank) transaction account, the
+     * debit account (Accounts Payable when left out) must be an open
+     * transaction account, a linked purchase must belong to the supplier,
+     * still owe at least the bill amount and be settled through Accounts
+     * Payable, and the predefined accounts the entry posts to must exist.
      */
     public function withValidator(Validator $validator): void
     {
@@ -66,10 +69,17 @@ class StoreSupplierPaymentRequest extends FormRequest
                     : [LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER],
             );
 
+            if ($this->filled('debit_account_id')) {
+                $this->validateEntryAccount($validator, 'debit_account_id', (int) $this->input('debit_account_id'));
+            }
+
             if ($this->filled('purchase_id')) {
                 $purchase = Purchase::find($this->input('purchase_id'));
+                $payable = resolve(LedgerPostingService::class)->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER);
 
-                if ($purchase->supplier_id !== (int) $this->input('supplier_id')) {
+                if ($this->filled('debit_account_id') && (int) $this->input('debit_account_id') !== $payable?->id) {
+                    $validator->errors()->add('debit_account_id', __('A purchase invoice is settled through Accounts Payable; choose it as the debit account.'));
+                } elseif ($purchase->supplier_id !== (int) $this->input('supplier_id')) {
                     $validator->errors()->add('purchase_id', __('This purchase does not belong to the selected supplier.'));
                 } elseif ((float) $this->input('bill_amount') > $purchase->due_amount) {
                     $validator->errors()->add('bill_amount', __('Bill amount cannot exceed the purchase due amount (:amount).', ['amount' => $purchase->due_amount]));

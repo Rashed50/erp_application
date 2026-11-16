@@ -612,6 +612,7 @@ const assetMenuPermissions = ['item-categories.view', 'item-sub-categories.view'
 const accountReportLinks = [
     { report: 'general_ledger', label: 'nav.generalLedgerReport' },
     { report: 'trial_balance', label: 'nav.trialBalance' },
+    { report: 'ledger_balances', label: 'nav.ledgerBalances' },
     { report: 'profit_loss', label: 'nav.profitLoss' },
     { report: 'balance_sheet', label: 'nav.balanceSheet' },
     { report: 'bank_reconciliation', label: 'nav.bankReconciliation' },
@@ -619,6 +620,8 @@ const accountReportLinks = [
     { report: 'work_order_profitability', label: 'nav.workOrderProfitability' },
     { report: 'work_order_details', label: 'nav.workOrderDetails' },
     { report: 'customer_collections', label: 'nav.customerCollections' },
+    { report: 'supplier_statement', label: 'nav.supplierTransactionHistory' },
+    { report: 'supplier_balances', label: 'nav.supplierBalances' },
     { report: 'cash_transactions', label: 'nav.otherReports' },
 ]
 

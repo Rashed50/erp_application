@@ -93,6 +93,61 @@ describe('store', function () {
         ]);
     });
 
+    it('debits the chosen account instead of Accounts Payable', function () {
+        $supplier = Supplier::factory()->create(['opening_balance' => 3000]);
+        $serviceExpense = ChartOfAccount::query()->where('account_number', '5020')->first();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload($supplier, $this->cash, [
+                'debit_account_id' => $serviceExpense->id,
+                'bank_charge' => 0,
+            ]))
+            ->assertStatus(201)
+            ->assertJsonPath('data.debit_account_id', $serviceExpense->id);
+
+        // Paid on the spot: the expense is debited, Accounts Payable and what
+        // is owed to the supplier do not move.
+        expect((float) $serviceExpense->fresh()->balance)->toBe(1000.0)
+            ->and((float) $this->payable->fresh()->balance)->toBe(0.0)
+            ->and((float) $supplier->fresh()->current_balance)->toBe(3000.0);
+
+        $this->assertDatabaseHas('supplier_transactions', [
+            'supplier_id' => $supplier->id,
+            'transaction_type' => 'Direct Payment',
+            'debit' => 1000,
+            'credit' => 1000,
+        ]);
+    });
+
+    it('defaults the debit account to Accounts Payable', function () {
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload(Supplier::factory()->create(), $this->cash))
+            ->assertStatus(201)
+            ->assertJsonPath('data.debit_account_id', $this->payable->id);
+    });
+
+    it('rejects a debit account other than Accounts Payable for a purchase invoice', function () {
+        $purchase = Purchase::factory()->withTotal(1500)->create();
+        $expense = ChartOfAccount::query()->where('account_number', '5020')->first();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload($purchase->supplier, $this->cash, [
+                'purchase_id' => $purchase->id,
+                'debit_account_id' => $expense->id,
+            ]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['debit_account_id']]);
+    });
+
+    it('rejects a group debit account', function () {
+        $group = ChartOfAccount::query()->where('account_number', '5000')->first();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload(Supplier::factory()->create(), $this->cash, ['debit_account_id' => $group->id]))
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['debit_account_id']]);
+    });
+
     it('settles a linked purchase and takes its invoice number', function () {
         $purchase = Purchase::factory()->withTotal(1500)->create();
 

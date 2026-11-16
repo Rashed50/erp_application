@@ -54,6 +54,15 @@ class SupplierPayment extends Model
         return $this->belongsTo(ChartOfAccount::class, 'payment_account_id');
     }
 
+    /**
+     * The account debited: Accounts Payable when settling what is owed, or
+     * e.g. an expense account when a service is paid for directly.
+     */
+    public function debitAccount(): BelongsTo
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'debit_account_id');
+    }
+
     public function ledgerTransaction(): BelongsTo
     {
         return $this->belongsTo(SupplierTransaction::class, 'supplier_transaction_id');
