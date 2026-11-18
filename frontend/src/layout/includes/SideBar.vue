@@ -615,6 +615,7 @@ const accountReportLinks = [
     { report: 'ledger_balances', label: 'nav.ledgerBalances' },
     { report: 'profit_loss', label: 'nav.profitLoss' },
     { report: 'balance_sheet', label: 'nav.balanceSheet' },
+    { report: 'balance_sheet_details', label: 'nav.balanceSheetDetails' },
     { report: 'bank_reconciliation', label: 'nav.bankReconciliation' },
     { report: 'work_order_collections', label: 'nav.workOrderCollections' },
     { report: 'work_order_profitability', label: 'nav.workOrderProfitability' },

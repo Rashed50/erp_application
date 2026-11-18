@@ -238,6 +238,40 @@ describe('balance sheet', function () {
             ->assertJsonPath('data.current_period_profit', 70)
             ->assertJsonPath('data.is_balanced', true);
     });
+
+    it('lists the accounts behind each balance sheet figure', function () {
+        $payable = ChartOfAccount::query()->where('account_number', LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->first();
+        $ledger = app(LedgerPostingService::class);
+        $ledger->post(null, ['date' => '2026-02-28'], [
+            ['account_id' => $this->bank->id, 'debit' => 100],
+            ['account_id' => $this->revenue->id, 'credit' => 100],
+        ]);
+        $ledger->post(null, ['date' => '2026-03-02'], [
+            ['account_id' => $this->cash->id, 'debit' => 40],
+            ['account_id' => $payable->id, 'credit' => 40],
+        ]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/balance-sheet-details')
+            ->assertOk()
+            ->assertJsonPath('data.total_assets', 140)
+            ->assertJsonPath('data.total_liabilities', 40)
+            ->assertJsonPath('data.current_period_profit', 100)
+            ->assertJsonPath('data.is_balanced', true)
+            ->assertJsonCount(2, 'data.assets')
+            ->assertJsonPath('data.assets.0.account_no', '1010')
+            ->assertJsonPath('data.assets.0.amount', 40)
+            ->assertJsonPath('data.assets.1.account_no', '1020')
+            ->assertJsonPath('data.assets.1.amount', 100)
+            ->assertJsonPath('data.liabilities.0.account_id', $payable->id)
+            ->assertJsonPath('data.liabilities.0.amount', 40)
+            ->assertJsonCount(0, 'data.equity');
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/balance-sheet-details?to_date=2026-03-01')
+            ->assertJsonCount(1, 'data.assets')
+            ->assertJsonCount(0, 'data.liabilities');
+    });
 });
 
 describe('dashboard', function () {

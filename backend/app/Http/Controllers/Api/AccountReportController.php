@@ -140,6 +140,13 @@ class AccountReportController extends Controller
         return ApiResponse::success($this->reportService->balanceSheet($request->date('to_date')?->toDateString()));
     }
 
+    public function balanceSheetDetails(Request $request): JsonResponse
+    {
+        $request->validate(['to_date' => ['nullable', 'date']]);
+
+        return ApiResponse::success($this->reportService->balanceSheetDetails($request->date('to_date')?->toDateString()));
+    }
+
     public function supplierStatement(Request $request): JsonResponse
     {
         $request->validate([

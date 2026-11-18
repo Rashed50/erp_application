@@ -394,6 +394,7 @@ export function usePrintable() {
         columns = [],
         items = [],
         totalRow = null,
+        signatures = [],
         logo = settings.company?.logo_url || '',
         orientation = columns.length >= WIDE_TABLE_COLUMNS ? 'landscape' : 'portrait',
     }) => {
@@ -415,7 +416,7 @@ export function usePrintable() {
         const tableBody = `
             <tbody>
                 ${items.map((row, i) => `
-                    <tr>
+                    <tr${row.__emphasis ? ' style="font-weight:bold"' : ''}>
                         ${columns.map(col => `
                             <td style="text-align:${col.align || 'left'}">
                                 ${
@@ -449,6 +450,7 @@ export function usePrintable() {
             title,
             logo,
             orientation,
+            signatures,
             contentHtml: `<table>${tableHead}${tableBody}${tableFoot}</table>`,
         })
     }

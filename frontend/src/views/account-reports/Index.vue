@@ -189,6 +189,8 @@ const ALL = 100000
 const BASE = '/api/accounting/reports'
 const ASSET = 1
 const WORK_ORDER_STATUSES = ['Pending', 'In Progress', 'Completed', 'Cancelled']
+// Signature lines printed under financial statements.
+const STATEMENT_SIGNATURES = ['Prepared by', 'Checked by', 'Approved by']
 // Account type ids as seeded by the backend (account_types table).
 const ACCOUNT_TYPES = [
     { id: 1, name: 'Asset' },
@@ -353,9 +355,29 @@ const reports = {
             { label: "Total Owner's Equity", amount: data.total_equity },
         ],
         totals: (data) => labelRow('label', "Liabilities + Owner's Equity", { amount: data.total_liabilities + data.total_equity }),
-        note: (data) => data.is_balanced
-            ? { text: 'The balance sheet is balanced.', class: 'text-success' }
-            : { text: 'The balance sheet is not balanced.', class: 'text-danger' },
+        note: (data) => balancedNote(data),
+        signatures: STATEMENT_SIGNATURES,
+    },
+    balance_sheet_details: {
+        title: 'Balance Sheet Details',
+        endpoint: `${BASE}/balance-sheet-details`,
+        filters: ['toDate'],
+        columns: () => [
+            column('account_no', 'Account No'),
+            column('account_name', 'Particulars'),
+            moneyColumn('amount', 'Amount'),
+        ],
+        rows: (data) => [
+            ...balanceSheetSection('Assets', data.assets, [labelRow('account_name', 'Total Assets', { amount: data.total_assets })]),
+            ...balanceSheetSection('Liabilities', data.liabilities, [labelRow('account_name', 'Total Liabilities', { amount: data.total_liabilities })]),
+            ...balanceSheetSection("Owner's Equity", data.equity, [
+                { account_name: 'Current Period Profit/Loss', amount: data.current_period_profit, __translate: true },
+                labelRow('account_name', "Total Owner's Equity", { amount: data.total_equity }),
+            ]),
+        ],
+        totals: (data) => labelRow('account_name', "Liabilities + Owner's Equity", { amount: data.total_liabilities + data.total_equity }),
+        note: (data) => balancedNote(data),
+        signatures: STATEMENT_SIGNATURES,
     },
     cash_transactions: {
         title: 'Cash Transaction',
@@ -542,6 +564,17 @@ const reports = {
     },
 }
 
+// A balance sheet section: its heading, one line per account, then its total line(s).
+function balanceSheetSection(heading, accounts, totalRows) {
+    return [labelRow('account_name', heading), ...accounts, ...totalRows]
+}
+
+function balancedNote(data) {
+    return data.is_balanced
+        ? { text: 'The balance sheet is balanced.', class: 'text-success' }
+        : { text: 'The balance sheet is not balanced.', class: 'text-danger' }
+}
+
 // "2026-03" reads as "Mar 2026"; a year stays as it is.
 function periodLabel(value) {
     if (!value || value.length !== 7) return value ?? ''
@@ -622,7 +655,7 @@ const accountTitle = (account) => `${account.account_number ?? ''} - ${account.n
 
 const cell = (col, row) => {
     const value = row[col.key]
-    if (row.__label && col.key === Object.keys(row)[0]) return text(value)
+    if ((row.__label || row.__translate) && col.key === Object.keys(row)[0]) return text(value)
     return col.format ? col.format(value, row) : (value ?? '')
 }
 
@@ -695,15 +728,15 @@ async function toggleCleared(row, checkbox) {
 }
 
 const print = () => {
-    const subtitle = [
-        has('fromDate') && filters.from_date ? filters.from_date : null,
-        has('toDate') && filters.to_date ? filters.to_date : null,
-    ].filter(Boolean).join(' - ')
+    const subtitle = has('fromDate')
+        ? [filters.from_date, has('toDate') ? filters.to_date : null].filter(Boolean).join(' - ')
+        : has('toDate') && filters.to_date ? t('As of {date}', { date: filters.to_date }) : ''
 
     const items = totalRow.value ? [...rows.value, totalRow.value] : rows.value
     printTable({
         title: `${t(report.value.title)}${subtitle ? ` (${subtitle})` : ''}`,
         items,
+        signatures: report.value.signatures,
         columns: columns.value.map((col) => ({
             ...col,
             label: t(col.label),

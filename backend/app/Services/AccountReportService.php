@@ -495,6 +495,49 @@ class AccountReportService
     }
 
     /**
+     * The balance sheet with the accounts behind each figure: every asset,
+     * liability and owner's equity account with a balance up to `to_date`.
+     * Assets read debit minus credit, the others credit minus debit, so each
+     * section's accounts add up to its total in the summary.
+     *
+     * @return array<string, mixed>
+     */
+    public function balanceSheetDetails(?string $toDate = null): array
+    {
+        $balances = $this->netByAccount(fn (Builder $query) => $query
+            ->when($toDate, fn (Builder $query) => $query->where('account_transactions.date', '<=', $toDate)))
+            ->reject(fn (float $net) => $net == 0);
+
+        $accounts = ChartOfAccount::query()
+            ->with('parent:id,name')
+            ->whereIn('id', $balances->keys())
+            ->whereIn('account_type_id', [AccountType::ASSET, AccountType::LIABILITY, AccountType::OWNER_EQUITY])
+            ->orderBy('account_number')
+            ->orderBy('id')
+            ->get();
+
+        $section = fn (int $accountTypeId, int $sign) => $accounts
+            ->where('account_type_id', $accountTypeId)
+            ->map(fn (ChartOfAccount $account) => [
+                'account_id' => $account->id,
+                'account_no' => $account->account_number,
+                'account_name' => $account->name,
+                'parent_name' => $account->parent?->name,
+                'amount' => $sign * (float) $balances[$account->id] + 0.0,
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'to_date' => $toDate,
+            ...$this->balanceSheet($toDate),
+            'assets' => $section(AccountType::ASSET, 1),
+            'liabilities' => $section(AccountType::LIABILITY, -1),
+            'equity' => $section(AccountType::OWNER_EQUITY, -1),
+        ];
+    }
+
+    /**
      * The payroll module's Supplier Report: selected suppliers' (all when
      * none are selected) ledger entries in a date range, with the balance
      * brought forward and a running due. A credit (purchase) raises what is
