@@ -9,6 +9,7 @@
     "A closed account cannot have child accounts.": "বন্ধ অ্যাকাউন্টের কোনো চাইল্ড অ্যাকাউন্ট থাকতে পারবে না।",
     "A paid salary cannot be cancelled. Record an adjustment in a later month instead.": "পরিশোধিত বেতন বাতিল করা যাবে না। এর পরিবর্তে পরবর্তী মাসে একটি সমন্বয় রেকর্ড করুন।",
     "A predefined account can only be renamed or activated/deactivated.": "পূর্বনির্ধারিত অ্যাকাউন্ট শুধুমাত্র নাম পরিবর্তন বা সক্রিয়/নিষ্ক্রিয় করা যায়।",
+    "A payment received must be a credit.": "প্রাপ্ত পেমেন্ট অবশ্যই ক্রেডিট হতে হবে।",
     "A salary has been generated from this work record. Cancel that salary first.": "এই কাজের রেকর্ড থেকে বেতন তৈরি করা হয়েছে। আগে সেই বেতনটি বাতিল করুন।",
     "A transaction account cannot have child accounts.": "লেনদেন অ্যাকাউন্টের কোনো চাইল্ড অ্যাকাউন্ট থাকতে পারবে না।",
     "A transaction cannot have both a debit and a credit amount.": "একটি লেনদেনে একসাথে ডেবিট ও ক্রেডিট উভয় পরিমাণ থাকতে পারবে না।",

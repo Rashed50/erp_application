@@ -33,7 +33,6 @@
                             <div class="form-group mb-3">
                                 <label>{{ $t('Type:') }}</label>
                                 <select class="form-control" v-model="form.transaction_type" required>
-                                    <option value="Invoice">{{ $t('Invoice') }}</option>
                                     <option value="Payment Received">{{ $t('Payment Received') }}</option>
                                     <option value="Adjustment">{{ $t('Adjustment') }}</option>
                                 </select>
@@ -42,7 +41,7 @@
                         <div class="col-md-3">
                             <div class="form-group mb-3">
                                 <label>{{ $t('Direction:') }}</label>
-                                <select class="form-control" v-model="form.direction" required>
+                                <select class="form-control" v-model="form.direction" :disabled="isPaymentReceived" required>
                                     <option value="debit">{{ $t('Debit (increases balance)') }}</option>
                                     <option value="credit">{{ $t('Credit (decreases balance)') }}</option>
                                 </select>
@@ -63,13 +62,25 @@
                                 <div v-if="errors.transaction_date" class="error-msg">{{ errors.transaction_date }}</div>
                             </div>
                         </div>
+                        <div class="col-md-4" v-if="isPaymentReceived">
+                            <div class="form-group mb-3">
+                                <label>{{ $t('Payment Account (Cash/Bank):') }}</label>
+                                <select class="form-control" v-model="form.payment_account_id" required>
+                                    <option value="" disabled>{{ $t('Select item') }}</option>
+                                    <option v-for="account in paymentAccounts" :key="account.id" :value="account.id">
+                                        {{ account.account_number }} - {{ account.name }}
+                                    </option>
+                                </select>
+                                <div v-if="errors.payment_account_id" class="error-msg">{{ errors.payment_account_id }}</div>
+                            </div>
+                        </div>
                         <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label>{{ $t('Invoice No:') }}</label>
                                 <input type="text" class="form-control" v-model="form.invoice_no" />
                             </div>
                         </div>
-                        <div class="col-md-8">
+                        <div :class="isPaymentReceived ? 'col-md-4' : 'col-md-8'">
                             <WorkOrderSelect ref="workOrderSelect" v-model="form.work_order_id"
                                 :customer-id="route.params.id" :error="errors.work_order_id" />
                         </div>
@@ -154,6 +165,7 @@ import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import WorkOrderSelect from '@/components/common/WorkOrderSelect.vue';
+import { useFetch } from '@/composables/useFetch';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
 import { useRoute } from 'vue-router';
@@ -174,17 +186,43 @@ const {
 } = usePaginatedFetch(`/api/customers/${route.params.id}/transactions`)
 
 const form = reactive({
-    transaction_type: 'Invoice',
-    direction: 'debit',
+    transaction_type: 'Payment Received',
+    direction: 'credit',
     amount: null,
     transaction_date: new Date().toISOString().slice(0, 10),
     invoice_no: '',
     work_order_id: '',
+    payment_account_id: '',
     notes: '',
 })
 const workOrderSelect = ref(null)
 const errors = reactive({})
 const isSubmitting = ref(false)
+
+// A payment received is always a credit into a cash/bank account, so it is
+// also posted to the general ledger (debit that account, credit Accounts Receivable).
+const isPaymentReceived = computed(() => form.transaction_type === 'Payment Received')
+
+// Account type id of Asset, as seeded by the backend (account_types table).
+const ASSET = 1
+
+// Money can only move through an open asset (cash/bank) transaction account.
+const { items: paymentAccounts, fetchData: loadPaymentAccounts } = useFetch('/api/ledger-accounts', {
+    per_page: 500,
+    account_type_id: ASSET,
+    is_transaction: 1,
+    active_status: 1,
+    is_closed: 0,
+})
+
+watch(isPaymentReceived, (isPayment) => {
+    if (isPayment) {
+        form.direction = 'credit'
+        if (!paymentAccounts.value.length) loadPaymentAccounts()
+    } else {
+        form.payment_account_id = ''
+    }
+})
 
 const loadCustomer = async () => {
     try {
@@ -203,6 +241,7 @@ const handleAddTransaction = async () => {
         transaction_type: form.transaction_type,
         invoice_no: form.invoice_no || null,
         work_order_id: form.work_order_id || null,
+        payment_account_id: isPaymentReceived.value ? form.payment_account_id : null,
         transaction_date: form.transaction_date,
         notes: form.notes || null,
         debit: form.direction === 'debit' ? form.amount : 0,
@@ -260,5 +299,6 @@ const handleReverse = async (item) => {
 onMounted(() => {
     loadCustomer()
     fetchData()
+    loadPaymentAccounts()
 })
 </script>
