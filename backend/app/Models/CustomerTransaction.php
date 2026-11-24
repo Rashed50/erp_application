@@ -12,6 +12,8 @@ class CustomerTransaction extends Model
 
     public const TYPE_PAYMENT_RECEIVED = 'Payment Received';
 
+    public const TYPE_ADJUSTMENT = 'Adjustment';
+
     protected $guarded = [];
 
     /**

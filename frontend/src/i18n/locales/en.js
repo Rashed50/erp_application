@@ -64,6 +64,7 @@ export default {
         trialBalance: 'Trial Balance',
         profitLoss: 'Profit & Loss',
         balanceSheet: 'Balance Sheet',
+        balanceSheetDetails: 'Balance Sheet Details',
         bankReconciliation: 'Bank Reconciliation',
         workOrderCollections: 'Work Order Collection & Due',
         workOrderProfitability: 'Work Order Sales & Expense',

@@ -290,6 +290,7 @@ describe('payment tracking', function () {
                 'transaction_type' => 'Payment Received',
                 'work_order_id' => $this->workOrder->id,
                 'credit' => 300,
+                'payment_account_id' => $this->cashAccountId,
                 'transaction_date' => now()->toDateString(),
             ])
             ->assertStatus(201)
