@@ -9,6 +9,7 @@ use App\Models\IncomeExpenseTransaction;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
+use App\Models\SupplierPayment;
 use App\Models\SupplierTransaction;
 use App\Models\User;
 use App\Models\WorkOrder;
@@ -38,12 +39,17 @@ function postIncomeExpense(User $actor, string $type, ChartOfAccount $account, C
         'amount' => $amount,
         'transaction_date' => $date,
     ])->assertStatus(201);
+    approvePending();
 }
 
 describe('access', function () {
     it('requires the account-reports.view permission', function () {
         $this->actingAs(User::factory()->create(), 'sanctum')
             ->getJson('/api/accounting/reports/balance-sheet')
+            ->assertStatus(403);
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->getJson('/api/accounting/reports/dashboard-details?card=sales')
             ->assertStatus(403);
     });
 });
@@ -195,6 +201,7 @@ describe('balance sheet', function () {
             'name' => 'Opening Customer',
             'opening_balance' => 500,
         ])->assertStatus(201);
+        approvePending();
 
         $this->actingAs($this->actor, 'sanctum')
             ->getJson('/api/accounting/reports/balance-sheet')
@@ -281,7 +288,9 @@ describe('dashboard', function () {
         Purchase::factory()->withTotal(400)->create(['purchase_date' => '2026-05-03']);
 
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/customers', ['name' => 'Due Customer', 'opening_balance' => 500])->assertStatus(201);
+        approvePending();
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/suppliers', ['name' => 'Due Supplier', 'opening_balance' => 300])->assertStatus(201);
+        approvePending();
 
         $subBank = ChartOfAccount::factory()->create(['parent_id' => $this->bank->id, 'account_type_id' => $this->bank->account_type_id, 'name' => 'City Bank']);
         postIncomeExpense($this->actor, 'income', $this->revenue, $this->bank, 700, '2026-05-05');
@@ -302,6 +311,23 @@ describe('dashboard', function () {
             ->getJson('/api/accounting/reports/dashboard?from_date=2026-05-01&to_date=2026-05-31')
             ->assertOk()
             ->assertJsonPath('data.total_sales', 1000);
+
+        foreach ([
+            'sales' => 2,
+            'purchase' => 1,
+            'receivable' => null,
+            'payable' => null,
+            'bank_balance' => 2,
+        ] as $card => $rowCount) {
+            $response = $this->actingAs($this->actor, 'sanctum')
+                ->getJson("/api/accounting/reports/dashboard-details?card={$card}")
+                ->assertOk()
+                ->assertJsonStructure(['data' => ['rows']]);
+
+            if ($rowCount !== null) {
+                $response->assertJsonCount($rowCount, 'data.rows');
+            }
+        }
     });
 
     it('summarizes expenses, collections, and work orders for today, month, and year', function () {
@@ -369,6 +395,53 @@ describe('dashboard', function () {
             ->assertJsonPath('data.activity_summary.this_year.collection', 450)
             ->assertJsonPath('data.activity_summary.this_year.work_orders_count', 2)
             ->assertJsonPath('data.activity_summary.this_year.work_orders_amount', 3000);
+
+        foreach (['collection', 'work_orders'] as $card) {
+            $this->actingAs($this->actor, 'sanctum')
+                ->getJson("/api/accounting/reports/dashboard-details?card={$card}&period=today")
+                ->assertOk()
+                ->assertJsonCount(1, 'data.rows');
+        }
+    });
+
+    it('returns dashboard activity details within the requested date range', function () {
+        IncomeExpenseTransaction::factory()->create([
+            'amount' => 75,
+            'transaction_date' => today()->toDateString(),
+        ]);
+        IncomeExpenseTransaction::factory()->create([
+            'amount' => 200,
+            'transaction_date' => today()->subDay()->toDateString(),
+        ]);
+        IncomeExpenseTransaction::factory()->income()->create([
+            'amount' => 400,
+            'transaction_date' => today()->toDateString(),
+        ]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/dashboard-details?card=expense&from_date='.today()->toDateString().'&to_date='.today()->toDateString())
+            ->assertOk()
+            ->assertJsonCount(1, 'data.rows')
+            ->assertJsonPath('data.rows.0.amount', 75)
+            ->assertJsonPath('data.totals.amount', 75);
+    });
+
+    it('returns collection and work-order details for a dashboard period', function () {
+        CustomerTransaction::factory()->payment()->create([
+            'credit' => 45,
+            'transaction_date' => today()->toDateString(),
+        ]);
+        WorkOrder::factory()->create([
+            'issue_date' => today()->toDateString(),
+            'total_amount' => 500,
+        ]);
+
+        foreach (['collection', 'work_orders'] as $card) {
+            $this->actingAs($this->actor, 'sanctum')
+                ->getJson("/api/accounting/reports/dashboard-details?card={$card}&period=today")
+                ->assertOk()
+                ->assertJsonCount(1, 'data.rows');
+        }
     });
 });
 
@@ -451,6 +524,54 @@ describe('customer statement', function () {
             ->assertJsonPath('data.rows.0.due', 700)
             ->assertJsonPath('data.rows.1.paid', 300)
             ->assertJsonPath('data.total_due', 400);
+    });
+});
+
+describe('payment history', function () {
+    it("lists a customer's payments received in a date range", function () {
+        $customer = Customer::factory()->create(['name' => 'Rahim']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 500, 'credit' => 0, 'transaction_type' => 'Invoice', 'transaction_date' => '2026-03-01']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 300, 'transaction_type' => 'Payment Received', 'payment_account_id' => $this->cash->id, 'transaction_date' => '2026-03-05']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 120, 'transaction_type' => 'Payment Received', 'payment_account_id' => $this->bank->id, 'transaction_date' => '2026-03-20']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 80, 'transaction_type' => 'Payment Received', 'status' => false, 'transaction_date' => '2026-03-10']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 999, 'transaction_type' => 'Payment Received', 'transaction_date' => '2026-04-02']);
+        CustomerTransaction::factory()->create(['debit' => 0, 'credit' => 777, 'transaction_type' => 'Payment Received', 'transaction_date' => '2026-03-06']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/accounting/reports/customer-payments?customer_ids[]={$customer->id}&from_date=2026-03-01&to_date=2026-03-31")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.rows')
+            ->assertJsonPath('data.rows.0.party_name', 'Rahim')
+            ->assertJsonPath('data.rows.0.amount', 300)
+            ->assertJsonPath('data.rows.0.payment_account', $this->cash->name)
+            ->assertJsonPath('data.rows.1.payment_account', $this->bank->name)
+            ->assertJsonPath('data.total_amount', 420);
+    });
+
+    it("lists a supplier's payments with the account each was paid from", function () {
+        $supplier = Supplier::factory()->create(['name' => 'Karim Traders']);
+        SupplierTransaction::factory()->for($supplier)->create(['debit' => 0, 'credit' => 900, 'transaction_type' => 'Purchase', 'transaction_date' => '2026-05-01']);
+        SupplierTransaction::factory()->for($supplier)->create(['debit' => 400, 'credit' => 0, 'transaction_type' => 'Bill Payment', 'payment_account_id' => $this->cash->id, 'transaction_date' => '2026-05-03']);
+        $viaPayment = SupplierTransaction::factory()->for($supplier)->create(['debit' => 250, 'credit' => 250, 'transaction_type' => 'Direct Payment', 'transaction_date' => '2026-05-08']);
+        SupplierPayment::factory()->for($supplier)->create(['payment_account_id' => $this->bank->id, 'supplier_transaction_id' => $viaPayment->id]);
+        SupplierTransaction::factory()->for($supplier)->create(['debit' => 100, 'credit' => 0, 'transaction_type' => 'Bill Payment', 'transaction_date' => '2026-06-01']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/supplier-payments?from_date=2026-05-01&to_date=2026-05-31')
+            ->assertOk()
+            ->assertJsonCount(2, 'data.rows')
+            ->assertJsonPath('data.rows.0.party_name', 'Karim Traders')
+            ->assertJsonPath('data.rows.0.payment_account', $this->cash->name)
+            ->assertJsonPath('data.rows.1.amount', 250)
+            ->assertJsonPath('data.rows.1.payment_account', $this->bank->name)
+            ->assertJsonPath('data.total_amount', 650);
+    });
+
+    it('validates the customer ids', function () {
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/customer-payments?customer_ids[]=999999')
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['customer_ids.0']]);
     });
 });
 
@@ -537,6 +658,7 @@ describe('bank reconciliation', function () {
             ])
             ->assertOk()
             ->assertJsonPath('data.updated', 2);
+        approvePending();
 
         $this->actingAs($this->actor, 'sanctum')
             ->getJson("/api/accounting/reports/bank-reconciliation?account_id={$this->bank->id}&from_date=2026-03-01&to_date=2026-03-31&statement_balance=3800")
@@ -586,6 +708,7 @@ describe('bank reconciliation', function () {
                 'cleared_date' => null,
             ])
             ->assertOk();
+        approvePending();
 
         expect($this->bankLines[0]->fresh()->cleared_date)->toBeNull();
     });

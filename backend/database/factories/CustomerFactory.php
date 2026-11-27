@@ -33,6 +33,7 @@ class CustomerFactory extends Factory
             'opening_date' => fake()->date(),
             'opening_balance' => $openingBalance,
             'active_status' => true,
+            'approved_at' => now(),
         ];
     }
 
@@ -43,6 +44,17 @@ class CustomerFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'active_status' => false,
+        ]);
+    }
+
+    /**
+     * Indicate that the record has not been approved yet.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved_by' => null,
+            'approved_at' => null,
         ]);
     }
 }

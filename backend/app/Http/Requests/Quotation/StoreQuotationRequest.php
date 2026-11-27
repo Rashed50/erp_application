@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Quotation;
 
+use App\Models\Customer;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,7 +33,7 @@ class StoreQuotationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'customer_id' => ['required', Rule::exists('customers', 'id')],
+            'customer_id' => ['required', Rule::exists('customers', 'id'), new Approved(Customer::class)],
             'concern_company_id' => ['required'],
             'signature_by' => ['required', 'string', 'max:255'],
             'invoice_number' => ['required', 'string', 'max:255', Rule::unique('quotations', 'invoice_number')],
@@ -45,8 +47,8 @@ class StoreQuotationRequest extends FormRequest
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.item_name' => ['required', 'string', 'max:255'],
-           // 'items.*.description' => ['nullable', 'text', 'max:1000'],
-            'items.*.unit_id' => [ 'integer', Rule::exists('inventory_units', 'id')->where('status', 1)],
+            // 'items.*.description' => ['nullable', 'text', 'max:1000'],
+            'items.*.unit_id' => ['integer', Rule::exists('inventory_units', 'id')->where('status', 1)],
             'items.*.count' => ['nullable', 'numeric', 'min:0'],
             'items.*.weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],

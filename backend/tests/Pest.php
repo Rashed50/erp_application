@@ -2,8 +2,26 @@
 
 use App\Models\AccountTransactionDetail;
 use App\Models\ChartOfAccount;
+use App\Models\Customer;
+use App\Models\FundTransfer;
+use App\Models\IncomeExpenseTransaction;
+use App\Models\Purchase;
+use App\Models\Sale;
+use App\Models\Supplier;
+use App\Models\SupplierPayment;
 use App\Models\User;
+use App\Models\WorkOrder;
+use App\Services\ApprovalService;
+use App\Services\ChartOfAccountService;
+use App\Services\CustomerService;
+use App\Services\FundTransferService;
+use App\Services\IncomeExpenseTransactionService;
+use App\Services\PurchaseService;
+use App\Services\SaleService;
+use App\Services\SupplierPaymentService;
+use App\Services\SupplierService;
 use Database\Seeders\ChartOfAccountSeeder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -87,4 +105,30 @@ function ledgerBalance(string $accountNumber): float
         ->whereHas('account', fn ($query) => $query->where('account_number', $accountNumber));
 
     return round((float) (clone $lines)->sum('debit') - (float) $lines->sum('credit'), 2);
+}
+
+/**
+ * Approve every pending record of the given approvable models (all of them
+ * when none are given) the way the approve endpoints do, so records created
+ * through the API reach the ledger. Approves as the signed-in user.
+ *
+ * @param  class-string<Model>  ...$modelClasses
+ */
+function approvePending(string ...$modelClasses): void
+{
+    $approvers = [
+        Customer::class => fn (Customer $record) => app(CustomerService::class)->approve($record),
+        Supplier::class => fn (Supplier $record) => app(SupplierService::class)->approve($record),
+        ChartOfAccount::class => fn (ChartOfAccount $record) => app(ChartOfAccountService::class)->approve($record),
+        WorkOrder::class => fn (WorkOrder $record) => app(ApprovalService::class)->approve($record),
+        Sale::class => fn (Sale $record) => app(SaleService::class)->approve($record),
+        Purchase::class => fn (Purchase $record) => app(PurchaseService::class)->approve($record),
+        IncomeExpenseTransaction::class => fn (IncomeExpenseTransaction $record) => app(IncomeExpenseTransactionService::class)->approve($record),
+        FundTransfer::class => fn (FundTransfer $record) => app(FundTransferService::class)->approve($record),
+        SupplierPayment::class => fn (SupplierPayment $record) => app(SupplierPaymentService::class)->approve($record),
+    ];
+
+    foreach ($modelClasses ?: array_keys($approvers) as $modelClass) {
+        $modelClass::query()->pendingApproval()->orderBy('id')->get()->each($approvers[$modelClass]);
+    }
 }

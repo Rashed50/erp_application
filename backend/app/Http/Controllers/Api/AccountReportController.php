@@ -133,6 +133,32 @@ class AccountReportController extends Controller
         ));
     }
 
+    public function dashboardDetails(Request $request): JsonResponse
+    {
+        $request->validate([
+            'card' => ['required', Rule::in([
+                'sales',
+                'purchase',
+                'receivable',
+                'payable',
+                'bank_balance',
+                'expense',
+                'collection',
+                'work_orders',
+            ])],
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+            'period' => ['nullable', Rule::in(['today', 'this_month', 'this_year'])],
+        ]);
+
+        return ApiResponse::success($this->reportService->dashboardDetails(
+            $request->string('card')->value(),
+            $request->date('from_date')?->toDateString(),
+            $request->date('to_date')?->toDateString(),
+            $request->string('period')->value() ?: null,
+        ));
+    }
+
     public function balanceSheet(Request $request): JsonResponse
     {
         $request->validate(['to_date' => ['nullable', 'date']]);
@@ -175,6 +201,34 @@ class AccountReportController extends Controller
         ]);
 
         return ApiResponse::success($this->reportService->customerStatement(
+            $this->ids($request, 'customer_ids'),
+            ...$this->dateRange($request),
+        ));
+    }
+
+    public function supplierPayments(Request $request): JsonResponse
+    {
+        $request->validate([
+            ...$this->dateRangeRules(),
+            'supplier_ids' => ['nullable', 'array'],
+            'supplier_ids.*' => ['integer', Rule::exists('suppliers', 'id')],
+        ]);
+
+        return ApiResponse::success($this->reportService->supplierPayments(
+            $this->ids($request, 'supplier_ids'),
+            ...$this->dateRange($request),
+        ));
+    }
+
+    public function customerPayments(Request $request): JsonResponse
+    {
+        $request->validate([
+            ...$this->dateRangeRules(),
+            'customer_ids' => ['nullable', 'array'],
+            'customer_ids.*' => ['integer', Rule::exists('customers', 'id')],
+        ]);
+
+        return ApiResponse::success($this->reportService->customerPayments(
             $this->ids($request, 'customer_ids'),
             ...$this->dateRange($request),
         ));

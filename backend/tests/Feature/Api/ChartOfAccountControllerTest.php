@@ -110,6 +110,7 @@ describe('store', function () {
 
         $response = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/ledger-accounts', ['name' => 'Assets', 'account_number' => '1000', 'account_type_id' => AccountType::ASSET]);
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.account_type', 'Asset')
@@ -124,6 +125,7 @@ describe('store', function () {
 
         $response = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/ledger-accounts', ['name' => 'Rent', 'parent_id' => $group->id, 'is_transaction' => true]);
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.account_type_id', AccountType::EXPENSE)
@@ -139,6 +141,7 @@ describe('store', function () {
             ->postJson('/api/ledger-accounts', ['name' => 'Sub', 'parent_id' => $leaf->id])
             ->assertCreated()
             ->assertJsonPath('data.parent_id', $leaf->id);
+        approvePending();
     });
 
     it('rejects a child whose type differs from its parent', function () {
@@ -171,7 +174,8 @@ describe('store opening balance', function () {
             ->postJson('/api/ledger-accounts', ['name' => 'Petty Cash', 'account_type_id' => AccountType::ASSET, 'is_transaction' => true, 'opening_balance' => 500])
             ->assertStatus(201)
             ->assertJsonPath('data.opening_balance', 500)
-            ->assertJsonPath('data.balance', 500);
+            ->assertJsonPath('data.approved_at', null);
+        approvePending();
 
         $account = ChartOfAccount::find($response->json('data.id'));
         $entry = AccountTransaction::query()->whereMorphedTo('source', $account)->sole();
@@ -190,7 +194,8 @@ describe('store opening balance', function () {
             ->postJson('/api/ledger-accounts', ['name' => 'Advance Received from Customer', 'account_type_id' => AccountType::LIABILITY, 'is_transaction' => true, 'opening_balance' => 20000])
             ->assertStatus(201)
             ->assertJsonPath('data.opening_balance', 20000)
-            ->assertJsonPath('data.balance', 20000);
+            ->assertJsonPath('data.approved_at', null);
+        approvePending();
 
         $account = ChartOfAccount::find($response->json('data.id'));
         $equity = ChartOfAccount::where('account_number', '3000')->first();
@@ -218,7 +223,8 @@ describe('store opening balance', function () {
         $response = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/ledger-accounts', ['name' => 'Opening Test', 'account_type_id' => $accountTypeId, 'is_transaction' => true, 'opening_balance' => 750])
             ->assertStatus(201)
-            ->assertJsonPath('data.balance', 750);
+            ->assertJsonPath('data.approved_at', null);
+        approvePending();
 
         $entry = AccountTransaction::query()->whereMorphedTo('source', ChartOfAccount::find($response->json('data.id')))->with('details')->sole();
 
@@ -239,6 +245,7 @@ describe('store opening balance', function () {
             ->postJson('/api/ledger-accounts', ['name' => 'Bank Loan', 'account_type_id' => AccountType::LIABILITY, 'is_transaction' => true, 'opening_balance' => 500])
             ->assertStatus(201)
             ->assertJsonPath('data.balance', 0);
+        approvePending();
 
         expect(AccountTransaction::query()->whereMorphedTo('source', ChartOfAccount::find($response->json('data.id')))->exists())->toBeFalse();
     });
@@ -285,6 +292,7 @@ describe('update', function () {
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$account->id}", ['account_type_id' => AccountType::EXPENSE])
             ->assertOk();
+        approvePending();
 
         $this->assertDatabaseHas('chart_of_accounts', ['id' => $account->id, 'account_type_id' => AccountType::ASSET]);
     });
@@ -296,12 +304,14 @@ describe('update', function () {
         $id = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/ledger-accounts', ['name' => 'Advance Received from Customer', 'account_type_id' => AccountType::LIABILITY, 'is_transaction' => true, 'opening_balance' => 20000, 'opening_date' => '2026-01-01'])
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$id}", ['name' => 'Customer Advances', 'opening_date' => '2026-02-01', 'opening_balance' => 99999])
             ->assertOk()
             ->assertJsonPath('data.opening_balance', 20000)
-            ->assertJsonPath('data.balance', 20000);
+            ->assertJsonPath('data.approved_at', null);
+        approvePending();
 
         $entry = AccountTransaction::query()->whereMorphedTo('source', ChartOfAccount::find($id))->sole();
 
@@ -319,6 +329,7 @@ describe('update', function () {
             ->putJson("/api/ledger-accounts/{$moving->id}", ['parent_id' => $other->id])
             ->assertOk()
             ->assertJsonPath('data.sibling_level', 2);
+        approvePending();
 
         expect($child->fresh()->sibling_level)->toBe(3);
     });
@@ -342,6 +353,7 @@ describe('update', function () {
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$parent->id}", ['is_transaction' => true])
             ->assertOk();
+        approvePending();
     });
 
     it('only lets a predefined account be renamed or deactivated', function () {
@@ -355,6 +367,7 @@ describe('update', function () {
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/ledger-accounts/{$account->id}", ['name' => 'Renamed'])
             ->assertOk();
+        approvePending();
     });
 });
 
@@ -399,6 +412,7 @@ describe('destroy', function () {
         $id = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/ledger-accounts', ['name' => 'Advance Received from Customer', 'account_type_id' => AccountType::LIABILITY, 'is_transaction' => true, 'opening_balance' => 20000])
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->deleteJson("/api/ledger-accounts/{$id}")

@@ -44,7 +44,7 @@
                                 <th class="text-left">{{ $t('Unit Name') }}</th>
                                 <th class="text-left">{{ $t('Short Name') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
@@ -67,7 +67,7 @@
                                         {{ $t(unit.status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
-                                <td>{{ unit.created_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="unit.created_by_name" :at="unit.created_at" /></td>
                                 <td class="text-center">
                                     <button v-if="can(['inventory-units.update'])" type="button"
                                         class="table-action-button" @click="openEditDialog(unit)">
@@ -126,6 +126,7 @@
     </v-dialog>
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';

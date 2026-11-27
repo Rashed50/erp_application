@@ -32,7 +32,7 @@ const loading = ref(false)
 const loadWorkOrders = async () => {
     loading.value = true
     try {
-        const { data } = await axios.get('/api/work-orders/options')
+        const { data } = await axios.get('/api/work-orders/options', { params: { approved: 1 } })
         workOrders.value = data.data ?? []
     } catch (e) {
         console.error(e)

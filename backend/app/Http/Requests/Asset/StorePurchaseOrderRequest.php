@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Asset;
 
+use App\Models\Supplier;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,7 +29,7 @@ class StorePurchaseOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'supplier_id' => ['required', 'integer', Rule::exists('suppliers', 'id')->where('active_status', true)],
+            'supplier_id' => ['required', 'integer', Rule::exists('suppliers', 'id')->where('active_status', true), new Approved(Supplier::class)],
             'material_request_id' => ['nullable', 'integer', Rule::exists('material_requests', 'id')],
             'purchase_date' => ['required', 'date'],
             'expected_date' => ['nullable', 'date', 'after_or_equal:purchase_date'],

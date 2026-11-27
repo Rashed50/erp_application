@@ -7,6 +7,7 @@ use App\Http\Requests\Purchase\StorePurchasePaymentRequest;
 use App\Http\Resources\PurchaseResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Purchase;
+use App\Services\ApprovalService;
 use App\Services\PurchaseService;
 use App\Services\SupplierPaymentService;
 use Illuminate\Http\JsonResponse;
@@ -16,15 +17,19 @@ class PurchasePaymentController extends Controller
     public function __construct(
         private readonly SupplierPaymentService $paymentService,
         private readonly PurchaseService $purchaseService,
+        private readonly ApprovalService $approvalService,
     ) {}
 
     /**
      * Record a (possibly partial) bill payment against a purchase. It is saved
      * as a supplier payment, so it posts to the chart of accounts and appears
-     * (and can be reversed) under Supplier Payments.
+     * (and can be reversed) under Supplier Payments. Only an approved
+     * purchase can be paid.
      */
     public function store(StorePurchasePaymentRequest $request, Purchase $purchase): JsonResponse
     {
+        $this->approvalService->ensureApproved($purchase, 'amount');
+
         $this->paymentService->create([
             'supplier_id' => $purchase->supplier_id,
             'purchase_id' => $purchase->id,

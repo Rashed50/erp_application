@@ -47,7 +47,7 @@
                                 <th class="text-left">{{ $t('Code') }}</th>
                                 <th class="text-left">{{ $t('Name') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
@@ -75,7 +75,7 @@
                                         {{ $t(item.active_status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
-                                <td>{{ item.created_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                                 <td class="text-center">
                                     <v-menu v-if="can(['products.update', 'products.delete'])">
                                         <template v-slot:activator="{ props }">
@@ -153,6 +153,7 @@
 
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';

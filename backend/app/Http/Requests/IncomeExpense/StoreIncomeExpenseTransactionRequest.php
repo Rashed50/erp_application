@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\IncomeExpense;
 
+use App\Models\ChartOfAccount;
+use App\Models\WorkOrder;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -31,9 +34,9 @@ class StoreIncomeExpenseTransactionRequest extends FormRequest
     {
         return [
             'type' => ['required', Rule::in(['income', 'expense'])],
-            'income_expense_account_id' => ['required', 'different:payment_account_id', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
-            'payment_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
-            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->withoutTrashed()],
+            'income_expense_account_id' => ['required', 'different:payment_account_id', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
+            'payment_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
+            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->withoutTrashed(), new Approved(WorkOrder::class)],
             'employee_id' => ['nullable', 'integer', Rule::exists('employee_info', 'id')->withoutTrashed()],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'transaction_date' => ['required', 'date'],

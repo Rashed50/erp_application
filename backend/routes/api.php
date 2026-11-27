@@ -298,6 +298,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Account module's admin/accounting/reports/* pages.
     Route::prefix('/accounting/reports')->name('account-reports.')->middleware('permission:account-reports.view')->group(function () {
         Route::get('/dashboard', [AccountReportController::class, 'dashboard'])->name('dashboard');
+        Route::get('/dashboard-details', [AccountReportController::class, 'dashboardDetails'])->name('dashboard-details');
         Route::get('/general-ledger', [AccountReportController::class, 'generalLedger'])->name('general-ledger');
         Route::get('/trial-balance', [AccountReportController::class, 'trialBalance'])->name('trial-balance');
         Route::get('/ledger-balances', [AccountReportController::class, 'ledgerBalances'])->name('ledger-balances');
@@ -308,6 +309,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/supplier-statement', [AccountReportController::class, 'supplierStatement'])->name('supplier-statement');
         Route::get('/supplier-balances', [AccountReportController::class, 'supplierBalances'])->name('supplier-balances');
         Route::get('/customer-statement', [AccountReportController::class, 'customerStatement'])->name('customer-statement');
+        Route::get('/supplier-payments', [AccountReportController::class, 'supplierPayments'])->name('supplier-payments');
+        Route::get('/customer-payments', [AccountReportController::class, 'customerPayments'])->name('customer-payments');
         Route::get('/expense-details', [AccountReportController::class, 'expenseDetails'])->name('expense-details');
         Route::get('/sales-purchase-summary', [AccountReportController::class, 'salesPurchaseSummary'])->name('sales-purchase-summary');
         Route::get('/sales', [AccountReportController::class, 'salesRegister'])->name('sales');

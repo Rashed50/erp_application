@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Concerns;
 
+use App\Models\ChartOfAccount;
+use App\Rules\Approved;
 use App\Services\LedgerPostingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Validation\Validator;
@@ -23,7 +25,7 @@ trait ValidatesEmployeeAdvance
         return [
             'advance_date' => ['required', 'date'],
             // The cash/bank account the advance is paid from.
-            'payment_account_id' => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
+            'payment_account_id' => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
             'amount' => ['required', 'numeric', 'min:1', 'max:9999999999'],
             'installment_count' => ['required', 'integer', 'min:1', 'max:120'],
             // Defaults to amount / installment count when left out.

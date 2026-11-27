@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Supplier;
 
 use App\Http\Requests\Concerns\ValidatesPaymentAccounts;
+use App\Models\ChartOfAccount;
 use App\Models\Supplier;
+use App\Rules\Approved;
 use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -48,6 +50,7 @@ class StoreSupplierRequest extends FormRequest
                 Rule::requiredIf(fn () => $this->input('supplier_type') === Supplier::TYPE_SERVICE && (float) $this->input('opening_balance', 0) > 0),
                 'nullable',
                 Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'),
+                new Approved(ChartOfAccount::class),
             ],
             'active_status' => ['nullable', 'boolean'],
             'branch_office_id' => ['nullable', 'integer'],

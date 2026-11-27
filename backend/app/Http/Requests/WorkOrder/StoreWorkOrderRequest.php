@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\WorkOrder;
 
+use App\Models\Customer;
 use App\Models\WorkOrder;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,7 +30,7 @@ class StoreWorkOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'customer_id' => ['required', Rule::exists('customers', 'id')->withoutTrashed()],
+            'customer_id' => ['required', Rule::exists('customers', 'id')->withoutTrashed(), new Approved(Customer::class)],
             'quotation_id' => ['nullable', 'integer', Rule::exists('quotations', 'id')->withoutTrashed()],
             'work_title' => ['required', 'string', 'max:255'],
             'work_order_no' => ['required', 'string', 'max:255', Rule::unique('work_orders', 'work_order_no')],

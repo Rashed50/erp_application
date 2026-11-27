@@ -18,6 +18,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Validation\Rule;
+use App\Models\WorkOrder;
+use App\Rules\Approved;
 
 
 class AttendanceController extends Controller
@@ -102,7 +104,7 @@ class AttendanceController extends Controller
                 'string',
                 'in:present,absent,late,half_day,leave,holiday,weekly_off,incomplete,offsite'
             ],
-            'work_order_id'   => ['nullable', 'exists:work_orders,id'],
+            'work_order_id'   => ['nullable', 'exists:work_orders,id', new Approved(WorkOrder::class)],
         ]);
 
         foreach ($data['ids'] as $employeeId) {

@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Hr;
 
 use App\Http\Requests\Concerns\ValidatesPaymentAccounts;
+use App\Models\ChartOfAccount;
+use App\Rules\Approved;
 use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -36,7 +38,7 @@ class StoreAdvanceRecoveryRequest extends FormRequest
             'amount' => ['required', 'numeric', 'gt:0', 'max:9999999999'],
             'recovery_date' => ['required', 'date'],
             // The cash/bank account the repayment is received into.
-            'payment_account_id' => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
+            'payment_account_id' => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
             'remarks' => ['nullable', 'string', 'max:255'],
         ];
     }

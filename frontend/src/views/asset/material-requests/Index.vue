@@ -50,7 +50,7 @@
                                 <th class="text-left">{{ $t('Items') }}</th>
                                 <th class="text-center">{{ $t('Priority') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-left">{{ $t('Approved By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -79,7 +79,7 @@
                                 <td class="text-center">
                                     <span :class="statusClass(request.status)">{{ $t(statusLabel(request.status)) }}</span>
                                 </td>
-                                <td>{{ request.requested_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="request.created_by_name" :at="request.created_at" /></td>
                                 <td>{{ request.approved_by_name || '-' }}</td>
                                 <td class="text-center">
                                     <button type="button" class="table-action-button" @click="openView(request)">
@@ -206,6 +206,7 @@
     </v-dialog>
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';

@@ -157,7 +157,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     attachment: null,
 })
 
-const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
+const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100, approved: 1 })
 const { items: quotations, fetchData: loadQuotations, error: quotationsError } = useFetch('/api/quotations', { per_page: 500 })
 
 const retentionAmount = computed(() =>

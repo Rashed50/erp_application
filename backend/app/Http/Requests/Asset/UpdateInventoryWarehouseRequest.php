@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Asset;
 
 use App\Models\InventoryWarehouse;
+use App\Models\WorkOrder;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -35,7 +37,7 @@ class UpdateInventoryWarehouseRequest extends FormRequest
             'name' => ['required', 'string', 'max:200'],
             'warehouse_type' => ['required', Rule::in(array_keys(InventoryWarehouse::TYPES))],
             'parent_id' => ['nullable', 'integer', Rule::exists('inventory_warehouses', 'id'), Rule::notIn([$warehouse->id])],
-            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->whereNull('deleted_at')],
+            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->whereNull('deleted_at'), new Approved(WorkOrder::class)],
             'manager_employee_id' => ['nullable', 'integer', Rule::exists('employee_info', 'id')->whereNull('deleted_at')],
             'address' => ['nullable', 'string', 'max:255'],
             'status' => ['sometimes', 'boolean'],

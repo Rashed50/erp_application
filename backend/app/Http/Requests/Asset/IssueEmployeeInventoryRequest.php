@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Asset;
 
+use App\Models\WorkOrder;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,7 +34,7 @@ class IssueEmployeeInventoryRequest extends FormRequest
             'item_id' => ['required', 'integer', Rule::exists('item_names', 'item_id')],
             'quantity' => ['required', 'numeric', 'gt:0'],
             'serial_id' => ['nullable', 'integer'],
-            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->whereNull('deleted_at')],
+            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->whereNull('deleted_at'), new Approved(WorkOrder::class)],
             'expected_return_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],
         ];

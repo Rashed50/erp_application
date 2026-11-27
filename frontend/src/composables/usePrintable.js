@@ -1,4 +1,5 @@
 import { imagePlaceholder } from '@/helpers/imagePlaceholder'
+import { formatDateTime } from '@/helpers/formatDateTime'
 import { intlLocale, t } from '@/i18n'
 import { useSettingStore } from '@/stores/settings'
 
@@ -11,6 +12,11 @@ export function usePrintable() {
     }[char]))
 
     const formatAmount = (value) => (Number(value) || 0).toFixed(2)
+
+    // Who entered a printed record and when, for the print footer.
+    const entryNoteFor = (createdBy, createdAt) => (createdBy || createdAt)
+        ? `${t('Created By')}: ${createdBy || '-'} | ${t('Created At')}: ${formatDateTime(createdAt)}`
+        : ''
 
     // 🔹 Cell value formatter (array / object / primitive)
     const formatCellValue = (value) => {
@@ -58,6 +64,7 @@ export function usePrintable() {
         extraCss = '',
         logoLeft = false,
         footerNoteHtml = '',
+        entryNote = '',
     }) => {
         const sheet = A4[orientation] ?? A4.portrait
         const pageMargin = 12 // mm
@@ -123,6 +130,7 @@ export function usePrintable() {
         const footerHtml = `
             <div class="print-footer">
                 ${signaturesHtml}
+                ${entryNote ? `<p class="system-note">${escapeHtml(entryNote)}</p>` : ''}
                 ${footerNoteHtml || `<p class="system-note">${escapeHtml(t('This report is computer system generated, and authentic without signature'))}</p>`}
             </div>
         `
@@ -517,7 +525,7 @@ export function usePrintable() {
     // print date right; BILL title; To / PO / Sub; item table; totals with the
     // amount in words; signatures; and a computer-generated note with the
     // company email and contact number.
-    const printBillInvoice = ({ title, partyName, partyAddress, billNo, reference, subject, items, totals, previousAdvance, notes, signatures }) => {
+    const printBillInvoice = ({ title, partyName, partyAddress, billNo, reference, subject, items, totals, previousAdvance, notes, signatures, entryNote = '' }) => {
         const company = settings.company ?? {}
         const gross = Number(totals.total_amount) || 0
         const discount = Number(totals.discount_amount) || 0
@@ -607,6 +615,7 @@ export function usePrintable() {
             logoLeft: true,
             extraCss: BILL_CSS,
             footerNoteHtml,
+            entryNote,
             contentHtml: `<h3 class="bill-title">${escapeHtml(t(title))}</h3>${infoHtml}${itemsHtml}${totalsHtml}${wordsHtml}${notesHtml}`,
         })
     }
@@ -624,6 +633,8 @@ export function usePrintable() {
      *   previousAdvance?: { amount: number, purpose?: string },
      *   notes?: string,
      *   signatures?: string[],
+     *   createdBy?: string,
+     *   createdAt?: string,
      * }} invoice
      */
     const printInvoice = ({
@@ -641,9 +652,13 @@ export function usePrintable() {
         billNo = '',
         reference = '',
         subject = '',
+        createdBy = '',
+        createdAt = '',
     }) => {
+        const entryNote = entryNoteFor(createdBy, createdAt)
+
         if (variant === 'bill') {
-            return printBillInvoice({ title, partyName, partyAddress, billNo, reference, subject, items, totals, previousAdvance, notes, signatures })
+            return printBillInvoice({ title, partyName, partyAddress, billNo, reference, subject, items, totals, previousAdvance, notes, signatures, entryNote })
         }
 
         const infoHtml = `
@@ -736,6 +751,7 @@ export function usePrintable() {
         printDocument({
             title: t(title),
             signatures,
+            entryNote,
             contentHtml: infoHtml + itemsHtml + totalsHtml + advancePurposeHtml + notesHtml,
         })
     }

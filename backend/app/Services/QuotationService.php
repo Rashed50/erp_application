@@ -15,16 +15,16 @@ class QuotationService
     public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null): LengthAwarePaginator
     {
         return Quotation::query()
-            ->with(['customer:id,name'])
-            ->when($search, fn($query) => $query->where('invoice_number', 'like', "%{$search}%"))
-            ->when($customerId, fn($query) => $query->where('customer_id', $customerId))
+            ->with(['customer:id,name', 'creator:id,name'])
+            ->when($search, fn ($query) => $query->where('invoice_number', 'like', "%{$search}%"))
+            ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
             ->latest('issue_date')
             ->paginate($perPage);
     }
 
     public function find(Quotation $quotation): Quotation
     {
-        return $quotation->load(['items.unit', 'customer']);
+        return $quotation->load(['items.unit', 'customer', 'creator:id,name']);
     }
 
     /**
@@ -48,8 +48,6 @@ class QuotationService
                 $discount = round((float) ($data['discount_amount'] ?? 0), 2);
                 $vat = round((float) ($data['vat_amount'] ?? 0), 2);
                 $this->assertDiscountWithinTotal($discount, (float) $totals['total_amount']);
-
-
 
                 $quotation = Quotation::create([
                     'customer_id' => $data['customer_id'],

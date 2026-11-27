@@ -38,6 +38,8 @@ class EmployeeInventoryResource extends JsonResource
             'remarks' => $this->remarks,
             'issued_by' => $this->issued_by,
             'issued_by_name' => $this->whenLoaded('issuer', fn () => $this->issuer?->name),
+            // Who entered the record, under the name every list uses.
+            'created_by_name' => $this->whenLoaded('issuer', fn () => $this->issuer?->name),
             'returns' => EmployeeInventoryReturnResource::collection($this->whenLoaded('returns')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

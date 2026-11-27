@@ -188,6 +188,7 @@ const ACCOUNTS_PAYABLE_NUMBER = '2010'
 
 const { items: accounts, fetchData: loadAccounts } = useFetch('/api/ledger-accounts', {
     per_page: 500,
+    approved: 1,
     is_transaction: 1,
     active_status: 1,
     is_closed: 0,

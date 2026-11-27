@@ -85,7 +85,7 @@ class ChartOfAccountSeeder extends Seeder
 
     private function seedAccount(string $number, string $name, int $accountTypeId, ?ChartOfAccount $parent, bool $isTransaction): ChartOfAccount
     {
-        return ChartOfAccount::query()->updateOrCreate(
+        $account = ChartOfAccount::query()->updateOrCreate(
             ['account_number' => $number],
             [
                 'name' => $name,
@@ -96,5 +96,12 @@ class ChartOfAccountSeeder extends Seeder
                 'is_predefined' => true,
             ],
         );
+
+        // The predefined chart is approved by the system, so the automatic postings can use it.
+        if (! $account->isApproved()) {
+            $account->forceFill(['approved_at' => now()])->save();
+        }
+
+        return $account;
     }
 }

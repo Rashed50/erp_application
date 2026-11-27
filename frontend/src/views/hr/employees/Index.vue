@@ -49,7 +49,7 @@
                             <th class="text-left">{{ $t('Phone') }}</th>
                             <th class="text-left">{{ $t('Joining Date') }}</th>
                             <th class="text-center">{{ $t('Status') }}</th>
-                            <th class="text-left">{{ $t('Inserted By') }}</th>
+                            <th class="text-left">{{ $t('Created By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
@@ -81,7 +81,7 @@
                             <td class="text-center">
                                 <span :class="employeeStatusClass(item.status)">{{ $t(item.status) }}</span>
                             </td>
-                            <td>{{ item.created_by_name || '-' }}</td>
+                            <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                             <td class="text-center">
                                 <v-menu>
                                     <template v-slot:activator="{ props }">
@@ -122,6 +122,8 @@
 </template>
 
 <script setup>
+import { formatDateTime } from '@/helpers/formatDateTime';
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
@@ -175,6 +177,8 @@ const print = async () => {
                 { key: 'joining_date', label: t('Joining Date') },
                 { key: 'employment_type', label: t('Employment Type'), format: (value) => t(value) },
                 { key: 'status', label: t('Status'), format: (value) => t(value) },
+                { key: 'created_by_name', label: t('Created By') },
+                { key: 'created_at', label: t('Created At'), format: formatDateTime },
             ],
         })
     } catch (e) {

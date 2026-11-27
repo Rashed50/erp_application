@@ -71,6 +71,7 @@ describe('store', function () {
             ->assertStatus(201)
             ->assertJsonPath('data.amount', 1000)
             ->assertJsonPath('data.total_amount', 1025);
+        approvePending();
 
         expect((float) $this->cash->fresh()->balance)->toBe(-1025.0)
             ->and((float) $this->bank->fresh()->balance)->toBe(1000.0)
@@ -81,6 +82,7 @@ describe('store', function () {
         $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/accounting/internal-fund-transfer-store', fundTransferPayload($this->cash, $this->bank, ['bank_charge' => 0, 'vat' => 5]))
             ->assertStatus(201);
+        approvePending();
 
         expect((float) $this->bankCharges->fresh()->balance)->toBe(5.0)
             ->and((float) $this->cash->fresh()->balance)->toBe(-1005.0);
@@ -100,6 +102,7 @@ describe('store', function () {
         $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/accounting/internal-fund-transfer-store', fundTransferPayload($sender, $receiver, ['bank_charge' => 0, 'vat' => 0]))
             ->assertStatus(201);
+        approvePending();
 
         $this->assertDatabaseHas('account_transaction_details', ['chart_of_account_id' => $sender->id, 'credit' => 1000, 'debit' => 0]);
         $this->assertDatabaseHas('account_transaction_details', ['chart_of_account_id' => $receiver->id, 'debit' => 1000, 'credit' => 0]);
@@ -151,6 +154,7 @@ describe('destroy', function () {
         $transferId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/accounting/internal-fund-transfer-store', fundTransferPayload($this->cash, $this->bank))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')->deleteJson("/api/accounting/internal-fund-transfer/{$transferId}")->assertOk();
 
@@ -165,7 +169,7 @@ describe('destroy', function () {
 
 it('approves a transfer', function () {
     $actor = adminUser();
-    $transfer = FundTransfer::factory()->create();
+    $transfer = FundTransfer::factory()->pending()->create();
 
     $this->actingAs($actor, 'sanctum')
         ->postJson("/api/accounting/internal-fund-transfer/{$transfer->id}/approve")

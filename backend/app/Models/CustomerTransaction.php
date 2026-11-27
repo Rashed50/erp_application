@@ -40,6 +40,14 @@ class CustomerTransaction extends Model
     }
 
     /**
+     * The cash/bank account a payment received came into.
+     */
+    public function paymentAccount(): BelongsTo
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'payment_account_id');
+    }
+
+    /**
      * The journal entry this ledger entry corresponds to.
      */
     public function accountTransaction(): BelongsTo

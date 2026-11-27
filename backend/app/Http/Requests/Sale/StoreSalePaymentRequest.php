@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Sale;
 
 use App\Http\Requests\Concerns\ValidatesPaymentAccounts;
+use App\Models\ChartOfAccount;
+use App\Rules\Approved;
 use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -32,7 +34,7 @@ class StoreSalePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'payment_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
+            'payment_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string'],

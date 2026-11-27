@@ -24,6 +24,7 @@ class WorkOrderController extends Controller
             $request->string('search')->value() ?: null,
             $request->integer('customer_id') ?: null,
             $request->string('status')->value() ?: null,
+            $request->filled('approved') ? $request->boolean('approved') : null,
         );
 
         return ApiResponse::success([
@@ -42,9 +43,11 @@ class WorkOrderController extends Controller
         return ApiResponse::success(WorkOrderResource::collection($this->workOrderService->forCustomer($customer)));
     }
 
-    public function options(): JsonResponse
+    public function options(Request $request): JsonResponse
     {
-        return ApiResponse::success(WorkOrderResource::collection($this->workOrderService->options()));
+        return ApiResponse::success(WorkOrderResource::collection($this->workOrderService->options(
+            $request->filled('approved') ? $request->boolean('approved') : null
+        )));
     }
 
     public function show(WorkOrder $workOrder): JsonResponse
@@ -81,13 +84,13 @@ class WorkOrderController extends Controller
         return ApiResponse::success(message: __('Work order deleted successfully.'));
     }
 
-
     public function getWorkOrderListForDropdownMenu(): JsonResponse
     {
-        $workOrders = WorkOrder::select('id', 'work_order_no')->get();
+        $workOrders = WorkOrder::query()->approved()->select('id', 'work_order_no')->get();
+
         return ApiResponse::success([
             'work_orders' => $workOrders,
         ]);
-      
+
     }
 }

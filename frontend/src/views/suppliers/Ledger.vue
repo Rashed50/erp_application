@@ -29,34 +29,26 @@
                 <h5 class="mb-3">{{ $t('Add Transaction') }}</h5>
                 <form @submit.prevent="handleAddTransaction">
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label>{{ $t('Type:') }}</label>
                                 <select class="form-control" v-model="form.transaction_type" required>
                                     <option value="Purchase">{{ $t('Purchase') }}</option>
                                     <option value="Bill Payment">{{ $t('Bill Payment') }}</option>
-                                    <option value="Adjustment">{{ $t('Adjustment') }}</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="form-group mb-3">
-                                <label>{{ $t('Direction:') }}</label>
-                                <select class="form-control" v-model="form.direction" required>
-                                    <option value="credit">{{ $t('Credit (increases what\'s owed)') }}</option>
-                                    <option value="debit">{{ $t('Debit (decreases balance, e.g. payment)') }}</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label>{{ $t('Amount:') }}</label>
                                 <input type="number" step="0.01" min="0.01" class="form-control"
                                     v-model.number="form.amount" required />
-                                <div v-if="errors.debit" class="error-msg">{{ errors.debit }}</div>
+                                <div v-if="errors.debit || errors.credit" class="error-msg">
+                                    {{ errors.debit || errors.credit }}
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label>{{ $t('Transaction Date:') }}</label>
                                 <input type="date" class="form-control" v-model="form.transaction_date" required />
@@ -65,11 +57,27 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group mb-3">
+                                <label>{{ $t('Payment Account (Cash/Bank):') }}</label>
+                                <select class="form-control" v-model="form.payment_account_id"
+                                    :disabled="!isBillPayment" :required="isBillPayment">
+                                    <option value="" disabled>{{ $t('Select item') }}</option>
+                                    <option v-for="account in paymentAccounts" :key="account.id" :value="account.id">
+                                        {{ account.account_number }} - {{ account.name }}
+                                    </option>
+                                </select>
+                                <small v-if="!isBillPayment" class="text-muted">
+                                    {{ $t('Select Bill Payment to enable this account.') }}
+                                </small>
+                                <div v-if="errors.payment_account_id" class="error-msg">{{ errors.payment_account_id }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
                                 <label>{{ $t('Invoice No:') }}</label>
                                 <input type="text" class="form-control" v-model="form.invoice_no" />
                             </div>
                         </div>
-                        <div class="col-md-8">
+                        <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label>{{ $t('Notes:') }}</label>
                                 <input type="text" class="form-control" v-model="form.notes" />
@@ -95,7 +103,7 @@
                             <th class="text-right">{{ $t('Credit') }}</th>
                             <th class="text-left">{{ $t('Notes') }}</th>
                             <th class="text-center">{{ $t('Status') }}</th>
-                            <th class="text-left">{{ $t('Inserted By') }}</th>
+                            <th class="text-left">{{ $t('Created By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
@@ -121,7 +129,7 @@
                                     {{ $t(item.status ? 'Active' : 'Reversed') }}
                                 </span>
                             </td>
-                            <td>{{ item.created_by_name || '-' }}</td>
+                            <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                             <td class="text-center">
                                 <v-btn v-if="item.status && can(['supplier-transactions.delete'])" size="small"
                                     color="red-darken-2" variant="text" @click="handleReverse(item)">
@@ -142,11 +150,13 @@
 
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
+import { useFetch } from '@/composables/useFetch';
 import { usePaginatedFetch } from '@/composables/usePaginatedFetch';
 import { usePermission } from '@/composables/usePermission';
 import { useRoute } from 'vue-router';
@@ -168,14 +178,37 @@ const {
 
 const form = reactive({
     transaction_type: 'Purchase',
-    direction: 'credit',
     amount: null,
     transaction_date: new Date().toISOString().slice(0, 10),
     invoice_no: '',
+    payment_account_id: '',
     notes: '',
 })
 const errors = reactive({})
 const isSubmitting = ref(false)
+
+const isBillPayment = computed(() => form.transaction_type === 'Bill Payment')
+
+// Account type id of Asset, as seeded by the backend (account_types table).
+const ASSET = 1
+
+// Only open cash/bank accounts can be selected for a bill payment.
+const { items: paymentAccounts, fetchData: loadPaymentAccounts } = useFetch('/api/ledger-accounts', {
+    per_page: 500,
+    approved: 1,
+    account_type_id: ASSET,
+    is_transaction: 1,
+    active_status: 1,
+    is_closed: 0,
+})
+
+watch(isBillPayment, (billPayment) => {
+    if (billPayment) {
+        if (!paymentAccounts.value.length) loadPaymentAccounts()
+    } else {
+        form.payment_account_id = ''
+    }
+})
 
 const loadSupplier = async () => {
     try {
@@ -195,8 +228,9 @@ const handleAddTransaction = async () => {
         invoice_no: form.invoice_no || null,
         transaction_date: form.transaction_date,
         notes: form.notes || null,
-        debit: form.direction === 'debit' ? form.amount : 0,
-        credit: form.direction === 'credit' ? form.amount : 0,
+        debit: isBillPayment.value ? form.amount : 0,
+        credit: isBillPayment.value ? 0 : form.amount,
+        payment_account_id: isBillPayment.value ? form.payment_account_id : null,
     }
 
     try {

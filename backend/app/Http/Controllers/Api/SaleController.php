@@ -22,6 +22,7 @@ class SaleController extends Controller
             (int) $request->integer('per_page', 15),
             $request->string('search')->value() ?: null,
             $request->integer('customer_id') ?: null,
+            $request->filled('approved') ? $request->boolean('approved') : null,
         );
 
         return ApiResponse::success([

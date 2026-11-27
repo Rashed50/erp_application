@@ -22,6 +22,7 @@ class SupplierController extends Controller
             (int) $request->integer('per_page', 15),
             $request->string('search')->value() ?: null,
             $request->filled('active_status') ? $request->boolean('active_status') : null,
+            $request->filled('approved') ? $request->boolean('approved') : null,
         );
 
         return ApiResponse::success([

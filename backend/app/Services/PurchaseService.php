@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\AccountTransaction;
 use App\Models\Purchase;
-use App\Models\Supplier;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -17,9 +16,10 @@ class PurchaseService
         private readonly SupplierTransactionService $supplierTransactionService,
         private readonly LedgerPostingService $ledgerPostingService,
         private readonly AttachmentService $attachmentService,
+        private readonly ApprovalService $approvalService,
     ) {}
 
-    public function paginate(int $perPage = 15, ?string $search = null, ?int $supplierId = null): LengthAwarePaginator
+    public function paginate(int $perPage = 15, ?string $search = null, ?int $supplierId = null, ?bool $approved = null): LengthAwarePaginator
     {
         return Purchase::query()
             ->with(['supplier:id,name', 'workOrder:id,work_order_no', 'purchasedBy:id,employee_code,name', 'creator:id,name', 'approver:id,name'])
@@ -27,20 +27,21 @@ class PurchaseService
             ->withPaidAmount()
             ->when($search, fn ($query) => $query->where('invoice_number', 'like', "%{$search}%"))
             ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
+            ->approvalStatus($approved)
             ->latest('purchase_date')
             ->paginate($perPage);
     }
 
     public function find(Purchase $purchase): Purchase
     {
-        return $purchase->load(['items.unit', 'supplier', 'workOrder', 'purchasedBy']);
+        return $purchase->load(['items.unit', 'supplier', 'workOrder', 'purchasedBy', 'creator:id,name']);
     }
 
     /**
-     * Create a purchase invoice, its line items, its journal entry, and the
-     * "Purchase" ledger entry it posts to the supplier's subsidiary ledger —
-     * all totals are computed here from `items` rather than trusted from the
-     * request. As on the payroll module's bill form, the debit and credit
+     * Create a purchase invoice and its line items — all totals are computed
+     * here from `items` rather than trusted from the request. It waits for
+     * approval: its journal entry and the "Purchase" entry on the supplier's
+     * subsidiary ledger are posted by approve(). As on the payroll module's bill form, the debit and credit
      * accounts can be chosen; the debit defaults to Inventory/Stock for a
      * product purchase and Purchase for a service one, the credit to
      * Accounts Payable.
@@ -77,29 +78,15 @@ class PurchaseService
 
             $purchase->items()->createMany($totals['items']);
 
-            $supplier = Supplier::findOrFail($data['supplier_id']);
-            $entry = $this->postToLedger($purchase);
-
-            $transaction = $this->supplierTransactionService->create($supplier, [
-                'transaction_type' => 'Purchase',
-                'invoice_no' => $data['invoice_number'],
-                'credit' => $totals['net_total'],
-                'account_transaction_id' => $entry?->id,
-                'transaction_date' => $data['purchase_date'],
-                'notes' => $data['description'] ?? null,
-            ]);
-
-            $purchase->update(['supplier_transaction_id' => $transaction->id]);
-
             return $purchase->load(['items.unit', 'supplier', 'workOrder', 'purchasedBy']);
         });
     }
 
     /**
      * Update a purchase invoice. When `items` is supplied, its line items are
-     * replaced and every total is recomputed; either way, the linked ledger
-     * entry is kept in sync in place, rather than left to drift the way the
-     * source module's purchase edit did.
+     * replaced and every total is recomputed. The edit sends the purchase back
+     * for approval, so its journal entry and supplier ledger entry are taken
+     * off the books until it is approved again.
      *
      * @param  array<string, mixed>  $data
      */
@@ -129,6 +116,8 @@ class PurchaseService
                 $purchase->overall_vat = $totals['overall_vat'];
             }
 
+            // The edit sends the purchase back for approval and takes it off the books.
+            $purchase->resetApproval();
             $purchase->save();
 
             if (isset($data['items'])) {
@@ -137,26 +126,59 @@ class PurchaseService
                 $purchase->unsetRelation('items');
             }
 
-            // Rewrite the journal entry in place, or post it now if the purchase was
-            // created before the predefined accounts were seeded.
+            $this->unpost($purchase);
+
+            return $purchase->load(['items.unit', 'supplier', 'workOrder', 'purchasedBy']);
+        });
+    }
+
+    /**
+     * Approve the purchase and post it: its journal entry (debit Inventory or
+     * Purchase, credit Accounts Payable by default) and the "Purchase" credit
+     * on the supplier's subsidiary ledger.
+     */
+    public function approve(Purchase $purchase): Purchase
+    {
+        return DB::transaction(function () use ($purchase) {
+            $this->approvalService->approve($purchase);
+
+            // Rewrite the journal entry in place, or post it now.
             if ($entry = $this->ledgerPostingService->entryFor($purchase)) {
                 $this->ledgerPostingService->repost($entry, $this->journalHeader($purchase), $this->journalLines($purchase));
             } else {
                 $entry = $this->postToLedger($purchase);
             }
 
+            $bill = [
+                'invoice_no' => $purchase->invoice_number,
+                'credit' => $purchase->net_total,
+                'account_transaction_id' => $entry?->id,
+                'transaction_date' => $purchase->purchase_date->toDateString(),
+                'notes' => $purchase->description,
+            ];
+
             if ($purchase->ledgerTransaction) {
-                $this->supplierTransactionService->updateAmounts($purchase->ledgerTransaction, [
-                    'invoice_no' => $purchase->invoice_number,
-                    'credit' => $purchase->net_total,
-                    'account_transaction_id' => $entry?->id,
-                    'transaction_date' => $purchase->purchase_date,
-                    'notes' => $purchase->description,
-                ]);
+                $this->supplierTransactionService->updateAmounts($purchase->ledgerTransaction, [...$bill, 'status' => true]);
+            } else {
+                $transaction = $this->supplierTransactionService->create($purchase->supplier, ['transaction_type' => 'Purchase', ...$bill]);
+                $purchase->update(['supplier_transaction_id' => $transaction->id]);
             }
 
             return $purchase->load(['items.unit', 'supplier', 'workOrder', 'purchasedBy']);
         });
+    }
+
+    /**
+     * Take a purchase that is no longer approved off the books: remove its
+     * journal entry and switch off its supplier ledger entry.
+     */
+    private function unpost(Purchase $purchase): void
+    {
+        $this->ledgerPostingService->reverse($purchase);
+
+        if ($purchase->ledgerTransaction?->status) {
+            $this->supplierTransactionService->updateAmounts($purchase->ledgerTransaction, ['status' => false, 'account_transaction_id' => null]);
+        }
     }
 
     /**

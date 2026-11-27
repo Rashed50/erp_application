@@ -8,13 +8,17 @@ use App\Http\Resources\CustomerTransactionResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customer;
 use App\Models\CustomerTransaction;
+use App\Services\ApprovalService;
 use App\Services\CustomerTransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CustomerTransactionController extends Controller
 {
-    public function __construct(private readonly CustomerTransactionService $transactionService) {}
+    public function __construct(
+        private readonly CustomerTransactionService $transactionService,
+        private readonly ApprovalService $approvalService,
+    ) {}
 
     public function index(Request $request, Customer $customer): JsonResponse
     {
@@ -38,6 +42,8 @@ class CustomerTransactionController extends Controller
 
     public function store(StoreCustomerTransactionRequest $request, Customer $customer): JsonResponse
     {
+        $this->approvalService->ensureApproved($customer);
+
         $transaction = $this->transactionService->create($customer, $request->validated());
 
         return ApiResponse::success(new CustomerTransactionResource($transaction), __('Transaction recorded successfully.'), 201);

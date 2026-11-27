@@ -9,18 +9,22 @@ use Illuminate\Support\Facades\DB;
 
 class CustomerService
 {
-    public function __construct(private readonly LedgerPostingService $ledgerPostingService) {}
+    public function __construct(
+        private readonly LedgerPostingService $ledgerPostingService,
+        private readonly ApprovalService $approvalService,
+    ) {}
 
     /**
      * @param  bool|null  $active  Filter by active status, or null for all customers.
      */
-    public function paginate(int $perPage = 15, ?string $search = null, ?bool $active = null): LengthAwarePaginator
+    public function paginate(int $perPage = 15, ?string $search = null, ?bool $active = null, ?bool $approved = null): LengthAwarePaginator
     {
         return Customer::query()
             ->with(['creator:id,name', 'approver:id,name'])
             ->withCurrentBalance()
             ->when($search, fn ($query) => $query->search($search))
             ->when(! is_null($active), fn ($query) => $query->where('active_status', $active))
+            ->approvalStatus($approved)
             ->latest()
             ->paginate($perPage);
     }
@@ -31,6 +35,9 @@ class CustomerService
     }
 
     /**
+     * A new customer waits for approval; its opening balance reaches the
+     * ledger only once it is approved (see approve()).
+     *
      * @param  array{name: string, email?: ?string, phone?: ?string, address?: ?string, vat_no?: ?string, payment_term?: ?int, contact_person?: ?string, contact_person_phone?: ?string, contact_person_email?: ?string, country?: ?string, opening_date?: ?string, opening_balance?: ?float, active_status?: ?bool, branch_office_id?: ?int}  $data
      */
     public function create(array $data): Customer
@@ -48,21 +55,47 @@ class CustomerService
                 'updated_by' => Auth::id(),
             ]);
 
-            $this->postOpeningBalance($customer);
+            return $customer;
+        });
+    }
+
+    /**
+     * Any change sends the customer back for approval, and its opening
+     * balance entry is taken off the ledger until it is approved again.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function update(Customer $customer, array $data): Customer
+    {
+        return DB::transaction(function () use ($customer, $data) {
+            $customer->fill($data);
+
+            if ($customer->isDirty()) {
+                $customer->resetApproval();
+                $this->ledgerPostingService->reverse($customer);
+            }
+
+            $customer->updated_by = Auth::id();
+            $customer->save();
 
             return $customer;
         });
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * Approve the customer and post its opening balance.
      */
-    public function update(Customer $customer, array $data): Customer
+    public function approve(Customer $customer): Customer
     {
-        $customer->fill([...$data, 'updated_by' => Auth::id()]);
-        $customer->save();
+        return DB::transaction(function () use ($customer) {
+            $this->approvalService->approve($customer);
 
-        return $customer;
+            if (! $this->ledgerPostingService->entryFor($customer)) {
+                $this->postOpeningBalance($customer);
+            }
+
+            return $customer;
+        });
     }
 
     /**

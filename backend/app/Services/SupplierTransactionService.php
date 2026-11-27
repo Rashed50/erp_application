@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 class SupplierTransactionService
 {
+    public function __construct(private readonly LedgerPostingService $ledgerPostingService) {}
+
     public function listForSupplier(Supplier $supplier, int $perPage = 15, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
     {
         return $supplier->transactions()
@@ -29,7 +31,7 @@ class SupplierTransactionService
      * `account_transaction_id` links the entry to the journal entry that
      * posted it to the general ledger, if any.
      *
-     * @param  array{transaction_type: string, invoice_no?: ?string, debit?: ?float, credit?: ?float, account_transaction_id?: ?int, transaction_date: string, notes?: ?string}  $data
+     * @param  array{transaction_type: string, invoice_no?: ?string, debit?: ?float, credit?: ?float, payment_account_id?: ?int, account_transaction_id?: ?int, transaction_date: string, notes?: ?string}  $data
      */
     public function create(Supplier $supplier, array $data): SupplierTransaction
     {
@@ -39,6 +41,7 @@ class SupplierTransactionService
                 'invoice_no' => $data['invoice_no'] ?? null,
                 'debit' => $data['debit'] ?? 0,
                 'credit' => $data['credit'] ?? 0,
+                'payment_account_id' => $data['payment_account_id'] ?? null,
                 'account_transaction_id' => $data['account_transaction_id'] ?? null,
                 'transaction_date' => $data['transaction_date'],
                 'notes' => $data['notes'] ?? null,
@@ -49,6 +52,8 @@ class SupplierTransactionService
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
+
+            $this->postBillPaymentToLedger($transaction);
 
             return $transaction;
         });
@@ -79,6 +84,10 @@ class SupplierTransactionService
     public function reverse(SupplierTransaction $transaction): SupplierTransaction
     {
         return DB::transaction(function () use ($transaction) {
+            if ($transaction->status && $transaction->payment_account_id) {
+                $this->ledgerPostingService->reverse($transaction);
+            }
+
             $transaction->status = false;
             $transaction->notes = trim(($transaction->notes ? $transaction->notes."\n" : '')."Reversed on {$this->today()}.");
             $transaction->updated_by = Auth::id();
@@ -91,5 +100,31 @@ class SupplierTransactionService
     private function today(): string
     {
         return now()->toDateString();
+    }
+
+    /**
+     * Post a standalone bill payment to the general ledger and link it to the
+     * supplier ledger entry.
+     */
+    private function postBillPaymentToLedger(SupplierTransaction $transaction): void
+    {
+        if (! $transaction->payment_account_id) {
+            return;
+        }
+
+        $amount = (float) $transaction->debit;
+        $payable = $this->ledgerPostingService->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)
+            ?? throw new \RuntimeException('Predefined account '.LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER.' is missing.');
+
+        $entry = $this->ledgerPostingService->post($transaction, [
+            'tr_no' => $transaction->invoice_no,
+            'date' => $transaction->transaction_date->toDateString(),
+            'general_particular' => $transaction->notes,
+        ], [
+            ['account_id' => $payable->id, 'debit' => $amount, 'particular' => "{$amount} dr {$payable->id}"],
+            ['account_id' => $transaction->payment_account_id, 'credit' => $amount, 'particular' => "{$amount} cr {$transaction->payment_account_id}"],
+        ]);
+
+        $transaction->update(['account_transaction_id' => $entry->id]);
     }
 }

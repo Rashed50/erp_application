@@ -99,7 +99,7 @@
                                         {{ $t(item.status) }}
                                     </span>
                                 </td>
-                                <td>{{ item.generated_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="item.generated_by_name" :at="item.created_at" /></td>
                                 <td>{{ item.approved_by_name || '-' }}</td>
                                 <td class="text-center">
                                     <v-btn size="small" variant="text" color="blue-darken-3" @click="showDetail(item)">
@@ -297,6 +297,8 @@
 </template>
 
 <script setup>
+import { formatDateTime } from '@/helpers/formatDateTime';
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
@@ -510,6 +512,8 @@ const print = async () => {
             { key: 'paid_amount', label: t('Paid'), align: 'right', format: money },
             { key: 'due_amount', label: t('Due'), align: 'right', format: money },
             { key: 'status', label: t('Status') },
+            { key: 'created_by_name', label: t('Created By') },
+            { key: 'created_at', label: t('Created At'), format: formatDateTime },
         ],
     })
 }

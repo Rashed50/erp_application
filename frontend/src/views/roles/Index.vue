@@ -23,7 +23,7 @@
                                             {{ $t('Name') }}
                                         </th>
                                         <th class="text-left">
-                                            {{ $t('Inserted By') }}
+                                            {{ $t('Created By') }}
                                         </th>
                                         <th class="text-center">
                                             {{ $t('Action') }}
@@ -52,7 +52,7 @@
                                     <tr v-else v-for="(item, index) in items" :key="item.id || index">
                                         <td>{{ index + 1 }}</td>
                                         <td>{{ item.name }}</td>
-                                        <td>{{ item.created_by_name || '-' }}</td>
+                                        <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                                         <!-- actions -->
                                         <td class="text-center">
                                             <v-menu v-if="item.name != 'Super Admin'">
@@ -88,6 +88,7 @@
 
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';
 import { useFetch } from '@/composables/useFetch';
 import { usePermission } from '@/composables/usePermission';

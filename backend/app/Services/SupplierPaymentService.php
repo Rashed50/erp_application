@@ -18,6 +18,7 @@ class SupplierPaymentService
         private readonly SupplierTransactionService $supplierTransactionService,
         private readonly LedgerPostingService $ledgerPostingService,
         private readonly AttachmentService $attachmentService,
+        private readonly ApprovalService $approvalService,
     ) {}
 
     public function paginate(
@@ -47,8 +48,9 @@ class SupplierPaymentService
     }
 
     /**
-     * Record a bill payment: post it to the supplier ledger, settle the linked
-     * purchase (if any), and post its journal entry to the general ledger.
+     * Record a bill payment against the linked purchase (if any). It waits for
+     * approval: approve() posts it to the supplier ledger and its journal
+     * entry to the general ledger.
      *
      * Debiting Accounts Payable (the default) settles what is owed, so the
      * supplier's due goes down. Debiting any other account (e.g. an expense
@@ -68,23 +70,12 @@ class SupplierPaymentService
             $invoiceNo = $purchase?->invoice_number ?? ($data['invoice_no'] ?? null);
             $payableId = $this->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->id;
             $debitAccountId = (int) ($data['debit_account_id'] ?? $payableId);
-            $settlesPayable = $debitAccountId === $payableId;
-
-            $transaction = $this->supplierTransactionService->create($supplier, [
-                'transaction_type' => $settlesPayable ? 'Bill Payment' : 'Direct Payment',
-                'invoice_no' => $invoiceNo,
-                'debit' => $billAmount,
-                'credit' => $settlesPayable ? 0 : $billAmount,
-                'transaction_date' => $data['payment_date'],
-                'notes' => $data['remarks'] ?? null,
-            ]);
 
             $payment = SupplierPayment::create([
                 'supplier_id' => $supplier->id,
                 'purchase_id' => $purchase?->id,
                 'payment_account_id' => $data['payment_account_id'],
                 'debit_account_id' => $debitAccountId,
-                'supplier_transaction_id' => $transaction->id,
                 'invoice_no' => $invoiceNo,
                 'payment_date' => $data['payment_date'],
                 'bill_amount' => $billAmount,
@@ -96,8 +87,37 @@ class SupplierPaymentService
                 'updated_by' => Auth::id(),
             ]);
 
+            return $this->find($payment);
+        });
+    }
+
+    /**
+     * Approve the payment and post it: the debit on the supplier's subsidiary
+     * ledger and its journal entry.
+     */
+    public function approve(SupplierPayment $payment): SupplierPayment
+    {
+        return DB::transaction(function () use ($payment) {
+            $this->approvalService->approve($payment);
+
+            if ($payment->supplier_transaction_id) {
+                return $this->find($payment);
+            }
+
+            $settlesPayable = (int) $payment->debit_account_id === $this->predefinedAccount(LedgerPostingService::ACCOUNTS_PAYABLE_NUMBER)->id;
+
+            $transaction = $this->supplierTransactionService->create($payment->supplier, [
+                'transaction_type' => $settlesPayable ? 'Bill Payment' : 'Direct Payment',
+                'invoice_no' => $payment->invoice_no,
+                'debit' => (float) $payment->bill_amount,
+                'credit' => $settlesPayable ? 0 : (float) $payment->bill_amount,
+                'transaction_date' => $payment->payment_date->toDateString(),
+                'notes' => $payment->remarks,
+            ]);
+
             $entry = $this->post($payment);
             $transaction->update(['account_transaction_id' => $entry->id]);
+            $payment->update(['supplier_transaction_id' => $transaction->id]);
 
             return $this->find($payment);
         });

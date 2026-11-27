@@ -56,7 +56,7 @@
                                 <th class="text-left">{{ $t('To Store') }}</th>
                                 <th class="text-left">{{ $t('Items') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-left">{{ $t('Approved By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -85,7 +85,7 @@
                                 <td class="text-center">
                                     <span :class="statusClass(transfer.status)">{{ $t(statusLabel(transfer.status)) }}</span>
                                 </td>
-                                <td>{{ transfer.requested_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="transfer.created_by_name" :at="transfer.created_at" /></td>
                                 <td>{{ transfer.approved_by_name || '-' }}</td>
                                 <td class="text-center">
                                     <v-menu>
@@ -219,6 +219,7 @@
     </v-dialog>
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';

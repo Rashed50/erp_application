@@ -26,7 +26,7 @@ class AssetService
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return InventoryAsset::query()
-            ->with(['item', 'serial', 'currentWarehouse', 'currentEmployee'])
+            ->with(['item', 'serial', 'currentWarehouse', 'currentEmployee', 'creator:id,name'])
             ->when($filters['search'] ?? null, fn ($query, string $search) => $query->search($search))
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->whereSerial('status', $status))
             ->when($filters['item_id'] ?? null, fn ($query, int $id) => $query->whereSerial('item_id', $id))

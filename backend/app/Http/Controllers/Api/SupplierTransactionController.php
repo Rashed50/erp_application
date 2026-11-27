@@ -8,13 +8,17 @@ use App\Http\Resources\SupplierTransactionResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Supplier;
 use App\Models\SupplierTransaction;
+use App\Services\ApprovalService;
 use App\Services\SupplierTransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SupplierTransactionController extends Controller
 {
-    public function __construct(private readonly SupplierTransactionService $transactionService) {}
+    public function __construct(
+        private readonly SupplierTransactionService $transactionService,
+        private readonly ApprovalService $approvalService,
+    ) {}
 
     public function index(Request $request, Supplier $supplier): JsonResponse
     {
@@ -38,6 +42,8 @@ class SupplierTransactionController extends Controller
 
     public function store(StoreSupplierTransactionRequest $request, Supplier $supplier): JsonResponse
     {
+        $this->approvalService->ensureApproved($supplier);
+
         $transaction = $this->transactionService->create($supplier, $request->validated());
 
         return ApiResponse::success(new SupplierTransactionResource($transaction), __('Transaction recorded successfully.'), 201);

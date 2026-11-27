@@ -211,6 +211,7 @@ class PurchaseOrderService
                 'serial_id' => $serial->id,
                 'asset_tag' => $serialData['asset_tag'] ?? $item->item_code.'-'.Str::upper(Str::random(8)),
                 'purchase_cost' => $unitCost,
+                'created_by' => Auth::id(),
             ]);
         }
 

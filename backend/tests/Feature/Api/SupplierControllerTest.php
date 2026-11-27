@@ -105,6 +105,7 @@ describe('store', function () {
         $this->actingAs($actor, 'sanctum')
             ->postJson('/api/suppliers', ['name' => 'New Supplier', 'email' => 'reused@example.com'])
             ->assertStatus(201);
+        approvePending();
 
         expect(Supplier::withTrashed()->where('email', 'reused@example.com')->count())->toBe(2);
     });
@@ -117,6 +118,7 @@ describe('store', function () {
             'email' => 'new-supplier@example.com',
             'opening_balance' => 1500,
         ]);
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJson(['success' => true, 'message' => 'Supplier created successfully.'])
@@ -144,6 +146,7 @@ describe('service supplier', function () {
             ->assertStatus(201)
             ->assertJsonPath('data.supplier_type', 'service')
             ->assertJsonPath('data.opening_balance_account_id', $expense->id);
+        approvePending();
 
         expect($expense->balance)->toBe(2000.0)
             ->and($payable->balance)->toBe(2000.0)
@@ -188,6 +191,7 @@ describe('update', function () {
 
         $response = $this->actingAs($actor, 'sanctum')
             ->putJson("/api/suppliers/{$target->id}", ['name' => 'Updated Name']);
+        approvePending();
 
         $response->assertOk()->assertJsonPath('data.name', 'Updated Name');
 
@@ -201,6 +205,7 @@ describe('update', function () {
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/suppliers/{$target->id}", ['opening_balance' => 9999])
             ->assertOk();
+        approvePending();
 
         $this->assertDatabaseHas('suppliers', ['id' => $target->id, 'opening_balance' => 100]);
     });
@@ -228,6 +233,7 @@ describe('destroy', function () {
             ->postJson('/api/suppliers', ['name' => 'Opening Supplier', 'opening_balance' => 3000])
             ->assertStatus(201)
             ->json('data.id');
+        approvePending();
 
         expect($payable->balance)->toBe(3000.0);
 

@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Asset;
 
 use App\Models\MaterialRequest;
+use App\Models\WorkOrder;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -29,7 +31,7 @@ class StoreMaterialRequest extends FormRequest
     {
         return [
             'warehouse_id' => ['required', 'integer', Rule::exists('inventory_warehouses', 'id')->where('status', true)],
-            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->whereNull('deleted_at')],
+            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->whereNull('deleted_at'), new Approved(WorkOrder::class)],
             'request_date' => ['nullable', 'date'],
             'required_date' => ['nullable', 'date', 'after_or_equal:request_date'],
             'priority' => ['required', Rule::in(MaterialRequest::PRIORITIES)],

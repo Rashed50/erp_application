@@ -42,7 +42,7 @@
                             <th class="text-right">{{ $t('Unpaid Leave') }}</th>
                             <th class="text-right">{{ $t('OT Hours') }}</th>
                             <th class="text-right">{{ $t('Bonus') }}</th>
-                            <th class="text-left">{{ $t('Inserted By') }}</th>
+                            <th class="text-left">{{ $t('Created By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
@@ -67,7 +67,7 @@
                             <td class="text-right">{{ item.unpaid_leave_days }}</td>
                             <td class="text-right">{{ item.overtime_hours }}</td>
                             <td class="text-right">{{ money(item.bonus) }}</td>
-                            <td>{{ item.created_by_name || '-' }}</td>
+                            <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                             <td class="text-center">
                                 <router-link v-if="can(['employee-works.update'])"
                                     :to="{ name: 'admin_hr_works_entry', query: { employee_id: item.employee_id, month: item.salary_month } }">
@@ -86,6 +86,7 @@
 </template>
 
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import BasePagination from '@/components/common/BasePagination.vue';
 import Breadcrumb from '@/components/common/Breadcrumb.vue';

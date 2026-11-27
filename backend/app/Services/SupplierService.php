@@ -10,18 +10,22 @@ use Illuminate\Support\Facades\DB;
 
 class SupplierService
 {
-    public function __construct(private readonly LedgerPostingService $ledgerPostingService) {}
+    public function __construct(
+        private readonly LedgerPostingService $ledgerPostingService,
+        private readonly ApprovalService $approvalService,
+    ) {}
 
     /**
      * @param  bool|null  $active  Filter by active status, or null for all suppliers.
      */
-    public function paginate(int $perPage = 15, ?string $search = null, ?bool $active = null): LengthAwarePaginator
+    public function paginate(int $perPage = 15, ?string $search = null, ?bool $active = null, ?bool $approved = null): LengthAwarePaginator
     {
         return Supplier::query()
             ->with(['creator:id,name', 'approver:id,name'])
             ->withCurrentBalance()
             ->when($search, fn ($query) => $query->search($search))
             ->when(! is_null($active), fn ($query) => $query->where('active_status', $active))
+            ->approvalStatus($approved)
             ->latest()
             ->paginate($perPage);
     }
@@ -50,21 +54,47 @@ class SupplierService
                 'updated_by' => Auth::id(),
             ]);
 
-            $this->postOpeningBalance($supplier);
+            return $supplier;
+        });
+    }
+
+    /**
+     * Any change sends the supplier back for approval, and its opening
+     * balance entry is taken off the ledger until it is approved again.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function update(Supplier $supplier, array $data): Supplier
+    {
+        return DB::transaction(function () use ($supplier, $data) {
+            $supplier->fill($data);
+
+            if ($supplier->isDirty()) {
+                $supplier->resetApproval();
+                $this->ledgerPostingService->reverse($supplier);
+            }
+
+            $supplier->updated_by = Auth::id();
+            $supplier->save();
 
             return $supplier;
         });
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * Approve the supplier and post its opening balance.
      */
-    public function update(Supplier $supplier, array $data): Supplier
+    public function approve(Supplier $supplier): Supplier
     {
-        $supplier->fill([...$data, 'updated_by' => Auth::id()]);
-        $supplier->save();
+        return DB::transaction(function () use ($supplier) {
+            $this->approvalService->approve($supplier);
 
-        return $supplier;
+            if (! $this->ledgerPostingService->entryFor($supplier)) {
+                $this->postOpeningBalance($supplier);
+            }
+
+            return $supplier;
+        });
     }
 
     /**

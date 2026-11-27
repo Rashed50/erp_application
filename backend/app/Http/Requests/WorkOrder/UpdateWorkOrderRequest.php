@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\WorkOrder;
 
+use App\Models\Customer;
 use App\Models\WorkOrder;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,7 +30,7 @@ class UpdateWorkOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'customer_id' => ['sometimes', 'required', Rule::exists('customers', 'id')->withoutTrashed()],
+            'customer_id' => ['sometimes', 'required', Rule::exists('customers', 'id')->withoutTrashed(), new Approved(Customer::class)],
             'quotation_id' => ['sometimes', 'nullable', 'integer', Rule::exists('quotations', 'id')->withoutTrashed()],
             'work_title' => ['sometimes', 'required', 'string', 'max:255'],
             'work_order_no' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('work_orders', 'work_order_no')->ignore($this->route('work_order'))],
@@ -37,6 +39,8 @@ class UpdateWorkOrderRequest extends FormRequest
             'retention_percent' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100'],
             'deliver_date' => ['sometimes', 'nullable', 'date', 'after_or_equal:issue_date'],
             'status' => ['sometimes', 'required', Rule::in(WorkOrder::STATUSES)],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx', 'max:20480'],
+            'remove_attachment' => ['sometimes', 'boolean'],
         ];
     }
 }

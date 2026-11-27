@@ -29,6 +29,18 @@ class FundTransferFactory extends Factory
             'bank_charge' => 0,
             'vat' => 0,
             'remarks' => fake()->optional()->sentence(),
+            'approved_at' => now(),
         ];
+    }
+
+    /**
+     * Indicate that the record has not been approved yet.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved_by' => null,
+            'approved_at' => null,
+        ]);
     }
 }

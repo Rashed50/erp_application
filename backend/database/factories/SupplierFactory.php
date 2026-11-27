@@ -31,6 +31,7 @@ class SupplierFactory extends Factory
             'contact_person_email' => fake()->unique()->safeEmail(),
             'opening_balance' => $openingBalance,
             'active_status' => true,
+            'approved_at' => now(),
         ];
     }
 
@@ -41,6 +42,17 @@ class SupplierFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'active_status' => false,
+        ]);
+    }
+
+    /**
+     * Indicate that the record has not been approved yet.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved_by' => null,
+            'approved_at' => null,
         ]);
     }
 }

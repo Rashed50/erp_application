@@ -39,7 +39,7 @@ class InventoryLookupController extends Controller
                 ->active()
                 ->orderBy('name')
                 ->get(['id', 'warehouse_code', 'name', 'warehouse_type']),
-            'suppliers' => Supplier::query()->active()->orderBy('name')->get(['id', 'name']),
+            'suppliers' => Supplier::query()->active()->approved()->orderBy('name')->get(['id', 'name']),
             'employees' => Employee::query()
                 ->where('status', 'Active')
                 ->orderBy('name')

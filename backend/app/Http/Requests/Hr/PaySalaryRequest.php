@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Hr;
 
 use App\Http\Requests\Concerns\ValidatesPaymentAccounts;
+use App\Models\ChartOfAccount;
+use App\Rules\Approved;
 use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -47,7 +49,7 @@ class PaySalaryRequest extends FormRequest
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'distinct'],
             // The cash/bank account the net salaries are paid from.
-            'payment_account_id' => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
+            'payment_account_id' => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
             'payment_date' => ['required', 'date'],
         ];
     }

@@ -13,6 +13,7 @@ class FundTransferService
     public function __construct(
         private readonly LedgerPostingService $ledgerPostingService,
         private readonly AttachmentService $attachmentService,
+        private readonly ApprovalService $approvalService,
     ) {}
 
     public function paginate(int $perPage = 15, ?string $search = null, ?int $accountId = null, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
@@ -61,7 +62,21 @@ class FundTransferService
                 'updated_by' => Auth::id(),
             ]);
 
-            $this->post($transfer);
+            return $this->find($transfer);
+        });
+    }
+
+    /**
+     * Approve the transfer and post its journal entry.
+     */
+    public function approve(FundTransfer $transfer): FundTransfer
+    {
+        return DB::transaction(function () use ($transfer) {
+            $this->approvalService->approve($transfer);
+
+            if (! $this->ledgerPostingService->entryFor($transfer)) {
+                $this->post($transfer);
+            }
 
             return $this->find($transfer);
         });

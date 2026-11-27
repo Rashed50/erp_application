@@ -436,6 +436,112 @@ class AccountReportService
     }
 
     /**
+     * Detail rows behind a dashboard card, using the same account-report
+     * permission as the summary.
+     *
+     * @return array<string, mixed>
+     */
+    public function dashboardDetails(string $card, ?string $fromDate, ?string $toDate, ?string $period = null): array
+    {
+        if ($period && in_array($card, ['expense', 'collection', 'work_orders'], true)) {
+            $today = today();
+            [$fromDate, $toDate] = match ($period) {
+                'today' => [$today->toDateString(), $today->toDateString()],
+                'this_month' => [$today->copy()->startOfMonth()->toDateString(), $today->toDateString()],
+                'this_year' => [$today->copy()->startOfYear()->toDateString(), $today->toDateString()],
+            };
+        }
+
+        return match ($card) {
+            'sales' => $this->salesRegister(null, $fromDate, $toDate),
+            'purchase' => $this->expenseDetails([], $fromDate, $toDate),
+            'receivable' => $this->customerBalances(),
+            'payable' => $this->supplierBalances(),
+            'bank_balance' => $this->dashboardBankDetails(),
+            'expense' => $this->dashboardExpenseDetails($fromDate, $toDate),
+            'collection' => $this->dashboardCollectionDetails($fromDate, $toDate),
+            'work_orders' => $this->workOrderCollections(null, null, $fromDate, $toDate),
+        };
+    }
+
+    /**
+     * @return array{rows: array<int, array<string, mixed>>, totals: array{balance: float}}
+     */
+    private function dashboardBankDetails(): array
+    {
+        $summary = $this->dashboardSummary();
+
+        return [
+            'rows' => $summary['banks'],
+            'totals' => ['balance' => $summary['bank_balance']],
+        ];
+    }
+
+    /**
+     * Expense rows underlying the dashboard activity summary.
+     *
+     * @return array{rows: array<int, array<string, mixed>>, totals: array{amount: float}}
+     */
+    private function dashboardExpenseDetails(?string $fromDate, ?string $toDate): array
+    {
+        $rows = IncomeExpenseTransaction::query()
+            ->with(['account:id,name', 'paymentAccount:id,name', 'workOrder:id,work_order_no', 'employee:id,name'])
+            ->where('type', 'expense')
+            ->when($fromDate, fn (Builder $query) => $query->whereDate('transaction_date', '>=', $fromDate))
+            ->when($toDate, fn (Builder $query) => $query->whereDate('transaction_date', '<=', $toDate))
+            ->orderBy('transaction_date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (IncomeExpenseTransaction $transaction) => [
+                'id' => $transaction->id,
+                'transaction_date' => $transaction->transaction_date?->toDateString(),
+                'reference_no' => $transaction->reference_no,
+                'account_name' => $transaction->account?->name,
+                'payment_account_name' => $transaction->paymentAccount?->name,
+                'work_order_no' => $transaction->workOrder?->work_order_no,
+                'employee_name' => $transaction->employee?->name,
+                'amount' => (float) $transaction->amount,
+                'description' => $transaction->description,
+            ]);
+
+        return [
+            'rows' => $rows->all(),
+            'totals' => ['amount' => round($rows->sum('amount'), 2)],
+        ];
+    }
+
+    /**
+     * Customer payment rows underlying the dashboard activity summary.
+     *
+     * @return array{rows: array<int, array<string, mixed>>, totals: array{credit: float}}
+     */
+    private function dashboardCollectionDetails(?string $fromDate, ?string $toDate): array
+    {
+        $rows = CustomerTransaction::query()
+            ->with('customer:id,name')
+            ->where('transaction_type', CustomerTransaction::TYPE_PAYMENT_RECEIVED)
+            ->where('status', true)
+            ->when($fromDate, fn (Builder $query) => $query->whereDate('transaction_date', '>=', $fromDate))
+            ->when($toDate, fn (Builder $query) => $query->whereDate('transaction_date', '<=', $toDate))
+            ->orderBy('transaction_date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (CustomerTransaction $transaction) => [
+                'id' => $transaction->id,
+                'transaction_date' => $transaction->transaction_date?->toDateString(),
+                'customer_name' => $transaction->customer?->name,
+                'invoice_no' => $transaction->invoice_no,
+                'credit' => (float) $transaction->credit,
+                'notes' => $transaction->notes,
+            ]);
+
+        return [
+            'rows' => $rows->all(),
+            'totals' => ['credit' => round($rows->sum('credit'), 2)],
+        ];
+    }
+
+    /**
      * The Bank Accounts account and all of its descendants.
      *
      * @return EloquentCollection<int, ChartOfAccount>
@@ -594,6 +700,38 @@ class AccountReportService
     }
 
     /**
+     * The customer outstanding balance report: every active customer's
+     * current balance.
+     *
+     * @return array{rows: array<int, array<string, mixed>>, totals: array{opening_balance: float, current_balance: float}}
+     */
+    public function customerBalances(): array
+    {
+        $rows = Customer::query()
+            ->where('active_status', true)
+            ->orderBy('name')
+            ->select(['id', 'name', 'phone', 'email', 'opening_balance'])
+            ->withCurrentBalance()
+            ->get()
+            ->map(fn (Customer $customer) => [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'phone' => $customer->phone,
+                'email' => $customer->email,
+                'opening_balance' => (float) $customer->opening_balance,
+                'current_balance' => (float) $customer->current_balance,
+            ]);
+
+        return [
+            'rows' => $rows->all(),
+            'totals' => [
+                'opening_balance' => round($rows->sum('opening_balance'), 2),
+                'current_balance' => round($rows->sum('current_balance'), 2),
+            ],
+        ];
+    }
+
+    /**
      * The payroll module's Sales Report (customer statement): selected
      * customers' (all when none are selected) ledger entries in a date range,
      * with the balance brought forward and a running due. A debit (invoice)
@@ -613,6 +751,52 @@ class AccountReportService
             $opening,
             'debit',
             fn (CustomerTransaction $row) => $row->customer?->name,
+            $fromDate,
+            $toDate,
+        );
+    }
+
+    /**
+     * Money received from the selected customers (all when none are
+     * selected) in a date range: their active Payment Received entries,
+     * with the cash/bank account each came into.
+     *
+     * @param  array<int, int>  $customerIds
+     * @return array{from_date: ?string, to_date: ?string, rows: array<int, array<string, mixed>>, total_amount: float}
+     */
+    public function customerPayments(array $customerIds, ?string $fromDate, ?string $toDate): array
+    {
+        return $this->partyPayments(
+            CustomerTransaction::query()
+                ->with(['customer:id,name', 'paymentAccount:id,name'])
+                ->where('transaction_type', CustomerTransaction::TYPE_PAYMENT_RECEIVED)
+                ->when($customerIds, fn ($query) => $query->whereIn('customer_id', $customerIds)),
+            'credit',
+            fn (CustomerTransaction $row) => $row->customer?->name,
+            fn (CustomerTransaction $row) => $row->paymentAccount?->name,
+            $fromDate,
+            $toDate,
+        );
+    }
+
+    /**
+     * Money paid to the selected suppliers (all when none are selected) in a
+     * date range: their active Bill Payment and Direct Payment entries, with
+     * the cash/bank account each was paid from.
+     *
+     * @param  array<int, int>  $supplierIds
+     * @return array{from_date: ?string, to_date: ?string, rows: array<int, array<string, mixed>>, total_amount: float}
+     */
+    public function supplierPayments(array $supplierIds, ?string $fromDate, ?string $toDate): array
+    {
+        return $this->partyPayments(
+            SupplierTransaction::query()
+                ->with(['supplier:id,name', 'paymentAccount:id,name', 'supplierPayment.paymentAccount:id,name'])
+                ->whereIn('transaction_type', ['Bill Payment', 'Direct Payment'])
+                ->when($supplierIds, fn ($query) => $query->whereIn('supplier_id', $supplierIds)),
+            'debit',
+            fn (SupplierTransaction $row) => $row->supplier?->name,
+            fn (SupplierTransaction $row) => $row->paymentAccount?->name ?? $row->supplierPayment?->paymentAccount?->name,
             $fromDate,
             $toDate,
         );
@@ -1217,6 +1401,44 @@ class AccountReportService
             'total_amount' => round($rows->sum('amount'), 2),
             'total_paid' => round($rows->sum('paid'), 2),
             'total_due' => $due,
+        ];
+    }
+
+    /**
+     * A supplier's or customer's payments in a date range. `$amountSide` is
+     * the column (debit or credit) holding the amount paid. Reversed entries
+     * are left out.
+     *
+     * @param  Builder<SupplierTransaction>|Builder<CustomerTransaction>  $transactions
+     * @param  callable(SupplierTransaction|CustomerTransaction): ?string  $partyName
+     * @param  callable(SupplierTransaction|CustomerTransaction): ?string  $paymentAccountName
+     * @return array{from_date: ?string, to_date: ?string, rows: array<int, array<string, mixed>>, total_amount: float}
+     */
+    private function partyPayments(Builder $transactions, string $amountSide, callable $partyName, callable $paymentAccountName, ?string $fromDate, ?string $toDate): array
+    {
+        $rows = $transactions
+            ->where('status', true)
+            ->when($fromDate, fn ($query) => $query->whereDate('transaction_date', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('transaction_date', '<=', $toDate))
+            ->orderBy('transaction_date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($row) => [
+                'id' => $row->id,
+                'date' => $row->transaction_date?->toDateString(),
+                'party_name' => $partyName($row),
+                'invoice_no' => $row->invoice_no,
+                'transaction_type' => $row->transaction_type,
+                'payment_account' => $paymentAccountName($row),
+                'notes' => $row->notes,
+                'amount' => (float) $row->{$amountSide},
+            ]);
+
+        return [
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'rows' => $rows->all(),
+            'total_amount' => round($rows->sum('amount'), 2),
         ];
     }
 

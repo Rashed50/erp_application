@@ -91,6 +91,7 @@ describe('store', function () {
                 'transaction_date' => now()->toDateString(),
                 'description' => 'September rent',
             ]);
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.type', 'expense')
@@ -120,6 +121,7 @@ describe('store', function () {
             ])
             ->assertStatus(201)
             ->assertJsonPath('data.type', 'income');
+        approvePending();
     });
 });
 
@@ -149,6 +151,7 @@ describe('account balances', function () {
             'amount' => 2500,
             'transaction_date' => now()->toDateString(),
         ])->assertStatus(201);
+        approvePending();
 
         expect((float) $rent->fresh()->balance)->toBe(2500.0)
             ->and((float) $cash->fresh()->balance)->toBe(-2500.0);
@@ -166,6 +169,7 @@ describe('account balances', function () {
             'amount' => 1500,
             'transaction_date' => now()->toDateString(),
         ])->assertStatus(201);
+        approvePending();
 
         expect((float) $sales->fresh()->balance)->toBe(1500.0)
             ->and((float) $bank->fresh()->balance)->toBe(1500.0);
@@ -183,8 +187,10 @@ describe('account balances', function () {
             'amount' => 2500,
             'transaction_date' => now()->toDateString(),
         ])->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')->putJson("/api/income-expenses/{$id}", ['amount' => 1000])->assertOk();
+        approvePending();
 
         expect((float) $rent->fresh()->balance)->toBe(1000.0)
             ->and((float) $cash->fresh()->balance)->toBe(-1000.0)
@@ -240,6 +246,7 @@ describe('work order', function () {
                 'amount' => 750,
                 'transaction_date' => now()->toDateString(),
             ]);
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.work_order_id', $workOrder->id)
@@ -276,6 +283,7 @@ describe('expense by', function () {
             ->assertStatus(201)
             ->assertJsonPath('data.employee_id', $employee->id)
             ->assertJsonPath('data.employee_name', "{$employee->name} ({$employee->employee_code})");
+        approvePending();
     });
 });
 
@@ -295,6 +303,7 @@ describe('attachment', function () {
                 'attachment' => UploadedFile::fake()->image('voucher.jpg'),
             ])
             ->assertStatus(201);
+        approvePending();
 
         $transaction = IncomeExpenseTransaction::sole();
         Storage::disk('public')->assertExists($transaction->attachment);
@@ -304,6 +313,7 @@ describe('attachment', function () {
             ->putJson("/api/income-expenses/{$transaction->id}", ['remove_attachment' => true])
             ->assertOk()
             ->assertJsonPath('data.attachment_url', null);
+        approvePending();
 
         Storage::disk('public')->assertMissing($transaction->attachment);
     });
