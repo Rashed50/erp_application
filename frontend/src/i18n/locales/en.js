@@ -72,6 +72,8 @@ export default {
         customerCollections: 'Customer Collection & Due',
         ledgerBalances: 'Ledger Account Balances',
         supplierTransactionHistory: 'Supplier Transaction History',
+        customerPaymentHistory: 'Customer Payment History',
+        supplierPaymentHistory: 'Supplier Payment History',
         supplierBalances: 'Supplier Outstanding Balance',
         otherReports: 'Other Reports',
         quotation: 'Quotation',

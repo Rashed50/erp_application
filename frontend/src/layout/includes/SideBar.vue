@@ -621,7 +621,9 @@ const accountReportLinks = [
     { report: 'work_order_profitability', label: 'nav.workOrderProfitability' },
     { report: 'work_order_details', label: 'nav.workOrderDetails' },
     { report: 'customer_collections', label: 'nav.customerCollections' },
+    { report: 'customer_payments', label: 'nav.customerPaymentHistory' },
     { report: 'supplier_statement', label: 'nav.supplierTransactionHistory' },
+    { report: 'supplier_payments', label: 'nav.supplierPaymentHistory' },
     { report: 'supplier_balances', label: 'nav.supplierBalances' },
     { report: 'cash_transactions', label: 'nav.otherReports' },
 ]

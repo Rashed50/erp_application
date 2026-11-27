@@ -73,6 +73,8 @@ export default {
         customerCollections: 'গ্রাহকভিত্তিক আদায় ও বকেয়া',
         ledgerBalances: 'লেজার হিসাবের ব্যালেন্স',
         supplierTransactionHistory: 'সরবরাহকারীর লেনদেনের ইতিহাস',
+        customerPaymentHistory: 'গ্রাহকের কাছ থেকে প্রাপ্ত পেমেন্টের ইতিহাস',
+        supplierPaymentHistory: 'সরবরাহকারীকে প্রদত্ত পেমেন্টের ইতিহাস',
         supplierBalances: 'সরবরাহকারীর বকেয়া ব্যালেন্স',
         settings: 'সেটিংস',
         quotation: 'সেটিংস',
