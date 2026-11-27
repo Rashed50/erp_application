@@ -298,6 +298,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Account module's admin/accounting/reports/* pages.
     Route::prefix('/accounting/reports')->name('account-reports.')->middleware('permission:account-reports.view')->group(function () {
         Route::get('/dashboard', [AccountReportController::class, 'dashboard'])->name('dashboard');
+        Route::get('/dashboard-details', [AccountReportController::class, 'dashboardDetails'])->name('dashboard-details');
         Route::get('/general-ledger', [AccountReportController::class, 'generalLedger'])->name('general-ledger');
         Route::get('/trial-balance', [AccountReportController::class, 'trialBalance'])->name('trial-balance');
         Route::get('/ledger-balances', [AccountReportController::class, 'ledgerBalances'])->name('ledger-balances');

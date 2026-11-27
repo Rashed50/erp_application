@@ -46,6 +46,10 @@ describe('access', function () {
         $this->actingAs(User::factory()->create(), 'sanctum')
             ->getJson('/api/accounting/reports/balance-sheet')
             ->assertStatus(403);
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->getJson('/api/accounting/reports/dashboard-details?card=sales')
+            ->assertStatus(403);
     });
 });
 
@@ -306,6 +310,23 @@ describe('dashboard', function () {
             ->getJson('/api/accounting/reports/dashboard?from_date=2026-05-01&to_date=2026-05-31')
             ->assertOk()
             ->assertJsonPath('data.total_sales', 1000);
+
+        foreach ([
+            'sales' => 2,
+            'purchase' => 1,
+            'receivable' => null,
+            'payable' => null,
+            'bank_balance' => 2,
+        ] as $card => $rowCount) {
+            $response = $this->actingAs($this->actor, 'sanctum')
+                ->getJson("/api/accounting/reports/dashboard-details?card={$card}")
+                ->assertOk()
+                ->assertJsonStructure(['data' => ['rows']]);
+
+            if ($rowCount !== null) {
+                $response->assertJsonCount($rowCount, 'data.rows');
+            }
+        }
     });
 
     it('summarizes expenses, collections, and work orders for today, month, and year', function () {
@@ -373,6 +394,53 @@ describe('dashboard', function () {
             ->assertJsonPath('data.activity_summary.this_year.collection', 450)
             ->assertJsonPath('data.activity_summary.this_year.work_orders_count', 2)
             ->assertJsonPath('data.activity_summary.this_year.work_orders_amount', 3000);
+
+        foreach (['collection', 'work_orders'] as $card) {
+            $this->actingAs($this->actor, 'sanctum')
+                ->getJson("/api/accounting/reports/dashboard-details?card={$card}&period=today")
+                ->assertOk()
+                ->assertJsonCount(1, 'data.rows');
+        }
+    });
+
+    it('returns dashboard activity details within the requested date range', function () {
+        IncomeExpenseTransaction::factory()->create([
+            'amount' => 75,
+            'transaction_date' => today()->toDateString(),
+        ]);
+        IncomeExpenseTransaction::factory()->create([
+            'amount' => 200,
+            'transaction_date' => today()->subDay()->toDateString(),
+        ]);
+        IncomeExpenseTransaction::factory()->income()->create([
+            'amount' => 400,
+            'transaction_date' => today()->toDateString(),
+        ]);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/dashboard-details?card=expense&from_date='.today()->toDateString().'&to_date='.today()->toDateString())
+            ->assertOk()
+            ->assertJsonCount(1, 'data.rows')
+            ->assertJsonPath('data.rows.0.amount', 75)
+            ->assertJsonPath('data.totals.amount', 75);
+    });
+
+    it('returns collection and work-order details for a dashboard period', function () {
+        CustomerTransaction::factory()->payment()->create([
+            'credit' => 45,
+            'transaction_date' => today()->toDateString(),
+        ]);
+        WorkOrder::factory()->create([
+            'issue_date' => today()->toDateString(),
+            'total_amount' => 500,
+        ]);
+
+        foreach (['collection', 'work_orders'] as $card) {
+            $this->actingAs($this->actor, 'sanctum')
+                ->getJson("/api/accounting/reports/dashboard-details?card={$card}&period=today")
+                ->assertOk()
+                ->assertJsonCount(1, 'data.rows');
+        }
     });
 });
 

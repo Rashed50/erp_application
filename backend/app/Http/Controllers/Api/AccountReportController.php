@@ -133,6 +133,32 @@ class AccountReportController extends Controller
         ));
     }
 
+    public function dashboardDetails(Request $request): JsonResponse
+    {
+        $request->validate([
+            'card' => ['required', Rule::in([
+                'sales',
+                'purchase',
+                'receivable',
+                'payable',
+                'bank_balance',
+                'expense',
+                'collection',
+                'work_orders',
+            ])],
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+            'period' => ['nullable', Rule::in(['today', 'this_month', 'this_year'])],
+        ]);
+
+        return ApiResponse::success($this->reportService->dashboardDetails(
+            $request->string('card')->value(),
+            $request->date('from_date')?->toDateString(),
+            $request->date('to_date')?->toDateString(),
+            $request->string('period')->value() ?: null,
+        ));
+    }
+
     public function balanceSheet(Request $request): JsonResponse
     {
         $request->validate(['to_date' => ['nullable', 'date']]);
