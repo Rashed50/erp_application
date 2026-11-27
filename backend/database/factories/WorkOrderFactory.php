@@ -27,6 +27,18 @@ class WorkOrderFactory extends Factory
             'retention_percent' => fake()->randomElement([0, 5, 10]),
             'deliver_date' => null,
             'status' => 'Pending',
+            'approved_at' => now(),
         ];
+    }
+
+    /**
+     * Indicate that the record has not been approved yet.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved_by' => null,
+            'approved_at' => null,
+        ]);
     }
 }

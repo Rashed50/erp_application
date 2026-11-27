@@ -94,6 +94,7 @@ describe('store', function () {
                 'total_amount' => 999999,
                 'net_total' => 999999,
             ]));
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.total_amount', 90)
@@ -110,6 +111,7 @@ describe('store', function () {
         $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->assertStatus(201);
+        approvePending();
 
         // net_total is 88 (see totals test above).
         expect($customer->fresh()->current_balance)->toEqual('188.00');
@@ -133,6 +135,7 @@ describe('store with products', function () {
                 ['item_name' => 'Custom work', 'qty' => 1, 'unit_price' => 5],
             ],
         ]));
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.items.0.product_id', $product->id)
@@ -161,10 +164,12 @@ describe('update', function () {
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/sales/{$sale['id']}", ['customer_id' => $otherCustomer->id])
             ->assertOk();
+        approvePending();
 
         $this->assertDatabaseHas('sales', ['id' => $sale['id'], 'customer_id' => $customer->id]);
     });
@@ -175,6 +180,7 @@ describe('update', function () {
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
+        approvePending();
 
         expect($customer->fresh()->current_balance)->toEqual('88.00');
 
@@ -184,6 +190,7 @@ describe('update', function () {
                     ['item_name' => 'Consulting', 'qty' => 1, 'unit_price' => 100, 'discount' => 0, 'vat' => 0],
                 ],
             ]);
+        approvePending();
 
         $response->assertOk()
             ->assertJsonPath('data.net_total', 100)
@@ -199,11 +206,13 @@ describe('update', function () {
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
+        approvePending();
 
         // net_total is 88; pay 50 of it.
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/sales/{$sale['id']}/payments", ['payment_account_id' => saleCashAccountId(), 'amount' => 50, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/sales/{$sale['id']}", [
@@ -223,6 +232,7 @@ describe('destroy', function () {
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
+        approvePending();
 
         expect($customer->fresh()->current_balance)->toEqual('88.00');
 
@@ -242,6 +252,7 @@ describe('payments', function () {
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
+        approvePending();
 
         // net_total is 88.
         $this->actingAs($actor, 'sanctum')
@@ -256,6 +267,7 @@ describe('payments', function () {
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
+        approvePending();
 
         // net_total is 88.
         $response = $this->actingAs($actor, 'sanctum')
@@ -265,6 +277,7 @@ describe('payments', function () {
                 'payment_date' => now()->toDateString(),
                 'notes' => 'partial payment',
             ]);
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.paid_amount', 30)
@@ -282,17 +295,20 @@ describe('payments', function () {
         $actor = adminUser();
         $customer = Customer::factory()->create(['opening_balance' => 0]);
         $sale = $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id))->json('data');
+        approvePending();
         $this->actingAs($actor, 'sanctum')->postJson("/api/sales/{$sale['id']}/payments", [
             'payment_account_id' => saleCashAccountId(),
             'amount' => 30,
             'payment_date' => now()->toDateString(),
         ])->assertStatus(201);
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/sales/{$sale['id']}", ['invoice_number' => 'RENUMBERED-1'])
             ->assertOk()
             ->assertJsonPath('data.paid_amount', 30)
             ->assertJsonPath('data.due_amount', 58);
+        approvePending();
     });
 
     it('allows paying off the remaining due amount across multiple partial payments', function () {
@@ -301,14 +317,17 @@ describe('payments', function () {
         $sale = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data');
+        approvePending();
 
         // net_total is 88.
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/sales/{$sale['id']}/payments", ['payment_account_id' => saleCashAccountId(), 'amount' => 58, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
+        approvePending();
 
         $response = $this->actingAs($actor, 'sanctum')
             ->postJson("/api/sales/{$sale['id']}/payments", ['payment_account_id' => saleCashAccountId(), 'amount' => 30, 'payment_date' => now()->toDateString()]);
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.paid_amount', 88)
@@ -330,6 +349,7 @@ describe('chart of account posting', function () {
             ->postJson('/api/sales', salePayload(Customer::factory()->create()->id))
             ->assertStatus(201)
             ->json('data.id');
+        approvePending();
 
         $sale = Sale::find($saleId);
         $entry = $sale->journalEntry;
@@ -352,6 +372,7 @@ describe('chart of account posting', function () {
                 'credit_account_id' => $serviceIncome->id,
             ]))
             ->assertStatus(201);
+        approvePending();
 
         expect((float) $this->cash->fresh()->balance)->toBe(88.0)
             ->and((float) $serviceIncome->fresh()->balance)->toBe(88.0)
@@ -372,12 +393,14 @@ describe('chart of account posting', function () {
         $saleId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload(Customer::factory()->create()->id))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/sales/{$saleId}", [
                 'items' => [['item_name' => 'Consulting', 'qty' => 20, 'unit_price' => 5, 'discount' => 0, 'vat' => 0]],
             ])
             ->assertOk();
+        approvePending();
 
         expect((float) $this->receivable->fresh()->balance)->toBe(100.0)
             ->and((float) $this->revenue->fresh()->balance)->toBe(100.0)
@@ -403,10 +426,12 @@ describe('chart of account posting', function () {
         $saleId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload(Customer::factory()->create()->id))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 88, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
+        approvePending();
 
         $payment = CustomerTransaction::query()->where('transaction_type', 'Payment Received')->sole();
 
@@ -427,10 +452,12 @@ describe('chart of account posting', function () {
         $saleId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 30, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
+        approvePending();
 
         $paymentEntryId = $customer->transactions()->where('transaction_type', 'Payment Received')->value('id');
 
@@ -447,6 +474,7 @@ describe('chart of account posting', function () {
         $saleId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/sales', salePayload(Customer::factory()->create()->id))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->revenue->id, 'amount' => 10, 'payment_date' => now()->toDateString()])
@@ -472,6 +500,7 @@ describe('units and overall discount/VAT', function () {
                 'overall_discount' => 10,
                 'overall_vat' => 4,
             ]));
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.items.1.unit_id', $day->id)
@@ -498,6 +527,7 @@ describe('attachment', function () {
         $response = $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id, ['attachment' => UploadedFile::fake()->create('invoice.pdf', 100, 'application/pdf')]))
             ->assertStatus(201);
+        approvePending();
 
         $sale = Sale::sole();
 
@@ -511,6 +541,7 @@ describe('attachment', function () {
         $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/sales', salePayload($customer->id, ['attachment' => UploadedFile::fake()->create('old.pdf', 100, 'application/pdf')]))
             ->assertStatus(201);
+        approvePending();
         $sale = Sale::sole();
         $oldAttachment = $sale->attachment;
 
@@ -532,6 +563,7 @@ describe('attachment', function () {
             ->putJson("/api/sales/{$sale->id}", ['remove_attachment' => true])
             ->assertOk()
             ->assertJsonPath('data.attachment_url', null);
+        approvePending();
 
         Storage::disk('public')->assertMissing('sales/invoice.pdf');
     });
@@ -569,6 +601,7 @@ describe('previous advance adjustment', function () {
             'previous_advance_amount' => 20,
             'previous_advance_purpose' => 'Previous Advance',
         ]));
+        approvePending();
 
         $response->assertCreated();
         $sale = Sale::query()->latest('id')->first();
@@ -598,6 +631,7 @@ describe('previous advance adjustment', function () {
         $customer = Customer::factory()->create();
 
         $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id))->assertCreated();
+        approvePending();
 
         $sale = Sale::query()->latest('id')->first();
         expect((float) $sale->previous_advance_amount)->toBe(0.0)
@@ -608,13 +642,16 @@ describe('previous advance adjustment', function () {
         $actor = adminUser();
         $customer = Customer::factory()->create();
         $this->actingAs($actor, 'sanctum')->postJson('/api/sales', salePayload($customer->id, ['previous_advance_amount' => 20, 'previous_advance_purpose' => 'Other']))->assertCreated();
+        approvePending();
         $sale = Sale::query()->latest('id')->first();
 
         $this->actingAs($actor, 'sanctum')->putJson("/api/sales/{$sale->id}", ['previous_advance_amount' => 30])->assertOk();
+        approvePending();
         expect((float) $sale->fresh()->previous_advance_amount)->toBe(30.0)
             ->and($sale->fresh()->previous_advance_purpose)->toBe('Other');
 
         $this->actingAs($actor, 'sanctum')->putJson("/api/sales/{$sale->id}", ['previous_advance_amount' => 0])->assertOk();
+        approvePending();
         expect((float) $sale->fresh()->previous_advance_amount)->toBe(0.0)
             ->and($sale->fresh()->previous_advance_purpose)->toBeNull();
     });

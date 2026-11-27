@@ -59,7 +59,7 @@
                                 <th class="text-right">{{ $t('Amount') }}</th>
                                 <th class="text-center">{{ $t('Predefined') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Manage') }}</th>
                             </tr>
@@ -93,7 +93,7 @@
                                         {{ $t(item.active_status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
-                                <td>{{ item.created_by_name || $t('Default') }}</td>
+                                <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" :fallback="$t('Default')" /></td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
                                         :approved-by-name="item.approved_by_name" />
@@ -107,7 +107,7 @@
                                         </template>
                                         <ul class="table-action-menu">
                                             <li class="menu-item"
-                                                v-if="!item.approved_by && can(['ledger-accounts.approve'])">
+                                                v-if="!item.approved_at && can(['ledger-accounts.approve'])">
                                                 <button type="button" class="menu-link"
                                                     @click="approve(item, 'account')">
                                                     {{ $t('Approve') }}
@@ -143,6 +143,7 @@
 
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';

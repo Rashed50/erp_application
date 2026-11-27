@@ -13,6 +13,7 @@ class IncomeExpenseTransactionService
     public function __construct(
         private readonly LedgerPostingService $ledgerPostingService,
         private readonly AttachmentService $attachmentService,
+        private readonly ApprovalService $approvalService,
     ) {}
 
     public function paginate(int $perPage = 15, ?string $type = null, ?string $fromDate = null, ?string $toDate = null): LengthAwarePaginator
@@ -43,8 +44,6 @@ class IncomeExpenseTransactionService
                 'updated_by' => Auth::id(),
             ]);
 
-            $this->post($transaction);
-
             return $transaction->load(['account', 'paymentAccount', 'workOrder', 'employee']);
         });
     }
@@ -57,9 +56,24 @@ class IncomeExpenseTransactionService
         return DB::transaction(function () use ($transaction, $data) {
             $transaction->fill([...collect($data)->except(AttachmentService::FIELDS)->all(), 'updated_by' => Auth::id()]);
             $this->attachmentService->sync($transaction, $data, 'income-expenses');
+            // The edit sends the entry back for approval and takes it off the ledger.
+            $transaction->resetApproval();
             $transaction->save();
 
-            // Rewrite the journal entry in place so it always matches the entry.
+            $this->ledgerPostingService->reverse($transaction);
+
+            return $transaction->load(['account', 'paymentAccount', 'workOrder', 'employee']);
+        });
+    }
+
+    /**
+     * Approve the entry and post its journal entry.
+     */
+    public function approve(IncomeExpenseTransaction $transaction): IncomeExpenseTransaction
+    {
+        return DB::transaction(function () use ($transaction) {
+            $this->approvalService->approve($transaction);
+
             if ($entry = $this->ledgerPostingService->entryFor($transaction)) {
                 $this->ledgerPostingService->repost($entry, $this->journalHeader($transaction), $this->journalLines($transaction));
             } else {

@@ -34,6 +34,8 @@ class InventoryAssetResource extends JsonResource
             'condition' => $this->serial?->condition,
             'assignments' => AssetAssignmentResource::collection($this->whenLoaded('assignments')),
             'returns' => AssetReturnResource::collection($this->whenLoaded('returns')),
+            'created_by' => $this->created_by,
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

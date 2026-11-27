@@ -2,6 +2,10 @@
 
 namespace App\Http\Requests\Purchase;
 
+use App\Models\ChartOfAccount;
+use App\Models\Supplier;
+use App\Models\WorkOrder;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,8 +35,8 @@ class StorePurchaseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'supplier_id' => ['required', Rule::exists('suppliers', 'id')],
-            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->withoutTrashed()],
+            'supplier_id' => ['required', Rule::exists('suppliers', 'id'), new Approved(Supplier::class)],
+            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->withoutTrashed(), new Approved(WorkOrder::class)],
             'purchased_by_id' => ['nullable', 'integer', Rule::exists('employee_info', 'id')->withoutTrashed()],
             'purchase_type' => ['required', 'string', Rule::in(['product', 'service'])],
             'invoice_number' => ['required', 'string', 'max:255', Rule::unique('purchases', 'invoice_number')],
@@ -43,8 +47,8 @@ class StorePurchaseRequest extends FormRequest
             'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx', 'max:20480'],
             // The journal entry's accounts, as on the payroll module's form; omitted
             // to use the predefined defaults.
-            'debit_account_id' => ['nullable', Rule::exists('chart_of_accounts', 'id')->where('is_transaction', 1)->where('is_closed', 0)->whereNull('deleted_at'), 'different:credit_account_id'],
-            'credit_account_id' => ['nullable', Rule::exists('chart_of_accounts', 'id')->where('is_transaction', 1)->where('is_closed', 0)->whereNull('deleted_at')],
+            'debit_account_id' => ['nullable', Rule::exists('chart_of_accounts', 'id')->where('is_transaction', 1)->where('is_closed', 0)->whereNull('deleted_at'), 'different:credit_account_id', new Approved(ChartOfAccount::class)],
+            'credit_account_id' => ['nullable', Rule::exists('chart_of_accounts', 'id')->where('is_transaction', 1)->where('is_closed', 0)->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->withoutTrashed()],

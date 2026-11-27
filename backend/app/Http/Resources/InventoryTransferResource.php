@@ -26,6 +26,8 @@ class InventoryTransferResource extends JsonResource
             'remarks' => $this->remarks,
             'requested_by' => $this->requested_by,
             'requested_by_name' => $this->whenLoaded('requester', fn () => $this->requester?->name),
+            // Who entered the record, under the name every list uses.
+            'created_by_name' => $this->whenLoaded('requester', fn () => $this->requester?->name),
             'approved_by' => $this->approved_by,
             'approved_by_name' => $this->whenLoaded('approver', fn () => $this->approver?->name),
             'dispatched_by' => $this->dispatched_by,

@@ -21,6 +21,7 @@ class ItemCategoryResource extends JsonResource
             'status' => $this->status,
             'sub_categories_count' => $this->whenCounted('subCategories'),
             'create_by_id' => $this->create_by_id,
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'update_by_id' => $this->update_by_id,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

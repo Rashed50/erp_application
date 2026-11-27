@@ -24,6 +24,7 @@ class CustomerController extends Controller
             // `filled` (not `has`) so a query string like `?active_status=` from a
             // reset dropdown is treated as "no filter" rather than "false".
             $request->filled('active_status') ? $request->boolean('active_status') : null,
+            $request->filled('approved') ? $request->boolean('approved') : null,
         );
 
         return ApiResponse::success([

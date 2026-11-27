@@ -55,7 +55,7 @@
                                 <th class="text-left">{{ $t('Parent Store') }}</th>
                                 <th class="text-left">{{ $t('Store Manager') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
@@ -81,7 +81,7 @@
                                         {{ $t(warehouse.status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
-                                <td>{{ warehouse.created_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="warehouse.created_by_name" :at="warehouse.created_at" /></td>
                                 <td class="text-center">
                                     <v-menu>
                                         <template v-slot:activator="{ props }">
@@ -221,6 +221,7 @@
     </v-dialog>
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';

@@ -1311,6 +1311,7 @@ export default {
         'Requested By': 'অনুরোধকারী',
         'Approved By': 'অনুমোদনকারী',
         'Created By': 'তৈরিকারী',
+        'Created At': 'তৈরির সময়',
         'Reject': 'বাতিল করুন',
         'Approve this material request?': 'এই ম্যাটেরিয়াল রিকোয়েস্ট অনুমোদন করবেন?',
         'Reject this material request?': 'এই ম্যাটেরিয়াল রিকোয়েস্ট বাতিল করবেন?',

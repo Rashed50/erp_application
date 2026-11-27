@@ -49,6 +49,8 @@
     "Purchase deleted successfully.": "ক্রয় সফলভাবে মুছে ফেলা হয়েছে।",
     "Purchase updated successfully.": "ক্রয় সফলভাবে আপডেট হয়েছে।",
     "Record approved successfully.": "রেকর্ড সফলভাবে অনুমোদিত হয়েছে।",
+    "The selected :attribute is not approved yet. Approve it first.": "নির্বাচিত :attribute এখনও অনুমোদিত হয়নি। আগে অনুমোদন করুন।",
+    "This record is not approved yet. Approve it before doing any activity with it.": "এই রেকর্ডটি এখনও অনুমোদিত হয়নি। এর সাথে কোনো কাজ করার আগে অনুমোদন করুন।",
     "Resource not found.": "তথ্য পাওয়া যায়নি।",
     "revenue": "আয়",
     "Role created successfully.": "রোল সফলভাবে তৈরি হয়েছে।",

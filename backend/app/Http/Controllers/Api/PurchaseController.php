@@ -22,6 +22,7 @@ class PurchaseController extends Controller
             (int) $request->integer('per_page', 15),
             $request->string('search')->value() ?: null,
             $request->integer('supplier_id') ?: null,
+            $request->filled('approved') ? $request->boolean('approved') : null,
         );
 
         return ApiResponse::success([

@@ -83,6 +83,7 @@ const ASSET = 1
 // Money can only move through an open asset (cash/bank) transaction account.
 const { items: paymentAccounts, fetchData: loadPaymentAccounts } = useFetch('/api/ledger-accounts', {
     per_page: 500,
+    approved: 1,
     account_type_id: ASSET,
     is_transaction: 1,
     active_status: 1,

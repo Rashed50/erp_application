@@ -45,7 +45,7 @@
                                 <th class="text-left">{{ $t('Description') }}</th>
                                 <th class="text-center">{{ $t('Employees') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
@@ -74,7 +74,7 @@
                                         {{ $t(item.status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
-                                <td>{{ item.created_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                                 <td class="text-center">
                                     <v-menu v-if="can([`${resource}.update`])">
                                         <template v-slot:activator="{ props }">
@@ -150,6 +150,7 @@
 
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';

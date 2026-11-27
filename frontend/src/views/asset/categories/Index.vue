@@ -48,20 +48,21 @@
                                 <th class="text-left">{{ $t('Category Name') }}</th>
                                 <th class="text-center">{{ $t('Sub Categories') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
 
                             <tr v-if="loading">
-                                <td colspan="6" class="text-center py-4">
+                                <td colspan="7" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary" size="30"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
                             </tr>
 
                             <tr v-else-if="!items.length">
-                                <td colspan="6" class="text-center py-4">
+                                <td colspan="7" class="text-center py-4">
                                     {{ $t('No records found.') }}
                                 </td>
                             </tr>
@@ -76,6 +77,7 @@
                                         {{ $t(item.status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
+                                <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                                 <td class="text-center">
                                     <v-menu v-if="can(['item-categories.update'])">
                                         <template v-slot:activator="{ props }">
@@ -154,6 +156,7 @@
 
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';

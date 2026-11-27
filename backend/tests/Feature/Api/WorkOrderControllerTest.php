@@ -100,6 +100,7 @@ describe('store', function () {
             ->assertJsonPath('data.status', 'Pending')
             ->assertJsonPath('data.created_by', $actor->id)
             ->assertJsonPath('data.approved_by', null);
+        approvePending();
     });
 
     it('links an optional quotation to the work order', function () {
@@ -116,6 +117,7 @@ describe('store', function () {
             ->postJson('/api/work-orders', workOrderPayload($customer->id, ['quotation_id' => $quotation->id]))
             ->assertCreated()
             ->assertJsonPath('data.quotation_id', $quotation->id);
+        approvePending();
 
         $this->assertDatabaseHas('work_orders', ['quotation_id' => $quotation->id]);
     });
@@ -145,6 +147,7 @@ describe('store', function () {
             ->assertStatus(201)
             ->assertJsonPath('data.status', 'Pending')
             ->assertJsonPath('data.retention_percent', 0);
+        approvePending();
     });
 
     it('rejects a duplicate work_order_no', function () {
@@ -209,6 +212,7 @@ describe('update', function () {
             ->assertJsonPath('data.status', 'In Progress')
             ->assertJsonPath('data.work_title', 'Updated')
             ->assertJsonPath('data.updated_by', $actor->id);
+        approvePending();
     });
 
     it('allows keeping its own work_order_no', function () {
@@ -217,6 +221,50 @@ describe('update', function () {
         $this->actingAs(adminUser(), 'sanctum')
             ->putJson("/api/work-orders/{$workOrder->id}", ['work_order_no' => $workOrder->work_order_no])
             ->assertOk();
+        approvePending();
+    });
+
+    it('replaces an attachment and deletes the previous file', function () {
+        $disk = config('filesystems.uploads.public_disk');
+        Storage::fake($disk);
+        $workOrder = WorkOrder::factory()->create([
+            'attachment' => UploadedFile::fake()->create('old.pdf', 100, 'application/pdf')->store('work-orders', $disk),
+        ]);
+        $oldPath = $workOrder->attachment;
+
+        $response = $this->actingAs(adminUser(), 'sanctum')
+            ->post("/api/work-orders/{$workOrder->id}", [
+                '_method' => 'PUT',
+                'attachment' => UploadedFile::fake()->create('new.pdf', 100, 'application/pdf'),
+            ], ['Accept' => 'application/json'])
+            ->assertOk();
+
+        $newPath = $workOrder->fresh()->attachment;
+        expect($newPath)->not->toBe($oldPath);
+        Storage::disk($disk)->assertMissing($oldPath);
+        Storage::disk($disk)->assertExists($newPath);
+        $response->assertJsonPath('data.attachment_url', Storage::disk($disk)->url($newPath));
+    });
+
+    it('keeps an existing attachment unless explicitly removed', function () {
+        $disk = config('filesystems.uploads.public_disk');
+        Storage::fake($disk);
+        $path = 'work-orders/keep.pdf';
+        Storage::disk($disk)->put($path, 'existing file');
+        $workOrder = WorkOrder::factory()->create(['attachment' => $path]);
+        $actor = adminUser();
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/work-orders/{$workOrder->id}", ['work_title' => 'Updated title'])
+            ->assertOk()
+            ->assertJsonPath('data.attachment_url', Storage::disk($disk)->url($path));
+        Storage::disk($disk)->assertExists($path);
+
+        $this->actingAs($actor, 'sanctum')
+            ->putJson("/api/work-orders/{$workOrder->id}", ['remove_attachment' => true])
+            ->assertOk()
+            ->assertJsonPath('data.attachment_url', null);
+        Storage::disk($disk)->assertMissing($path);
     });
 });
 
@@ -235,10 +283,12 @@ describe('payment tracking', function () {
             ->assertJsonPath('data.work_order_id', $this->workOrder->id)
             ->assertJsonPath('data.work_order_no', $this->workOrder->work_order_no)
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($this->actor, 'sanctum')
             ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->cashAccountId, 'amount' => 250, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
+        approvePending();
 
         $this->assertDatabaseHas('customer_transactions', ['work_order_id' => $this->workOrder->id, 'transaction_type' => 'Invoice', 'debit' => 600]);
         $this->assertDatabaseHas('customer_transactions', ['work_order_id' => $this->workOrder->id, 'transaction_type' => 'Payment Received', 'credit' => 250]);
@@ -248,11 +298,13 @@ describe('payment tracking', function () {
         $saleId = $this->actingAs($this->actor, 'sanctum')
             ->postJson('/api/sales', workOrderSalePayload($this->workOrder))
             ->json('data.id');
+        approvePending();
 
         foreach ([100, 150] as $amount) {
             $this->actingAs($this->actor, 'sanctum')
                 ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->cashAccountId, 'amount' => $amount, 'payment_date' => now()->toDateString()])
                 ->assertStatus(201);
+            approvePending();
         }
         WorkOrder::factory()->create();
 
@@ -269,8 +321,10 @@ describe('payment tracking', function () {
         $saleId = $this->actingAs($this->actor, 'sanctum')
             ->postJson('/api/sales', workOrderSalePayload($this->workOrder))
             ->json('data.id');
+        approvePending();
         $this->actingAs($this->actor, 'sanctum')
             ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->cashAccountId, 'amount' => 200, 'payment_date' => now()->toDateString()]);
+        approvePending();
 
         $paymentId = $this->workOrder->transactions()->where('transaction_type', 'Payment Received')->value('id');
         $this->actingAs($this->actor, 'sanctum')
@@ -295,6 +349,7 @@ describe('payment tracking', function () {
             ])
             ->assertStatus(201)
             ->assertJsonPath('data.work_order_id', $this->workOrder->id);
+        approvePending();
 
         $this->actingAs($this->actor, 'sanctum')
             ->getJson("/api/work-orders/{$this->workOrder->id}")
@@ -326,14 +381,17 @@ describe('payment tracking', function () {
         $saleId = $this->actingAs($this->actor, 'sanctum')
             ->postJson('/api/sales', workOrderSalePayload($this->workOrder))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($this->actor, 'sanctum')
             ->putJson("/api/sales/{$saleId}", ['work_order_id' => $otherWorkOrder->id])
             ->assertOk();
+        approvePending();
         $this->assertDatabaseHas('customer_transactions', ['work_order_id' => $otherWorkOrder->id, 'transaction_type' => 'Invoice']);
 
         $this->actingAs($this->actor, 'sanctum')
             ->postJson("/api/sales/{$saleId}/payments", ['payment_account_id' => $this->cashAccountId, 'amount' => 50, 'payment_date' => now()->toDateString()]);
+        approvePending();
 
         $this->actingAs($this->actor, 'sanctum')
             ->putJson("/api/sales/{$saleId}", ['work_order_id' => $this->workOrder->id])
@@ -345,6 +403,7 @@ describe('payment tracking', function () {
         $this->actingAs($this->actor, 'sanctum')
             ->postJson('/api/sales', workOrderSalePayload($this->workOrder))
             ->assertStatus(201);
+        approvePending();
 
         $this->actingAs($this->actor, 'sanctum')
             ->deleteJson("/api/work-orders/{$this->workOrder->id}")

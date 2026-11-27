@@ -46,7 +46,7 @@
                             <th class="text-right">{{ $t('Recovered') }}</th>
                             <th class="text-right">{{ $t('Outstanding') }}</th>
                             <th>{{ $t('Status') }}</th>
-                            <th>{{ $t('Inserted By') }}</th>
+                            <th>{{ $t('Created By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
@@ -76,7 +76,7 @@
                             <td class="text-right">{{ money(item.recovered_amount) }}</td>
                             <td class="text-right"><strong>{{ money(item.outstanding_amount) }}</strong></td>
                             <td><span :class="advanceStatusClass(item.status)">{{ $t(item.status) }}</span></td>
-                            <td>{{ item.created_by_name || '-' }}</td>
+                            <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                             <td class="text-center text-nowrap">
                                 <v-btn size="small" variant="text" color="blue-darken-3" icon="mdi-eye"
                                     :title="$t('Details')" @click="openDetail(item)"></v-btn>
@@ -112,6 +112,7 @@
 </template>
 
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';

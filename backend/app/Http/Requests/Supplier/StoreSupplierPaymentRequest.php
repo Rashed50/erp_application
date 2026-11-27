@@ -3,7 +3,10 @@
 namespace App\Http\Requests\Supplier;
 
 use App\Http\Requests\Concerns\ValidatesPaymentAccounts;
+use App\Models\ChartOfAccount;
 use App\Models\Purchase;
+use App\Models\Supplier;
+use App\Rules\Approved;
 use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -33,10 +36,10 @@ class StoreSupplierPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'supplier_id' => ['required', Rule::exists('suppliers', 'id')->whereNull('deleted_at')],
-            'purchase_id' => ['nullable', Rule::exists('purchases', 'id')->whereNull('deleted_at')],
-            'payment_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
-            'debit_account_id' => ['nullable', 'different:payment_account_id', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
+            'supplier_id' => ['required', Rule::exists('suppliers', 'id')->whereNull('deleted_at'), new Approved(Supplier::class)],
+            'purchase_id' => ['nullable', Rule::exists('purchases', 'id')->whereNull('deleted_at'), new Approved(Purchase::class)],
+            'payment_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
+            'debit_account_id' => ['nullable', 'different:payment_account_id', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
             'invoice_no' => ['nullable', 'string', 'max:255'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'bill_amount' => ['required', 'numeric', 'min:0.01'],

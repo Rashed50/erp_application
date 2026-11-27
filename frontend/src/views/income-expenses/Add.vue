@@ -147,6 +147,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
 // selected type client-side rather than refetching on every toggle.
 const { items: accounts, fetchData: loadAccounts } = useFetch('/api/ledger-accounts', {
     per_page: 200,
+    approved: 1,
     active_status: 1,
     is_transaction: 1,
 })

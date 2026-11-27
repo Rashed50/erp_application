@@ -34,7 +34,6 @@
                                 <label>{{ $t('Type:') }}</label>
                                 <select class="form-control" v-model="form.transaction_type" required>
                                     <option value="Payment Received">{{ $t('Payment Received') }}</option>
-                                    <option value="Adjustment">{{ $t('Adjustment') }}</option>
                                 </select>
                             </div>
                         </div>
@@ -111,7 +110,7 @@
                             <th class="text-right">{{ $t('Credit') }}</th>
                             <th class="text-left">{{ $t('Notes') }}</th>
                             <th class="text-center">{{ $t('Status') }}</th>
-                            <th class="text-left">{{ $t('Inserted By') }}</th>
+                            <th class="text-left">{{ $t('Created By') }}</th>
                             <th class="text-center">{{ $t('Action') }}</th>
                         </tr>
                     </thead>
@@ -138,7 +137,7 @@
                                     {{ $t(item.status ? 'Active' : 'Reversed') }}
                                 </span>
                             </td>
-                            <td>{{ item.created_by_name || '-' }}</td>
+                            <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                             <td class="text-center">
                                 <v-btn v-if="item.status && can(['customer-transactions.delete'])" size="small"
                                     color="red-darken-2" variant="text" @click="handleReverse(item)">
@@ -159,6 +158,7 @@
 
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
@@ -209,6 +209,7 @@ const ASSET = 1
 // Money can only move through an open asset (cash/bank) transaction account.
 const { items: paymentAccounts, fetchData: loadPaymentAccounts } = useFetch('/api/ledger-accounts', {
     per_page: 500,
+    approved: 1,
     account_type_id: ASSET,
     is_transaction: 1,
     active_status: 1,

@@ -28,6 +28,7 @@ class ChartOfAccountController extends Controller
             $request->filled('active_status') ? $request->boolean('active_status') : null,
             $request->filled('is_transaction') ? $request->boolean('is_transaction') : null,
             $request->filled('is_closed') ? $request->boolean('is_closed') : null,
+            $request->filled('approved') ? $request->boolean('approved') : null,
         );
 
         return ApiResponse::success([
@@ -51,6 +52,7 @@ class ChartOfAccountController extends Controller
         $accounts = ChartOfAccount::query()
             ->ofType(AccountType::ASSET)
             ->active()
+            ->approved()
             ->where('is_transaction', true)
             ->where('is_closed', false)
             ->whereNot('account_number', LedgerPostingService::EMPLOYEE_ADVANCE_NUMBER)

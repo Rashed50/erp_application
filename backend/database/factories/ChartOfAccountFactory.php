@@ -28,6 +28,7 @@ class ChartOfAccountFactory extends Factory
             'is_transaction' => true,
             'is_predefined' => false,
             'is_closed' => false,
+            'approved_at' => now(),
         ];
     }
 
@@ -82,5 +83,16 @@ class ChartOfAccountFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn (array $attributes) => ['active_status' => false]);
+    }
+
+    /**
+     * Indicate that the record has not been approved yet.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved_by' => null,
+            'approved_at' => null,
+        ]);
     }
 }

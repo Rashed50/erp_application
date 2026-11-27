@@ -1,9 +1,10 @@
 <template>
-    <span v-if="approvedBy" class="badge bg-success" :title="approvedAt ? $t('approval.approvedAt', { date: approvedAt }) : ''">
+    <!-- approved_at decides: records approved by the system have no approver. -->
+    <span v-if="approvedAt" class="badge bg-success" :title="$t('approval.approvedAt', { date: approvedAt })">
         {{ $t('approval.approved') }}
     </span>
     <span v-else class="badge bg-warning text-dark">{{ $t('approval.pending') }}</span>
-    <small v-if="approvedBy && approvedByName" class="d-block text-muted">{{ $t('approval.by', { name: approvedByName }) }}</small>
+    <small v-if="approvedAt && approvedByName" class="d-block text-muted">{{ $t('approval.by', { name: approvedByName }) }}</small>
 </template>
 <script setup>
 defineProps({

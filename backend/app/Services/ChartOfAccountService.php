@@ -10,7 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class ChartOfAccountService
 {
-    public function __construct(private readonly LedgerPostingService $ledgerPostingService) {}
+    public function __construct(
+        private readonly LedgerPostingService $ledgerPostingService,
+        private readonly ApprovalService $approvalService,
+    ) {}
 
     /**
      * @param  bool|null  $transactionOnly  Restrict to (non-)transaction accounts, or null for all.
@@ -24,6 +27,7 @@ class ChartOfAccountService
         ?bool $active = null,
         ?bool $transactionOnly = null,
         ?bool $closed = null,
+        ?bool $approved = null,
     ): LengthAwarePaginator {
         return ChartOfAccount::query()
             ->with(['accountType:id,name,normal_balance', 'parent:id,name', 'creator:id,name', 'approver:id,name'])
@@ -34,6 +38,7 @@ class ChartOfAccountService
             ->when(! is_null($active), fn ($query) => $query->where('active_status', $active))
             ->when(! is_null($transactionOnly), fn ($query) => $query->where('is_transaction', $transactionOnly))
             ->when(! is_null($closed), fn ($query) => $query->where('is_closed', $closed))
+            ->approvalStatus($approved)
             ->orderBy('account_type_id')
             ->orderBy('account_number')
             ->orderBy('name')
@@ -68,27 +73,44 @@ class ChartOfAccountService
                 'updated_by' => Auth::id(),
             ]);
 
-            $this->postOpeningBalance($account);
-
             return $this->find($account);
         });
     }
 
     /**
-     * The opening balance itself cannot be edited, so editing never posts a
-     * second opening entry; a changed opening date moves the existing entry.
+     * Any change sends the account back for approval, and its opening
+     * balance entry is taken off the ledger until it is approved again (when
+     * it is posted with the account's current opening date).
      *
      * @param  array<string, mixed>  $data
      */
     public function update(ChartOfAccount $account, array $data): ChartOfAccount
     {
         return DB::transaction(function () use ($account, $data) {
-            $account->fill([...$data, 'updated_by' => Auth::id()]);
-            $openingDateChanged = $account->isDirty('opening_date');
+            $account->fill($data);
+
+            if ($account->isDirty()) {
+                $account->resetApproval();
+                $this->ledgerPostingService->reverse($account);
+            }
+
+            $account->updated_by = Auth::id();
             $account->save();
 
-            if ($openingDateChanged && $entry = $this->ledgerPostingService->entryFor($account)) {
-                $entry->update(['date' => $account->opening_date->toDateString()]);
+            return $this->find($account);
+        });
+    }
+
+    /**
+     * Approve the account and post its opening balance.
+     */
+    public function approve(ChartOfAccount $account): ChartOfAccount
+    {
+        return DB::transaction(function () use ($account) {
+            $this->approvalService->approve($account);
+
+            if (! $this->ledgerPostingService->entryFor($account)) {
+                $this->postOpeningBalance($account);
             }
 
             return $this->find($account);

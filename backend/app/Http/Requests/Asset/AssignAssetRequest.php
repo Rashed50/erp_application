@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Asset;
 
+use App\Models\WorkOrder;
+use App\Rules\Approved;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,7 +30,7 @@ class AssignAssetRequest extends FormRequest
     {
         return [
             'employee_id' => ['required', 'integer', Rule::exists('employee_info', 'id')->whereNull('deleted_at')],
-            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->whereNull('deleted_at')],
+            'work_order_id' => ['nullable', 'integer', Rule::exists('work_orders', 'id')->whereNull('deleted_at'), new Approved(WorkOrder::class)],
             'expected_return_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],
         ];

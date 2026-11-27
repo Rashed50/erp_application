@@ -64,7 +64,7 @@
                                 <th class="text-right">{{ $t('Paid') }}</th>
                                 <th class="text-right">{{ $t('Outstanding') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -107,7 +107,7 @@
                                 <td class="text-center">
                                     <span :class="statusBadgeClass(item.status)">{{ $t(item.status) }}</span>
                                 </td>
-                                <td>{{ item.created_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
                                         :approved-by-name="item.approved_by_name" />
@@ -126,7 +126,7 @@
                                                     {{ $t('View') }}
                                                 </button>
                                             </li>
-                                            <li class="menu-item" v-if="!item.approved_by && can(['work-orders.approve'])">
+                                            <li class="menu-item" v-if="!item.approved_at && can(['work-orders.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'work order')">
                                                     {{ $t('Approve') }}
                                                 </button>
@@ -230,6 +230,8 @@
 
 </template>
 <script setup>
+import { formatDateTime } from '@/helpers/formatDateTime';
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
@@ -309,7 +311,8 @@ const print = async () => {
                 { key: 'paid_amount', label: t('Paid'), align: 'right', format: amount },
                 { key: 'outstanding_amount', label: t('Outstanding'), align: 'right', format: amount },
                 { key: 'status', label: t('Status'), format: (value) => t(value) },
-                { key: 'created_by_name', label: t('Inserted By') },
+                { key: 'created_by_name', label: t('Created By') },
+                { key: 'created_at', label: t('Created At'), format: formatDateTime },
                 { key: 'approved_by_name', label: t('Approved By') },
             ],
         })

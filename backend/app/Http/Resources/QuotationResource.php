@@ -37,22 +37,24 @@ class QuotationResource extends JsonResource
             'file_url' => $this->file_path ? Storage::disk('public')->url($this->file_path) : null,
             'items' => QuotationItemResource::collection($this->whenLoaded('items')),
             'created_by' => $this->created_by,
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
     }
-    private function concernCompany(int $concernCompanyId): ?string
-    { 
 
-        if($concernCompanyId == 1) {
-            return "Al Noor Trading Co.";
-        }else if($concernCompanyId == 2) {
-            return "Saudi Build Solutions LLC";
-        }else if($concernCompanyId == 3) {
-            return "Gulf Engineering Works";
-        }else if($concernCompanyId == 4) {
-            return "Al Faisal Contracting Est.";
-        }else {
+    private function concernCompany(int $concernCompanyId): ?string
+    {
+
+        if ($concernCompanyId == 1) {
+            return 'Al Noor Trading Co.';
+        } elseif ($concernCompanyId == 2) {
+            return 'Saudi Build Solutions LLC';
+        } elseif ($concernCompanyId == 3) {
+            return 'Gulf Engineering Works';
+        } elseif ($concernCompanyId == 4) {
+            return 'Al Faisal Contracting Est.';
+        } else {
             return null;
         }
     }

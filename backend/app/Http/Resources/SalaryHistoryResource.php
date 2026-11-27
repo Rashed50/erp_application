@@ -40,6 +40,9 @@ class SalaryHistoryResource extends JsonResource
             'remarks' => $this->remarks,
             'generated_by' => $this->generated_by,
             'generated_by_name' => $this->whenLoaded('generator', fn () => $this->generator?->name),
+            // Who entered the record, under the name every list uses.
+            'created_by_name' => $this->whenLoaded('generator', fn () => $this->generator?->name),
+            'created_at' => $this->created_at,
             'generated_at' => $this->generated_at,
             'approved_by' => $this->approved_by,
             'approved_by_name' => $this->whenLoaded('approver', fn () => $this->approver?->name),

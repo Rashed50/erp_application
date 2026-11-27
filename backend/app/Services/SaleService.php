@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\AccountTransaction;
-use App\Models\Customer;
 use App\Models\CustomerTransaction;
 use App\Models\Sale;
 use Illuminate\Http\UploadedFile;
@@ -18,9 +17,10 @@ class SaleService
         private readonly CustomerTransactionService $customerTransactionService,
         private readonly LedgerPostingService $ledgerPostingService,
         private readonly AttachmentService $attachmentService,
+        private readonly ApprovalService $approvalService,
     ) {}
 
-    public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null): LengthAwarePaginator
+    public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null, ?bool $approved = null): LengthAwarePaginator
     {
         return Sale::query()
             ->with(['customer:id,name', 'workOrder:id,work_order_no', 'creator:id,name', 'approver:id,name'])
@@ -28,22 +28,24 @@ class SaleService
             ->withPaidAmount()
             ->when($search, fn ($query) => $query->where('invoice_number', 'like', "%{$search}%"))
             ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
+            ->approvalStatus($approved)
             ->latest('issue_date')
             ->paginate($perPage);
     }
 
     public function find(Sale $sale): Sale
     {
-        return $sale->load(['items.unit', 'customer', 'workOrder']);
+        return $sale->load(['items.unit', 'customer', 'workOrder', 'creator:id,name']);
     }
 
     /**
-     * Create a sale invoice, its line items, its journal entry, and the
-     * "Invoice" ledger entry it posts to the customer's subsidiary ledger —
-     * all totals are computed here from `items` rather than trusted from the
-     * request. As on the payroll module's sale form, the debit and credit
-     * accounts can be chosen; they default to Accounts Receivable and Sales
-     * Revenue.
+     * Create a sale invoice and its line items — all totals are computed here
+     * from `items` rather than trusted from the request. As on the payroll
+     * module's sale form, the debit and credit accounts can be chosen; they
+     * default to Accounts Receivable and Sales Revenue.
+     *
+     * The sale waits for approval: its journal entry and the "Invoice" entry
+     * on the customer's subsidiary ledger are posted by approve().
      *
      * @param  array{customer_id: int, work_order_id?: ?int, invoice_number: string, description?: ?string, issue_date: string, due_date?: ?string, notes?: ?string, debit_account_id?: ?int, credit_account_id?: ?int, overall_discount?: ?float, overall_vat?: ?float, previous_advance_amount?: ?float, previous_advance_purpose?: ?string, attachment?: ?UploadedFile, items: array<int, array{item_name: string, description?: ?string, qty: float, unit_id?: ?int, unit_price: float, discount?: ?float, vat?: ?float}>}  $data
      */
@@ -78,29 +80,15 @@ class SaleService
 
             $sale->items()->createMany($totals['items']);
 
-            $customer = Customer::findOrFail($data['customer_id']);
-            $entry = $this->postToLedger($sale);
-
-            $transaction = $this->customerTransactionService->create($customer, [
-                'transaction_type' => 'Invoice',
-                'work_order_id' => $sale->work_order_id,
-                'invoice_no' => $data['invoice_number'],
-                'debit' => $totals['net_total'],
-                'account_transaction_id' => $entry?->id,
-                'transaction_date' => $data['issue_date'],
-                'notes' => $data['description'] ?? null,
-            ]);
-
-            $sale->update(['customer_transaction_id' => $transaction->id]);
-
             return $sale->load(['items.unit', 'customer', 'workOrder']);
         });
     }
 
     /**
      * Update a sale invoice. When `items` is supplied, its line items are
-     * replaced and every total is recomputed; either way, the linked ledger
-     * entry is kept in sync in place.
+     * replaced and every total is recomputed. The edit sends the sale back
+     * for approval, so its journal entry and customer ledger invoice are
+     * taken off the books until it is approved again.
      *
      * @param  array<string, mixed>  $data
      */
@@ -144,6 +132,7 @@ class SaleService
                     ->update(['invoice_no' => $sale->invoice_number]);
             }
 
+            $sale->resetApproval();
             $sale->save();
 
             if (isset($data['items'])) {
@@ -152,27 +141,60 @@ class SaleService
                 $sale->unsetRelation('items');
             }
 
-            // Rewrite the journal entry in place, or post it now if the sale was
-            // created before the predefined accounts were seeded.
+            $this->unpost($sale);
+
+            return $sale->load(['items.unit', 'customer', 'workOrder']);
+        });
+    }
+
+    /**
+     * Approve the sale and post it: its journal entry (debit Accounts
+     * Receivable, credit Sales Revenue by default) and the "Invoice" debit on
+     * the customer's subsidiary ledger.
+     */
+    public function approve(Sale $sale): Sale
+    {
+        return DB::transaction(function () use ($sale) {
+            $this->approvalService->approve($sale);
+
+            // Rewrite the journal entry in place, or post it now.
             if ($entry = $this->ledgerPostingService->entryFor($sale)) {
                 $this->ledgerPostingService->repost($entry, $this->journalHeader($sale), $this->journalLines($sale));
             } else {
                 $entry = $this->postToLedger($sale);
             }
 
+            $invoice = [
+                'work_order_id' => $sale->work_order_id,
+                'invoice_no' => $sale->invoice_number,
+                'debit' => $sale->net_total,
+                'account_transaction_id' => $entry?->id,
+                'transaction_date' => $sale->issue_date->toDateString(),
+                'notes' => $sale->description,
+            ];
+
             if ($sale->ledgerTransaction) {
-                $this->customerTransactionService->updateAmounts($sale->ledgerTransaction, [
-                    'work_order_id' => $sale->work_order_id,
-                    'invoice_no' => $sale->invoice_number,
-                    'debit' => $sale->net_total,
-                    'account_transaction_id' => $entry?->id,
-                    'transaction_date' => $sale->issue_date,
-                    'notes' => $sale->description,
-                ]);
+                $this->customerTransactionService->updateAmounts($sale->ledgerTransaction, [...$invoice, 'status' => true]);
+            } else {
+                $transaction = $this->customerTransactionService->create($sale->customer, ['transaction_type' => 'Invoice', ...$invoice]);
+                $sale->update(['customer_transaction_id' => $transaction->id]);
             }
 
             return $sale->load(['items.unit', 'customer', 'workOrder']);
         });
+    }
+
+    /**
+     * Take a sale that is no longer approved off the books: remove its
+     * journal entry and switch off its customer ledger invoice.
+     */
+    private function unpost(Sale $sale): void
+    {
+        $this->ledgerPostingService->reverse($sale);
+
+        if ($sale->ledgerTransaction?->status) {
+            $this->customerTransactionService->updateAmounts($sale->ledgerTransaction, ['status' => false, 'account_transaction_id' => null]);
+        }
     }
 
     /**
@@ -257,7 +279,7 @@ class SaleService
     }
 
     /**
-     * Record a payment received against a sale, posting a credit ledger
+     * Record a payment received against an approved sale, posting a credit ledger
      * entry that reduces what the customer owes and tracking how much of
      * the sale has been paid so far. The payment is also posted to the
      * general ledger: debit the cash/bank account, credit Accounts Receivable.
@@ -266,6 +288,8 @@ class SaleService
      */
     public function recordPayment(Sale $sale, array $data): Sale
     {
+        $this->approvalService->ensureApproved($sale, 'amount');
+
         return DB::transaction(function () use ($sale, $data) {
             $this->customerTransactionService->create($sale->customer, [
                 'transaction_type' => CustomerTransaction::TYPE_PAYMENT_RECEIVED,

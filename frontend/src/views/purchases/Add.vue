@@ -140,7 +140,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     items: [emptyInvoiceItem()],
 })
 
-const { items: suppliers, fetchData: loadSuppliers } = useFetch('/api/suppliers', { per_page: 100 })
+const { items: suppliers, fetchData: loadSuppliers } = useFetch('/api/suppliers', { per_page: 100, approved: 1 })
 
 // Only active products are offered; a line can still be a free-text custom item.
 const { items: products, fetchData: loadProducts } = useFetch('/api/products', { per_page: 500, active_status: 1 })

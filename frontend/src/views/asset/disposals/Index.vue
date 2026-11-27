@@ -50,7 +50,7 @@
                                 <th class="text-left">{{ $t('Reason') }}</th>
                                 <th class="text-left">{{ $t('Items') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-left">{{ $t('Approved By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -80,7 +80,7 @@
                                 <td class="text-center">
                                     <span :class="statusClass(disposal.status)">{{ $t(statusLabel(disposal.status)) }}</span>
                                 </td>
-                                <td>{{ disposal.created_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="disposal.created_by_name" :at="disposal.created_at" /></td>
                                 <td>{{ disposal.approved_by_name || '-' }}</td>
                                 <td class="text-center">
                                     <v-btn v-if="disposal.status === 'draft' && can(['inventory-disposals.approve'])"
@@ -196,6 +196,7 @@
     </v-dialog>
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';

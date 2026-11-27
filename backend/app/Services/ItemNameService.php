@@ -16,7 +16,7 @@ class ItemNameService
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return ItemName::query()
-            ->with(['category', 'subCategory', 'unit'])
+            ->with(['category', 'subCategory', 'unit', 'creator:id,name'])
             ->when($filters['search'] ?? null, fn ($query, string $search) => $query->search($search))
             ->when(! is_null($filters['status'] ?? null), fn ($query) => $query->where('item_status', $filters['status']))
             ->when($filters['icatg_id'] ?? null, fn ($query, int $categoryId) => $query->whereRelation('subCategory', 'icatg_id', $categoryId))

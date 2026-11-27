@@ -72,6 +72,7 @@ describe('store', function () {
 
         $response = $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload($supplier, $this->cash));
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.bill_amount', 1000)
@@ -104,6 +105,7 @@ describe('store', function () {
             ]))
             ->assertStatus(201)
             ->assertJsonPath('data.debit_account_id', $serviceExpense->id);
+        approvePending();
 
         // Paid on the spot: the expense is debited, Accounts Payable and what
         // is owed to the supplier do not move.
@@ -124,6 +126,7 @@ describe('store', function () {
             ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload(Supplier::factory()->create(), $this->cash))
             ->assertStatus(201)
             ->assertJsonPath('data.debit_account_id', $this->payable->id);
+        approvePending();
     });
 
     it('rejects a debit account other than Accounts Payable for a purchase invoice', function () {
@@ -158,6 +161,7 @@ describe('store', function () {
             ]))
             ->assertStatus(201)
             ->assertJsonPath('data.invoice_no', $purchase->invoice_number);
+        approvePending();
 
         expect((float) $purchase->fresh()->paid_amount)->toBe(1000.0);
     });
@@ -221,6 +225,7 @@ describe('destroy', function () {
         $paymentId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/accounting/purchase/payment/store', billPaymentPayload($supplier, $this->cash, ['purchase_id' => $purchase->id]))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')->deleteJson("/api/accounting/purchase/payment/{$paymentId}")->assertOk();
 
@@ -237,7 +242,7 @@ describe('destroy', function () {
 
 it('approves a payment', function () {
     $actor = adminUser();
-    $payment = SupplierPayment::factory()->create();
+    $payment = SupplierPayment::factory()->pending()->create();
 
     $this->actingAs($actor, 'sanctum')
         ->postJson("/api/accounting/purchase/payment/{$payment->id}/approve")

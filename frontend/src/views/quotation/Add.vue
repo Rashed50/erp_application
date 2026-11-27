@@ -322,7 +322,7 @@ const file = ref(null);
 const errors = ref({});
 const isSubmitting = ref(false);
 
-const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 });
+const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100, approved: 1 });
 const { items: products, fetchData: loadProducts } = useFetch('/api/products', { per_page: 500, active_status: 1 });
 
 const units = ref([]);

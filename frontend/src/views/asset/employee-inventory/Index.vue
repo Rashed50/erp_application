@@ -54,18 +54,19 @@
                                 <th class="text-right">{{ $t('Returned') }}</th>
                                 <th class="text-left">{{ $t('Expected Return') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="10" class="text-center py-4">
+                                <td colspan="11" class="text-center py-4">
                                     <v-progress-linear indeterminate color="primary"></v-progress-linear>
                                     {{ $t('Loading...') }}
                                 </td>
                             </tr>
                             <tr v-else-if="!items.length">
-                                <td colspan="10" class="text-center py-4">{{ $t('No records found.') }}</td>
+                                <td colspan="11" class="text-center py-4">{{ $t('No records found.') }}</td>
                             </tr>
                             <tr v-else v-for="(record, index) in items" :key="record.id">
                                 <td>{{ (pagination.page - 1) * pagination.perPage + index + 1 }}</td>
@@ -82,6 +83,7 @@
                                 <td class="text-center">
                                     <span :class="statusClass(record.status)">{{ $t(statusLabel(record.status)) }}</span>
                                 </td>
+                                <td><CreatedInfo :name="record.created_by_name" :at="record.created_at" /></td>
                                 <td class="text-center">
                                     <button v-if="record.status === 'issued' && can(['employee-inventory.return'])"
                                         type="button" class="table-action-button" :title="$t('Take Back')"
@@ -212,6 +214,7 @@
     </v-dialog>
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import { toast } from 'vue3-toastify';
 import BasePagination from '@/components/common/BasePagination.vue';

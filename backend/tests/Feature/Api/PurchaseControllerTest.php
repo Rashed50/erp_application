@@ -87,6 +87,7 @@ describe('store', function () {
                 'total_amount' => 999999,
                 'net_total' => 999999,
             ]));
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.total_amount', 90)
@@ -103,6 +104,7 @@ describe('store', function () {
         $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->assertStatus(201);
+        approvePending();
 
         // net_total is 88 (see totals test above).
         expect($supplier->fresh()->current_balance)->toEqual('188.00');
@@ -126,6 +128,7 @@ describe('store with products', function () {
                 ['item_name' => 'Custom item', 'qty' => 1, 'unit_price' => 5],
             ],
         ]));
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.items.0.product_id', $product->id)
@@ -154,10 +157,12 @@ describe('update', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/purchases/{$purchase['id']}", ['supplier_id' => $otherSupplier->id])
             ->assertOk();
+        approvePending();
 
         $this->assertDatabaseHas('purchases', ['id' => $purchase['id'], 'supplier_id' => $supplier->id]);
     });
@@ -168,6 +173,7 @@ describe('update', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
+        approvePending();
 
         expect($supplier->fresh()->current_balance)->toEqual('88.00');
 
@@ -177,6 +183,7 @@ describe('update', function () {
                     ['item_name' => 'Paper', 'qty' => 1, 'unit_price' => 100, 'discount' => 0, 'vat' => 0],
                 ],
             ]);
+        approvePending();
 
         $response->assertOk()
             ->assertJsonPath('data.net_total', 100)
@@ -192,6 +199,7 @@ describe('update', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
+        approvePending();
 
         $this->seed(ChartOfAccountSeeder::class);
         $cash = ChartOfAccount::query()->where('account_number', '1010')->first();
@@ -200,6 +208,7 @@ describe('update', function () {
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $cash->id, 'amount' => 50, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/purchases/{$purchase['id']}", [
@@ -224,6 +233,7 @@ describe('payments', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
+        approvePending();
 
         // net_total is 88.
         $this->actingAs($actor, 'sanctum')
@@ -238,6 +248,7 @@ describe('payments', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
+        approvePending();
 
         // net_total is 88.
         $response = $this->actingAs($actor, 'sanctum')
@@ -247,6 +258,7 @@ describe('payments', function () {
                 'payment_date' => now()->toDateString(),
                 'notes' => 'partial payment',
             ]);
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.paid_amount', 30)
@@ -266,14 +278,17 @@ describe('payments', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
+        approvePending();
 
         // net_total is 88.
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 58, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
+        approvePending();
 
         $response = $this->actingAs($actor, 'sanctum')
             ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 30, 'payment_date' => now()->toDateString()]);
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.paid_amount', 88)
@@ -285,6 +300,7 @@ describe('payments', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload(Supplier::factory()->create()->id))
             ->json('data');
+        approvePending();
         $expenseAccount = ChartOfAccount::query()->where('account_number', '5010')->first();
 
         $this->actingAs($actor, 'sanctum')
@@ -303,12 +319,14 @@ describe('payments', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload(Supplier::factory()->create()->id))
             ->json('data');
+        approvePending();
         $payable = ChartOfAccount::query()->where('account_number', '2010')->first();
 
         // net_total is 88, credited to Accounts Payable when the purchase was saved.
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/purchases/{$purchase['id']}/payments", ['payment_account_id' => $this->cash->id, 'amount' => 30, 'payment_date' => now()->toDateString()])
             ->assertStatus(201);
+        approvePending();
 
         expect((float) $this->cash->fresh()->balance)->toBe(-30.0)
             ->and((float) $payable->fresh()->balance)->toBe(58.0);
@@ -329,6 +347,7 @@ describe('destroy', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
+        approvePending();
 
         expect($supplier->fresh()->current_balance)->toEqual('88.00');
 
@@ -357,6 +376,7 @@ describe('chart of account posting', function () {
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->assertStatus(201)
             ->json('data.id');
+        approvePending();
 
         $purchase = Purchase::find($purchaseId);
 
@@ -370,6 +390,7 @@ describe('chart of account posting', function () {
         $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/purchases', purchasePayload(Supplier::factory()->create()->id, ['purchase_type' => 'service']))
             ->assertStatus(201);
+        approvePending();
 
         expect((float) $this->purchaseAccount->fresh()->balance)->toBe(88.0)
             ->and((float) $this->inventory->fresh()->balance)->toBe(0.0);
@@ -385,6 +406,7 @@ describe('chart of account posting', function () {
                 'credit_account_id' => $cash->id,
             ]))
             ->assertStatus(201);
+        approvePending();
 
         expect((float) $repairs->fresh()->balance)->toBe(88.0)
             ->and((float) $cash->fresh()->balance)->toBe(-88.0)
@@ -398,12 +420,14 @@ describe('chart of account posting', function () {
         $purchaseId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/purchases/{$purchaseId}", [
                 'items' => [['item_name' => 'Paper', 'qty' => 20, 'unit_price' => 5, 'discount' => 0, 'vat' => 0]],
             ])
             ->assertOk();
+        approvePending();
 
         expect((float) $this->inventory->fresh()->balance)->toBe(100.0)
             ->and((float) $this->payable->fresh()->balance)->toBe(100.0)
@@ -417,6 +441,7 @@ describe('chart of account posting', function () {
         $purchaseId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')->deleteJson("/api/purchases/{$purchaseId}")->assertOk();
 
@@ -441,6 +466,7 @@ describe('chart of account posting', function () {
         $purchaseId = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data.id');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->postJson('/api/accounting/purchase/payment/store', [
@@ -452,6 +478,7 @@ describe('chart of account posting', function () {
                 'bank_charge' => 0,
             ])
             ->assertStatus(201);
+        approvePending();
 
         expect((float) $this->payable->fresh()->balance)->toBe(0.0)
             ->and((float) $cash->fresh()->balance)->toBe(-88.0);
@@ -466,6 +493,7 @@ describe('work order', function () {
 
         $response = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id, ['work_order_id' => $workOrder->id]));
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.work_order_id', $workOrder->id)
@@ -493,11 +521,13 @@ describe('work order', function () {
             ->putJson("/api/purchases/{$purchase->id}", ['work_order_id' => $other->id])
             ->assertOk()
             ->assertJsonPath('data.work_order_id', $other->id);
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/purchases/{$purchase->id}", ['work_order_id' => null])
             ->assertOk()
             ->assertJsonPath('data.work_order_id', null);
+        approvePending();
     });
 });
 
@@ -520,6 +550,7 @@ describe('units, overall discount/VAT and purchased by', function () {
                 'overall_vat' => 10,
                 'purchased_by_id' => $buyer->id,
             ]));
+        approvePending();
 
         $response->assertStatus(201)
             ->assertJsonPath('data.items.0.unit_id', $ream->id)
@@ -541,6 +572,7 @@ describe('units, overall discount/VAT and purchased by', function () {
         $purchase = $this->actingAs($actor, 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id))
             ->json('data');
+        approvePending();
 
         $this->actingAs($actor, 'sanctum')
             ->putJson("/api/purchases/{$purchase['id']}", ['overall_discount' => 8])
@@ -548,6 +580,7 @@ describe('units, overall discount/VAT and purchased by', function () {
             ->assertJsonPath('data.discount_amount', 13)
             ->assertJsonPath('data.net_total', 80)
             ->assertJsonCount(2, 'data.items');
+        approvePending();
     });
 
     it('rejects a discount larger than the invoice amount', function () {
@@ -569,6 +602,7 @@ describe('attachment', function () {
         $this->actingAs(adminUser(), 'sanctum')
             ->postJson('/api/purchases', purchasePayload($supplier->id, ['attachment' => UploadedFile::fake()->create('bill.pdf', 100, 'application/pdf')]))
             ->assertStatus(201);
+        approvePending();
         $purchase = Purchase::sole();
         $oldAttachment = $purchase->attachment;
         Storage::disk('public')->assertExists($oldAttachment);

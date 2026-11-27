@@ -26,6 +26,7 @@ class SaleFactory extends Factory
             'issue_date' => fake()->date(),
             'due_date' => fake()->optional()->date(),
             'notes' => fake()->optional()->sentence(),
+            'approved_at' => now(),
         ];
     }
 
@@ -53,5 +54,16 @@ class SaleFactory extends Factory
             'discount' => 0,
             'vat' => $vat,
         ]), 'items');
+    }
+
+    /**
+     * Indicate that the record has not been approved yet.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved_by' => null,
+            'approved_at' => null,
+        ]);
     }
 }

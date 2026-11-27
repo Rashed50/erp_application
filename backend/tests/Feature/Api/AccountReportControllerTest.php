@@ -38,6 +38,7 @@ function postIncomeExpense(User $actor, string $type, ChartOfAccount $account, C
         'amount' => $amount,
         'transaction_date' => $date,
     ])->assertStatus(201);
+    approvePending();
 }
 
 describe('access', function () {
@@ -195,6 +196,7 @@ describe('balance sheet', function () {
             'name' => 'Opening Customer',
             'opening_balance' => 500,
         ])->assertStatus(201);
+        approvePending();
 
         $this->actingAs($this->actor, 'sanctum')
             ->getJson('/api/accounting/reports/balance-sheet')
@@ -281,7 +283,9 @@ describe('dashboard', function () {
         Purchase::factory()->withTotal(400)->create(['purchase_date' => '2026-05-03']);
 
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/customers', ['name' => 'Due Customer', 'opening_balance' => 500])->assertStatus(201);
+        approvePending();
         $this->actingAs($this->actor, 'sanctum')->postJson('/api/suppliers', ['name' => 'Due Supplier', 'opening_balance' => 300])->assertStatus(201);
+        approvePending();
 
         $subBank = ChartOfAccount::factory()->create(['parent_id' => $this->bank->id, 'account_type_id' => $this->bank->account_type_id, 'name' => 'City Bank']);
         postIncomeExpense($this->actor, 'income', $this->revenue, $this->bank, 700, '2026-05-05');
@@ -537,6 +541,7 @@ describe('bank reconciliation', function () {
             ])
             ->assertOk()
             ->assertJsonPath('data.updated', 2);
+        approvePending();
 
         $this->actingAs($this->actor, 'sanctum')
             ->getJson("/api/accounting/reports/bank-reconciliation?account_id={$this->bank->id}&from_date=2026-03-01&to_date=2026-03-31&statement_balance=3800")
@@ -586,6 +591,7 @@ describe('bank reconciliation', function () {
                 'cleared_date' => null,
             ])
             ->assertOk();
+        approvePending();
 
         expect($this->bankLines[0]->fresh()->cleared_date)->toBeNull();
     });

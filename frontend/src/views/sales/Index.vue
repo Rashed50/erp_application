@@ -46,7 +46,7 @@
                                 <th class="text-left">{{ $t('Issue Date') }}</th>
                                 <th class="text-right">{{ $t('Net Total') }}</th>
                                 <th class="text-right">{{ $t('Due') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -80,7 +80,7 @@
                                         {{ Number(item.due_amount).toFixed(2) }}
                                     </span>
                                 </td>
-                                <td>{{ item.created_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
                                         :approved-by-name="item.approved_by_name" />
@@ -94,7 +94,7 @@
                                             </button>
                                         </template>
                                         <ul class="table-action-menu">
-                                            <li class="menu-item" v-if="!item.approved_by && can(['sales.approve'])">
+                                            <li class="menu-item" v-if="!item.approved_at && can(['sales.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'sale')">
                                                     {{ $t('Approve') }}
                                                 </button>
@@ -149,6 +149,7 @@
 
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
@@ -218,6 +219,8 @@ const handlePrintInvoice = async (item) => {
             reference: sale.work_order_no,
             subject: sale.work_order_title,
             signatures: ['Receiver Signature', 'Authorized Signature'],
+            createdBy: sale.created_by_name,
+            createdAt: sale.created_at,
         })
     } catch (e) {
         toast.error(e.response?.data?.message || t('Failed to load the invoice.'))

@@ -124,4 +124,9 @@ class InventoryAsset extends Model
                 ->orWhereHas('item', fn (Builder $query) => $query->where('item_name', 'like', "%{$search}%"));
         });
     }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

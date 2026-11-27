@@ -3,6 +3,8 @@
 namespace App\Http\Requests\FundTransfer;
 
 use App\Http\Requests\Concerns\ValidatesPaymentAccounts;
+use App\Models\ChartOfAccount;
+use App\Rules\Approved;
 use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -32,8 +34,8 @@ class StoreFundTransferRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'credit_account_id' => ['required', 'different:debit_account_id', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
-            'debit_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at')],
+            'credit_account_id' => ['required', 'different:debit_account_id', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
+            'debit_account_id' => ['required', Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'), new Approved(ChartOfAccount::class)],
             'receipt_no' => ['nullable', 'string', 'max:255'],
             'transfer_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'min:0.01'],

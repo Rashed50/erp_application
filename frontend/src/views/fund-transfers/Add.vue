@@ -203,6 +203,7 @@ const attachmentInput = ref(null)
 // expense to expense, expense to liability, and so on.
 const { items: transactionAccounts, fetchData: loadTransactionAccounts } = useFetch('/api/ledger-accounts', {
     per_page: 500,
+    approved: 1,
     is_transaction: 1,
     active_status: 1,
     is_closed: 0,

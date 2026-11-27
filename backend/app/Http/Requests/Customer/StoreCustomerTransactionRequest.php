@@ -3,7 +3,10 @@
 namespace App\Http\Requests\Customer;
 
 use App\Http\Requests\Concerns\ValidatesPaymentAccounts;
+use App\Models\ChartOfAccount;
 use App\Models\CustomerTransaction;
+use App\Models\WorkOrder;
+use App\Rules\Approved;
 use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -40,7 +43,7 @@ class StoreCustomerTransactionRequest extends FormRequest
     {
         return [
             'transaction_type' => ['required', Rule::in([CustomerTransaction::TYPE_PAYMENT_RECEIVED, CustomerTransaction::TYPE_ADJUSTMENT])],
-            'work_order_id' => ['nullable', Rule::exists('work_orders', 'id')->where('customer_id', $this->route('customer')?->id)->withoutTrashed()],
+            'work_order_id' => ['nullable', Rule::exists('work_orders', 'id')->where('customer_id', $this->route('customer')?->id)->withoutTrashed(), new Approved(WorkOrder::class)],
             'invoice_no' => ['nullable', 'string', 'max:100'],
             'debit' => ['nullable', 'numeric', 'min:0'],
             'credit' => ['nullable', 'numeric', 'min:0'],
@@ -49,6 +52,7 @@ class StoreCustomerTransactionRequest extends FormRequest
                 Rule::requiredIf($this->isPaymentReceived()),
                 Rule::prohibitedIf(! $this->isPaymentReceived()),
                 Rule::exists('chart_of_accounts', 'id')->whereNull('deleted_at'),
+                new Approved(ChartOfAccount::class),
             ],
             'transaction_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],

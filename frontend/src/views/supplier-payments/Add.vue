@@ -230,6 +230,7 @@ const ASSET = 1
 // Money can only leave an open asset (cash/bank) transaction account.
 const { items: creditAccounts, fetchData: loadCreditAccounts } = useFetch('/api/ledger-accounts', {
     per_page: 500,
+    approved: 1,
     account_type_id: ASSET,
     is_transaction: 1,
     active_status: 1,
@@ -242,6 +243,7 @@ const ACCOUNTS_PAYABLE_NUMBER = '2010'
 // The debit side can be any open transaction account other than the credit account.
 const { items: debitAccounts, fetchData: loadDebitAccounts } = useFetch('/api/ledger-accounts', {
     per_page: 500,
+    approved: 1,
     is_transaction: 1,
     active_status: 1,
     is_closed: 0,
@@ -265,6 +267,7 @@ watch(() => form.purchase_id, (purchaseId) => {
 
 const { items: suppliers, fetchData: loadSuppliers } = useFetch('/api/suppliers', {
     per_page: 500,
+    approved: 1,
     active_status: 1,
 })
 
@@ -282,7 +285,7 @@ watch(() => form.supplier_id, async (supplierId) => {
     if (!supplierId) return
 
     try {
-        const { data } = await axios.get('/api/purchases', { params: { supplier_id: supplierId, per_page: 500 } })
+        const { data } = await axios.get('/api/purchases', { params: { supplier_id: supplierId, per_page: 500, approved: 1 } })
         purchases.value = data.data?.purchases ?? []
     } catch (e) {
         toast.error(t('Failed to load the supplier purchases.'))

@@ -14,6 +14,7 @@ class ItemCategoryService
     public function paginate(int $perPage = 15, ?string $search = null, ?bool $status = null): LengthAwarePaginator
     {
         return ItemCategory::query()
+            ->with('creator:id,name')
             ->withCount('subCategories')
             ->when($search, fn ($query) => $query->search($search))
             ->when(! is_null($status), fn ($query) => $query->where('status', $status))

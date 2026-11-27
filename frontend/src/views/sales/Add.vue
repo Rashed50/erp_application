@@ -160,7 +160,7 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
 const adjustmentPurposes = ['Previous Advance', 'Previous Bill', 'Previous Due Adjustment', 'Other']
 const payable = (netTotal) => netTotal - (Number(form.previous_advance_amount) || 0)
 
-const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
+const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100, approved: 1 })
 
 // Only active products are offered; a line can still be a free-text custom item.
 const { items: products, fetchData: loadProducts } = useFetch('/api/products', { per_page: 500, active_status: 1 })

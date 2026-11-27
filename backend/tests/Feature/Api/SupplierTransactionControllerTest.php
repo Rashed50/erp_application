@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\ChartOfAccount;
 use App\Models\Supplier;
 use App\Models\SupplierTransaction;
+use Database\Seeders\ChartOfAccountSeeder;
 
 describe('index', function () {
     it('lists transactions for a supplier', function () {
@@ -64,19 +66,125 @@ describe('store', function () {
         expect($supplier->fresh()->current_balance)->toEqual('500.00');
     });
 
+    it('rejects a purchase transaction entered as a debit', function () {
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson("/api/suppliers/{$supplier->id}/transactions", [
+                'transaction_type' => 'Purchase',
+                'debit' => 200,
+                'transaction_date' => now()->toDateString(),
+            ])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['credit']]);
+    });
+
     it('records a debit (bill payment) transaction and decreases the supplier balance', function () {
         $actor = adminUser();
         $supplier = Supplier::factory()->create(['opening_balance' => 500]);
+        $this->seed(ChartOfAccountSeeder::class);
+        $cash = ChartOfAccount::query()->where('account_number', '1010')->firstOrFail();
+        $payable = ChartOfAccount::query()->where('account_number', '2010')->firstOrFail();
 
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/suppliers/{$supplier->id}/transactions", [
                 'transaction_type' => 'Bill Payment',
                 'debit' => 200,
+                'payment_account_id' => $cash->id,
                 'transaction_date' => now()->toDateString(),
             ])
             ->assertStatus(201);
 
-        expect($supplier->fresh()->current_balance)->toEqual('300.00');
+        $transaction = $supplier->transactions()->sole();
+
+        expect($supplier->fresh()->current_balance)->toEqual('300.00')
+            ->and((float) $cash->fresh()->balance)->toBe(-200.0)
+            ->and((float) $payable->fresh()->balance)->toBe(-200.0)
+            ->and($transaction->payment_account_id)->toBe($cash->id)
+            ->and($transaction->accountTransaction->source->is($transaction))->toBeTrue();
+    });
+});
+
+describe('bill payment posting', function () {
+    beforeEach(function () {
+        $this->seed(ChartOfAccountSeeder::class);
+        $this->cash = ChartOfAccount::query()->where('account_number', '1010')->firstOrFail();
+        $this->payable = ChartOfAccount::query()->where('account_number', '2010')->firstOrFail();
+        $this->revenue = ChartOfAccount::query()->where('account_number', '4010')->firstOrFail();
+    });
+
+    it('requires a payment account', function () {
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson("/api/suppliers/{$supplier->id}/transactions", [
+                'transaction_type' => 'Bill Payment',
+                'debit' => 200,
+                'transaction_date' => now()->toDateString(),
+            ])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['payment_account_id']]);
+    });
+
+    it('requires an open cash or bank account', function () {
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson("/api/suppliers/{$supplier->id}/transactions", [
+                'transaction_type' => 'Bill Payment',
+                'debit' => 200,
+                'payment_account_id' => $this->revenue->id,
+                'transaction_date' => now()->toDateString(),
+            ])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['payment_account_id']]);
+    });
+
+    it('rejects a bill payment entered as a credit', function () {
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson("/api/suppliers/{$supplier->id}/transactions", [
+                'transaction_type' => 'Bill Payment',
+                'credit' => 200,
+                'payment_account_id' => $this->cash->id,
+                'transaction_date' => now()->toDateString(),
+            ])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['debit']]);
+    });
+
+    it('reverses the cash and payable posting when the transaction is reversed', function () {
+        $supplier = Supplier::factory()->create();
+        $transactionId = $this->actingAs(adminUser(), 'sanctum')
+            ->postJson("/api/suppliers/{$supplier->id}/transactions", [
+                'transaction_type' => 'Bill Payment',
+                'debit' => 200,
+                'payment_account_id' => $this->cash->id,
+                'transaction_date' => now()->toDateString(),
+            ])
+            ->json('data.id');
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->deleteJson("/api/suppliers/{$supplier->id}/transactions/{$transactionId}")
+            ->assertOk();
+
+        expect((float) $this->cash->fresh()->balance)->toBe(0.0)
+            ->and((float) $this->payable->fresh()->balance)->toBe(0.0);
+    });
+
+    it('rejects a payment account for a purchase transaction', function () {
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs(adminUser(), 'sanctum')
+            ->postJson("/api/suppliers/{$supplier->id}/transactions", [
+                'transaction_type' => 'Purchase',
+                'credit' => 200,
+                'payment_account_id' => $this->cash->id,
+                'transaction_date' => now()->toDateString(),
+            ])
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['payment_account_id']]);
     });
 });
 

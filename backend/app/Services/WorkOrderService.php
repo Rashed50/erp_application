@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\WorkOrder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,7 +13,7 @@ class WorkOrderService
 {
     public function __construct(private readonly AttachmentService $attachmentService) {}
 
-    public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null, ?string $status = null): LengthAwarePaginator
+    public function paginate(int $perPage = 15, ?string $search = null, ?int $customerId = null, ?string $status = null, ?bool $approved = null): LengthAwarePaginator
     {
         return WorkOrder::query()
             ->with(['customer:id,name', 'creator:id,name', 'approver:id,name'])
@@ -20,6 +21,7 @@ class WorkOrderService
             ->when($search, fn ($query) => $query->search($search))
             ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
             ->when($status, fn ($query) => $query->where('status', $status))
+            ->approvalStatus($approved)
             ->latest('issue_date')
             ->latest('id')
             ->paginate($perPage);
@@ -33,14 +35,15 @@ class WorkOrderService
     }
 
     /**
-     * Every work order of a customer with its paid and outstanding amounts,
-     * for picking one on a sale.
+     * Every approved work order of a customer with its paid and outstanding
+     * amounts, for picking one on a sale.
      *
      * @return Collection<int, WorkOrder>
      */
     public function forCustomer(Customer $customer): Collection
     {
         return $customer->workOrders()
+            ->approved()
             ->withPaymentTotals()
             ->latest('issue_date')
             ->latest('id')
@@ -53,17 +56,18 @@ class WorkOrderService
      *
      * @return Collection<int, WorkOrder>
      */
-    public function options(): Collection
+    public function options(?bool $approved = null): Collection
     {
         return WorkOrder::query()
             ->with('customer:id,name')
+            ->approvalStatus($approved)
             ->latest('issue_date')
             ->latest('id')
-            ->get(['id', 'customer_id', 'work_order_no', 'work_title', 'issue_date', 'total_amount', 'retention_percent', 'status']);
+            ->get(['id', 'customer_id', 'work_order_no', 'work_title', 'issue_date', 'total_amount', 'retention_percent', 'status', 'approved_by', 'approved_at']);
     }
 
     /**
-     * @param  array{customer_id: int, work_title: string, work_order_no: string, issue_date: string, total_amount: float, retention_percent?: ?float, deliver_date?: ?string, status?: ?string, attachment?: ?\Illuminate\Http\UploadedFile}  $data
+     * @param  array{customer_id: int, work_title: string, work_order_no: string, issue_date: string, total_amount: float, retention_percent?: ?float, deliver_date?: ?string, status?: ?string, attachment?: ?UploadedFile}  $data
      */
     public function create(array $data): WorkOrder
     {
@@ -84,7 +88,15 @@ class WorkOrderService
      */
     public function update(WorkOrder $workOrder, array $data): WorkOrder
     {
-        $workOrder->fill([...$data, 'updated_by' => Auth::id()]);
+        $workOrder->fill(collect($data)->except(AttachmentService::FIELDS)->all());
+        $this->attachmentService->sync($workOrder, $data, 'work-orders');
+
+        // Any change sends the work order back for approval.
+        if ($workOrder->isDirty()) {
+            $workOrder->resetApproval();
+        }
+
+        $workOrder->updated_by = Auth::id();
         $workOrder->save();
 
         return $workOrder->load('customer')->loadPaymentTotals();

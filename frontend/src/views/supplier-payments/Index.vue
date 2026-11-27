@@ -46,7 +46,7 @@
                                 <th class="text-right">{{ $t('Bank Charge') }}</th>
                                 <th class="text-right">{{ $t('Total') }}</th>
                                 <th class="text-left">{{ $t('Remarks') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Manage') }}</th>
                             </tr>
@@ -72,7 +72,7 @@
                                 <td class="text-right">{{ Number(item.bank_charge).toFixed(2) }}</td>
                                 <td class="text-right fw-bold">{{ Number(item.total_amount).toFixed(2) }}</td>
                                 <td>{{ item.remarks }}</td>
-                                <td>{{ item.created_by_name || $t('Unknown') }}</td>
+                                <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" :fallback="$t('Unknown')" /></td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
                                         :approved-by-name="item.approved_by_name" />
@@ -86,7 +86,7 @@
                                         </template>
                                         <ul class="table-action-menu">
                                             <li class="menu-item"
-                                                v-if="!item.approved_by && can(['supplier-payments.approve'])">
+                                                v-if="!item.approved_at && can(['supplier-payments.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'payment')">
                                                     {{ $t('Approve') }}
                                                 </button>
@@ -120,6 +120,7 @@
 
 </template>
 <script setup>
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';

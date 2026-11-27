@@ -11,6 +11,8 @@ const COMPANY = {
     phone: '01721393543',
 };
 
+import { formatDateTime } from '@/helpers/formatDateTime';
+
 const escapeHtml = (value) =>
     String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -107,6 +109,7 @@ const buildHtml = (quotation) => {
     table.totals tr.net td { font-weight: bold; border-top: 1px solid #000; }
 
     .notes { margin-top: 12px; }
+    .entry-note { margin-top: 8px; font-size: 11px; color: #555; }
 
     .signs { display: flex; justify-content: space-between; margin-top: 70px; page-break-inside: avoid; }
     .sign { width: 190px; text-align: center; }
@@ -160,6 +163,8 @@ const buildHtml = (quotation) => {
         <table class="totals"><tbody>${totalRows}</tbody></table>
 
         ${quotation.notes ? `<div class="notes"><strong>Note:</strong> ${withBreaks(quotation.notes)}</div>` : ''}
+
+        <div class="entry-note">Created By: ${escapeHtml(quotation.created_by_name || '-')} | Created At: ${escapeHtml(formatDateTime(quotation.created_at))}</div>
 
         <div class="signs">
             <div class="sign">

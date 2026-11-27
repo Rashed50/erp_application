@@ -50,7 +50,7 @@
                                 <th class="text-left">{{ $t('Phone') }}</th>
                                 <th class="text-right">{{ $t('Balance') }}</th>
                                 <th class="text-center">{{ $t('Status') }}</th>
-                                <th class="text-left">{{ $t('Inserted By') }}</th>
+                                <th class="text-left">{{ $t('Created By') }}</th>
                                 <th class="text-center">{{ $t('Approval') }}</th>
                                 <th class="text-center">{{ $t('Action') }}</th>
                             </tr>
@@ -84,7 +84,7 @@
                                         {{ $t(item.active_status ? 'Active' : 'Inactive') }}
                                     </span>
                                 </td>
-                                <td>{{ item.created_by_name || '-' }}</td>
+                                <td><CreatedInfo :name="item.created_by_name" :at="item.created_at" /></td>
                                 <td class="text-center">
                                     <ApprovalBadge :approved-by="item.approved_by" :approved-at="item.approved_at"
                                         :approved-by-name="item.approved_by_name" />
@@ -98,7 +98,7 @@
                                             </button>
                                         </template>
                                         <ul class="table-action-menu">
-                                            <li class="menu-item" v-if="!item.approved_by && can(['suppliers.approve'])">
+                                            <li class="menu-item" v-if="!item.approved_at && can(['suppliers.approve'])">
                                                 <button type="button" class="menu-link" @click="approve(item, 'supplier')">
                                                     {{ $t('Approve') }}
                                                 </button>
@@ -140,6 +140,8 @@
 
 </template>
 <script setup>
+import { formatDateTime } from '@/helpers/formatDateTime';
+import CreatedInfo from '@/components/common/CreatedInfo.vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { toast } from 'vue3-toastify';
@@ -211,7 +213,8 @@ const print = async () => {
                 { key: 'address', label: t('Address') },
                 { key: 'current_balance', label: t('Balance'), align: 'right', format: (value) => Number(value || 0).toFixed(2) },
                 { key: 'active_status', label: t('Status'), format: (value) => t(value ? 'Active' : 'Inactive') },
-                { key: 'created_by_name', label: t('Inserted By') },
+                { key: 'created_by_name', label: t('Created By') },
+                { key: 'created_at', label: t('Created At'), format: formatDateTime },
                 { key: 'approved_by_name', label: t('Approved By') },
             ],
         })

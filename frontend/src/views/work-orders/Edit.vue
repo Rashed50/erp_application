@@ -89,6 +89,11 @@
                                         <div v-if="errors.status" class="error-msg">{{ errors.status }}</div>
                                     </div>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <AttachmentInput v-model="form.attachment" v-model:remove="form.remove_attachment"
+                                        :current-url="attachmentUrl" :error="errors.attachment" />
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-12">
@@ -115,6 +120,7 @@ import { setToast } from "@/helpers/toast";
 import { useRouter, useRoute } from 'vue-router';
 import { WORK_ORDER_STATUSES } from './statuses';
 import { t } from '@/i18n';
+import AttachmentInput from '@/components/common/AttachmentInput.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -128,9 +134,12 @@ const { form, errors, isSubmitting, submit } = useStoreForm({
     retention_percent: 0,
     deliver_date: '',
     status: 'Pending',
+    attachment: null,
+    remove_attachment: 0,
 })
 
-const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100 })
+const { items: customers, fetchData: loadCustomers } = useFetch('/api/customers', { per_page: 100, approved: 1 })
+const attachmentUrl = ref('')
 
 const retentionAmount = computed(() =>
     ((Number(form.total_amount) || 0) * (Number(form.retention_percent) || 0) / 100).toFixed(2)
@@ -158,6 +167,7 @@ const loadWorkOrder = async () => {
             form.retention_percent = workOrder.retention_percent
             form.deliver_date = workOrder.deliver_date || ''
             form.status = workOrder.status
+            attachmentUrl.value = workOrder.attachment_url ?? ''
         }
     } catch (e) {
         console.error(e)
