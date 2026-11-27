@@ -757,6 +757,52 @@ class AccountReportService
     }
 
     /**
+     * Money received from the selected customers (all when none are
+     * selected) in a date range: their active Payment Received entries,
+     * with the cash/bank account each came into.
+     *
+     * @param  array<int, int>  $customerIds
+     * @return array{from_date: ?string, to_date: ?string, rows: array<int, array<string, mixed>>, total_amount: float}
+     */
+    public function customerPayments(array $customerIds, ?string $fromDate, ?string $toDate): array
+    {
+        return $this->partyPayments(
+            CustomerTransaction::query()
+                ->with(['customer:id,name', 'paymentAccount:id,name'])
+                ->where('transaction_type', CustomerTransaction::TYPE_PAYMENT_RECEIVED)
+                ->when($customerIds, fn ($query) => $query->whereIn('customer_id', $customerIds)),
+            'credit',
+            fn (CustomerTransaction $row) => $row->customer?->name,
+            fn (CustomerTransaction $row) => $row->paymentAccount?->name,
+            $fromDate,
+            $toDate,
+        );
+    }
+
+    /**
+     * Money paid to the selected suppliers (all when none are selected) in a
+     * date range: their active Bill Payment and Direct Payment entries, with
+     * the cash/bank account each was paid from.
+     *
+     * @param  array<int, int>  $supplierIds
+     * @return array{from_date: ?string, to_date: ?string, rows: array<int, array<string, mixed>>, total_amount: float}
+     */
+    public function supplierPayments(array $supplierIds, ?string $fromDate, ?string $toDate): array
+    {
+        return $this->partyPayments(
+            SupplierTransaction::query()
+                ->with(['supplier:id,name', 'paymentAccount:id,name', 'supplierPayment.paymentAccount:id,name'])
+                ->whereIn('transaction_type', ['Bill Payment', 'Direct Payment'])
+                ->when($supplierIds, fn ($query) => $query->whereIn('supplier_id', $supplierIds)),
+            'debit',
+            fn (SupplierTransaction $row) => $row->supplier?->name,
+            fn (SupplierTransaction $row) => $row->paymentAccount?->name ?? $row->supplierPayment?->paymentAccount?->name,
+            $fromDate,
+            $toDate,
+        );
+    }
+
+    /**
      * The payroll module's Cash Transaction report: journal lines of the
      * selected accounts (all when none are selected) in a date range.
      *
@@ -1355,6 +1401,44 @@ class AccountReportService
             'total_amount' => round($rows->sum('amount'), 2),
             'total_paid' => round($rows->sum('paid'), 2),
             'total_due' => $due,
+        ];
+    }
+
+    /**
+     * A supplier's or customer's payments in a date range. `$amountSide` is
+     * the column (debit or credit) holding the amount paid. Reversed entries
+     * are left out.
+     *
+     * @param  Builder<SupplierTransaction>|Builder<CustomerTransaction>  $transactions
+     * @param  callable(SupplierTransaction|CustomerTransaction): ?string  $partyName
+     * @param  callable(SupplierTransaction|CustomerTransaction): ?string  $paymentAccountName
+     * @return array{from_date: ?string, to_date: ?string, rows: array<int, array<string, mixed>>, total_amount: float}
+     */
+    private function partyPayments(Builder $transactions, string $amountSide, callable $partyName, callable $paymentAccountName, ?string $fromDate, ?string $toDate): array
+    {
+        $rows = $transactions
+            ->where('status', true)
+            ->when($fromDate, fn ($query) => $query->whereDate('transaction_date', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('transaction_date', '<=', $toDate))
+            ->orderBy('transaction_date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($row) => [
+                'id' => $row->id,
+                'date' => $row->transaction_date?->toDateString(),
+                'party_name' => $partyName($row),
+                'invoice_no' => $row->invoice_no,
+                'transaction_type' => $row->transaction_type,
+                'payment_account' => $paymentAccountName($row),
+                'notes' => $row->notes,
+                'amount' => (float) $row->{$amountSide},
+            ]);
+
+        return [
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+            'rows' => $rows->all(),
+            'total_amount' => round($rows->sum('amount'), 2),
         ];
     }
 

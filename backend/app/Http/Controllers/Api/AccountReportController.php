@@ -206,6 +206,34 @@ class AccountReportController extends Controller
         ));
     }
 
+    public function supplierPayments(Request $request): JsonResponse
+    {
+        $request->validate([
+            ...$this->dateRangeRules(),
+            'supplier_ids' => ['nullable', 'array'],
+            'supplier_ids.*' => ['integer', Rule::exists('suppliers', 'id')],
+        ]);
+
+        return ApiResponse::success($this->reportService->supplierPayments(
+            $this->ids($request, 'supplier_ids'),
+            ...$this->dateRange($request),
+        ));
+    }
+
+    public function customerPayments(Request $request): JsonResponse
+    {
+        $request->validate([
+            ...$this->dateRangeRules(),
+            'customer_ids' => ['nullable', 'array'],
+            'customer_ids.*' => ['integer', Rule::exists('customers', 'id')],
+        ]);
+
+        return ApiResponse::success($this->reportService->customerPayments(
+            $this->ids($request, 'customer_ids'),
+            ...$this->dateRange($request),
+        ));
+    }
+
     public function cashTransactions(Request $request): JsonResponse
     {
         $request->validate([

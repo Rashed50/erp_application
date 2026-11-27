@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class SupplierTransaction extends Model
 {
@@ -28,6 +29,22 @@ class SupplierTransaction extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    /**
+     * The cash/bank account a bill payment recorded on the ledger left from.
+     */
+    public function paymentAccount(): BelongsTo
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'payment_account_id');
+    }
+
+    /**
+     * The supplier payment that posted this entry, if any.
+     */
+    public function supplierPayment(): HasOne
+    {
+        return $this->hasOne(SupplierPayment::class, 'supplier_transaction_id');
     }
 
     /**

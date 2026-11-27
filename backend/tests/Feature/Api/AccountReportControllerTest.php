@@ -9,6 +9,7 @@ use App\Models\IncomeExpenseTransaction;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
+use App\Models\SupplierPayment;
 use App\Models\SupplierTransaction;
 use App\Models\User;
 use App\Models\WorkOrder;
@@ -523,6 +524,54 @@ describe('customer statement', function () {
             ->assertJsonPath('data.rows.0.due', 700)
             ->assertJsonPath('data.rows.1.paid', 300)
             ->assertJsonPath('data.total_due', 400);
+    });
+});
+
+describe('payment history', function () {
+    it("lists a customer's payments received in a date range", function () {
+        $customer = Customer::factory()->create(['name' => 'Rahim']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 500, 'credit' => 0, 'transaction_type' => 'Invoice', 'transaction_date' => '2026-03-01']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 300, 'transaction_type' => 'Payment Received', 'payment_account_id' => $this->cash->id, 'transaction_date' => '2026-03-05']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 120, 'transaction_type' => 'Payment Received', 'payment_account_id' => $this->bank->id, 'transaction_date' => '2026-03-20']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 80, 'transaction_type' => 'Payment Received', 'status' => false, 'transaction_date' => '2026-03-10']);
+        CustomerTransaction::factory()->for($customer)->create(['debit' => 0, 'credit' => 999, 'transaction_type' => 'Payment Received', 'transaction_date' => '2026-04-02']);
+        CustomerTransaction::factory()->create(['debit' => 0, 'credit' => 777, 'transaction_type' => 'Payment Received', 'transaction_date' => '2026-03-06']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson("/api/accounting/reports/customer-payments?customer_ids[]={$customer->id}&from_date=2026-03-01&to_date=2026-03-31")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.rows')
+            ->assertJsonPath('data.rows.0.party_name', 'Rahim')
+            ->assertJsonPath('data.rows.0.amount', 300)
+            ->assertJsonPath('data.rows.0.payment_account', $this->cash->name)
+            ->assertJsonPath('data.rows.1.payment_account', $this->bank->name)
+            ->assertJsonPath('data.total_amount', 420);
+    });
+
+    it("lists a supplier's payments with the account each was paid from", function () {
+        $supplier = Supplier::factory()->create(['name' => 'Karim Traders']);
+        SupplierTransaction::factory()->for($supplier)->create(['debit' => 0, 'credit' => 900, 'transaction_type' => 'Purchase', 'transaction_date' => '2026-05-01']);
+        SupplierTransaction::factory()->for($supplier)->create(['debit' => 400, 'credit' => 0, 'transaction_type' => 'Bill Payment', 'payment_account_id' => $this->cash->id, 'transaction_date' => '2026-05-03']);
+        $viaPayment = SupplierTransaction::factory()->for($supplier)->create(['debit' => 250, 'credit' => 250, 'transaction_type' => 'Direct Payment', 'transaction_date' => '2026-05-08']);
+        SupplierPayment::factory()->for($supplier)->create(['payment_account_id' => $this->bank->id, 'supplier_transaction_id' => $viaPayment->id]);
+        SupplierTransaction::factory()->for($supplier)->create(['debit' => 100, 'credit' => 0, 'transaction_type' => 'Bill Payment', 'transaction_date' => '2026-06-01']);
+
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/supplier-payments?from_date=2026-05-01&to_date=2026-05-31')
+            ->assertOk()
+            ->assertJsonCount(2, 'data.rows')
+            ->assertJsonPath('data.rows.0.party_name', 'Karim Traders')
+            ->assertJsonPath('data.rows.0.payment_account', $this->cash->name)
+            ->assertJsonPath('data.rows.1.amount', 250)
+            ->assertJsonPath('data.rows.1.payment_account', $this->bank->name)
+            ->assertJsonPath('data.total_amount', 650);
+    });
+
+    it('validates the customer ids', function () {
+        $this->actingAs($this->actor, 'sanctum')
+            ->getJson('/api/accounting/reports/customer-payments?customer_ids[]=999999')
+            ->assertStatus(422)
+            ->assertJsonStructure(['data' => ['customer_ids.0']]);
     });
 });
 

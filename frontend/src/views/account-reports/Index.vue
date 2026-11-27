@@ -402,6 +402,14 @@ const reports = {
         rows: (data) => [labelRow('party_name', 'Previous Balance', { due: data.previous_balance }), ...data.rows],
         totals: (data) => labelRow('party_name', 'Total', { amount: data.total_amount, paid: data.total_paid, due: data.total_due }),
     },
+    supplier_payments: {
+        title: 'Supplier Payment History',
+        endpoint: `${BASE}/supplier-payments`,
+        filters: ['suppliers', 'fromDate', 'toDate'],
+        columns: () => paymentColumns('Supplier', 'Paid From'),
+        rows: (data) => data.rows,
+        totals: (data) => labelRow('party_name', 'Total', { amount: data.total_amount }),
+    },
     supplier_balances: {
         title: 'Supplier Outstanding Balance',
         endpoint: `${BASE}/supplier-balances`,
@@ -426,6 +434,14 @@ const reports = {
         columns: () => partyColumns('Customer'),
         rows: (data) => [labelRow('party_name', 'Previous Balance', { due: data.previous_balance }), ...data.rows],
         totals: (data) => labelRow('party_name', 'Total', { amount: data.total_amount, paid: data.total_paid, due: data.total_due }),
+    },
+    customer_payments: {
+        title: 'Customer Payment History',
+        endpoint: `${BASE}/customer-payments`,
+        filters: ['customers', 'fromDate', 'toDate'],
+        columns: () => paymentColumns('Customer', 'Received In'),
+        rows: (data) => data.rows,
+        totals: (data) => labelRow('party_name', 'Total', { amount: data.total_amount }),
     },
     sales_register: {
         title: 'Sales Report',
@@ -591,6 +607,18 @@ function partyColumns(partyLabel) {
         moneyColumn('amount', 'Amount'),
         moneyColumn('paid', 'Paid'),
         moneyColumn('due', 'Due'),
+    ]
+}
+
+function paymentColumns(partyLabel, accountLabel) {
+    return [
+        column('date', 'Date'),
+        column('party_name', partyLabel),
+        column('invoice_no', 'Invoice No'),
+        column('transaction_type', 'Type', { format: text }),
+        column('payment_account', accountLabel),
+        column('notes', 'Notes'),
+        moneyColumn('amount', 'Amount'),
     ]
 }
 
